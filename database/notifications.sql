@@ -1,0 +1,38 @@
+-- NOTIFICATIONS TABLE
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    heading VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    expiry_date TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+    image_url TEXT,
+    related_id UUID, -- Can reference order_id, return_order_id, etc.
+    related_type VARCHAR(50), -- 'order', 'return_order', 'payment', etc.
+    notification_type VARCHAR(20) DEFAULT 'user' CHECK (notification_type IN ('user', 'admin')),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP
+);
+
+-- Add indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(related_type);
+CREATE INDEX IF NOT EXISTS idx_notifications_notification_type ON notifications(notification_type);
+
+-- Add trigger to update read_at timestamp when is_read changes to true
+CREATE OR REPLACE FUNCTION update_notification_read_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_read = TRUE AND OLD.is_read = FALSE THEN
+        NEW.read_at = CURRENT_TIMESTAMP;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_notification_read_at
+    BEFORE UPDATE ON notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION update_notification_read_at();
