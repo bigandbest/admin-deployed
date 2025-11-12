@@ -1,5 +1,6 @@
 // Zone Management API Functions
 import axios from "axios";
+import { supabase } from "./supabase.js";
 
 const API_BASE_URL = import.meta.env.DEV
   ? "/api"
@@ -19,29 +20,6 @@ const api = axios.create({
  */
 export const fetchZones = async (params = {}) => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn(
-        "Supabase configuration not found, returning empty zones list"
-      );
-      return {
-        success: true,
-        data: [],
-        pagination: {
-          total: 0,
-          page: 1,
-          limit: params.limit || 50,
-          totalPages: 0,
-        },
-      };
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     let query = supabase.from("delivery_zones").select(
       `
         id,
@@ -122,18 +100,6 @@ export const fetchZones = async (params = {}) => {
  */
 export const fetchZoneById = async (zoneId) => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn("Supabase configuration not found");
-      throw new Error("Zone not found");
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data: zone, error: zoneError } = await supabase
       .from("delivery_zones")
       .select(
@@ -210,18 +176,6 @@ export const fetchZoneById = async (zoneId) => {
  */
 export const createZone = async (zoneData) => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn("Supabase configuration not found");
-      throw new Error("Failed to create zone");
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data: zone, error } = await supabase
       .from("delivery_zones")
       .insert([
@@ -251,18 +205,6 @@ export const createZone = async (zoneData) => {
  */
 export const updateZone = async (zoneId, zoneData) => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn("Supabase configuration not found");
-      throw new Error("Failed to update zone");
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data: zone, error } = await supabase
       .from("delivery_zones")
       .update({
@@ -291,18 +233,6 @@ export const updateZone = async (zoneId, zoneData) => {
  */
 export const deleteZone = async (zoneId) => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn("Supabase configuration not found");
-      throw new Error("Failed to delete zone");
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { error } = await supabase
       .from("delivery_zones")
       .delete()
@@ -347,26 +277,6 @@ export const uploadZoneExcel = async (file) => {
  */
 export const validatePincode = async (pincode) => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn("Supabase configuration not found");
-      return {
-        success: true,
-        data: {
-          is_valid: false,
-          message: "Service unavailable",
-          pincode: pincode,
-          zone: null,
-        },
-      };
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Check if pincode exists in zone_pincodes
     const { data: pincodeData, error: pincodeError } = await supabase
       .from("zone_pincodes")
@@ -439,28 +349,6 @@ export const validatePincode = async (pincode) => {
  */
 export const getZoneStatistics = async () => {
   try {
-    // Import supabase client
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn(
-        "Supabase configuration not found, returning default statistics"
-      );
-      return {
-        success: true,
-        statistics: {
-          totalZones: 0,
-          activeZones: 0,
-          nationwideZones: 0,
-          totalPincodes: 0,
-        },
-      };
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Get total zones count
     const { count: totalZones, error: zonesError } = await supabase
       .from("delivery_zones")
