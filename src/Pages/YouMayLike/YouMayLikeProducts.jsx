@@ -25,9 +25,10 @@ const YouMayLikeProducts = () => {
   const fetchAllProducts = async () => {
     try {
       const res = await axios.get(`${API_URL_ALL_PRODUCTS}/allproducts`);
-      setAllProducts(res.data);
+      setAllProducts(Array.isArray(res.data) ? res.data : res.data?.products || []);
     } catch (err) {
       console.error("Failed to fetch all products:", err);
+      setAllProducts([]);
     }
   };
 
@@ -87,7 +88,7 @@ const YouMayLikeProducts = () => {
             onChange={(e) => setSelectedProductId(e.target.value)}
           >
             <option value="">Select a product</option>
-            {allProducts.map((product) => (
+            {(allProducts || []).map((product) => (
               <option
                 key={product.id}
                 value={product.id}

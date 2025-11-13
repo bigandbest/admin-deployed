@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../../utils/supabase";
+// Removed direct Supabase import - using backend API endpoints instead
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -369,81 +369,95 @@ const ProductsPage = () => {
 
   useEffect(() => {
     const fetchSetting = async () => {
-      const { data } = await supabase
-        .from("product_grid_settings")
-        .select("is_visible")
-        .single();
-
-      if (data) setVisible(data.is_visible);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setVisible(result.data.is_visible);
+        }
+      } catch (error) {
+        console.error('Error fetching product grid settings:', error);
+      }
     };
 
     fetchSetting();
   }, []);
 
   const toggleVisibility = async () => {
-    const { error } = await supabase
-      .from("product_grid_settings")
-      .update({ is_visible: !visible })
-      .eq("id", "1"); // replace with actual ID
-
-    if (!error) setVisible(!visible);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ is_visible: !visible }),
+        }
+      );
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setVisible(!visible);
+      } else {
+        console.error('Error updating visibility:', result.error);
+      }
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+    }
   };
 
   // Check authentication on component mount
   useEffect(() => {
     async function getProducts() {
-      const { data: products, error } = await supabase
-        .from("products")
-        .select();
-      if (error) {
-        setError(error.message);
-      } else if (products && products.length > 0) {
-        setProducts(products);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/admin/products`
+        );
+        const result = await response.json();
+        
+        if (result.success && result.products) {
+          setProducts(result.products);
+        } else {
+          setError(result.error || 'Failed to fetch products');
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('Failed to fetch products');
       }
       setLoading(false);
     }
     getProducts();
-    // Supabase auth state change listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/login");
-      } else {
-        fetchProducts();
-        fetchCategories();
-        fetchSubcategories();
-        fetchGroups();
-        fetchBrands();
-        fetchStores();
-        fetchWarehousesData();
-        fetchZonesData();
-      }
-    });
-    return () => subscription.unsubscribe();
+    // Initialize data fetching
+    fetchProducts();
+    fetchCategories();
+    fetchSubcategories();
+    fetchGroups();
+    fetchBrands();
+    fetchStores();
+    fetchWarehousesData();
+    fetchZonesData();
   }, [navigate]);
 
-  // Fetch products from Supabase
+  // Fetch products from backend API
   const fetchProducts = async () => {
     setLoading(true);
     setError("");
 
     try {
-      // Fetch with join to groups, subcategories and categories
-      const { data, error } = await supabase
-        .from("products")
-        .select(
-          `
-          *, 
-          groups(id, name, subcategories(id, name, categories(id, name))),
-          subcategories(id, name, categories(id, name))
-        `
-        )
-        .order("created_at", { ascending: false });
-      if (error) {
-        setError(error.message);
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/admin/products`
+      );
+      const result = await response.json();
+      
+      if (result.success && result.products) {
+        setProducts(result.products);
       } else {
-        setProducts(data || []);
+        setError(result.error || 'Failed to fetch products');
       }
     } catch (err) {
       console.error("Error fetching products:", err);
@@ -1221,20 +1235,20 @@ const ProductsPage = () => {
         <div className="overflow-x-auto" style={{ maxHeight: "70vh" }}>
           <Table striped highlightOnHover className="min-w-full">
             <colgroup>
-              <col style={{ width: "120px" }} /> {/* Image */}
-              <col style={{ width: "200px" }} /> {/* Name */}
-              <col style={{ width: "250px" }} /> {/* Category Path */}
-              <col style={{ width: "100px" }} /> {/* Price */}
-              <col style={{ width: "100px" }} /> {/* Old Price */}
-              <col style={{ width: "80px" }} /> {/* Discount */}
-              <col style={{ width: "80px" }} /> {/* Stock */}
-              <col style={{ width: "80px" }} /> {/* In Stock */}
-              <col style={{ width: "100px" }} /> {/* Rating */}
-              <col style={{ width: "80px" }} /> {/* Featured */}
-              <col style={{ width: "80px" }} /> {/* Popular */}
-              <col style={{ width: "90px" }} /> {/* Status */}
-              <col style={{ width: "110px" }} /> {/* Created */}
-              <col style={{ width: "100px" }} /> {/* Actions */}
+              <col style={{ width: "120px" }} />
+              <col style={{ width: "200px" }} />
+              <col style={{ width: "250px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "80px" }} />
+              <col style={{ width: "80px" }} />
+              <col style={{ width: "80px" }} />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "80px" }} />
+              <col style={{ width: "80px" }} />
+              <col style={{ width: "90px" }} />
+              <col style={{ width: "110px" }} />
+              <col style={{ width: "100px" }} />
             </colgroup>
             <thead className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm">
               <tr className="bg-gray-100 dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
@@ -1769,8 +1783,7 @@ const ProductsPage = () => {
                     >
                       {product.enquiry ? "Yes" : "No"}
                     </Badge>
-                  </td>{" "}
-                  {/* to here */}
+                  </td>
                   <td style={{ textAlign: "center", padding: "8px" }}>
                     <Button
                       size="xs"

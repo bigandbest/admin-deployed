@@ -1256,7 +1256,7 @@ const CategoriesPage = () => {
                       <Button
                         variant="subtle"
                         onClick={loadMoreCategories}
-                        compact
+                        size="compact-sm"
                       >
                         Load {Math.min(batchSize, remainingCategories)} more (
                         {remainingCategories} remaining)
@@ -1489,7 +1489,7 @@ const CategoriesPage = () => {
                       <Button
                         variant="subtle"
                         onClick={loadMoreSubcategories}
-                        compact
+                        size="compact-sm"
                       >
                         Load{" "}
                         {Math.min(
@@ -1711,7 +1711,7 @@ const CategoriesPage = () => {
                 {!loadingMore.groups && remainingGroups > 0 && (
                   <tr>
                     <td colSpan="8" className="text-center py-4">
-                      <Button variant="subtle" onClick={loadMoreGroups} compact>
+                      <Button variant="subtle" onClick={loadMoreGroups} size="compact-sm">
                         Load {Math.min(batchSize, remainingGroups)} more (
                         {remainingGroups} remaining)
                       </Button>
@@ -1941,7 +1941,7 @@ const CategoriesPage = () => {
                     <Button
                       variant="subtle"
                       onClick={loadMoreHierarchy}
-                      compact
+                      size="compact-sm"
                     >
                       Load {Math.min(batchSize, remainingHierarchy)} more (
                       {remainingHierarchy} remaining)

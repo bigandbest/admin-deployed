@@ -25,7 +25,7 @@ const Brand = () => {
     try {
       const result = await getAllBrands();
       if (result.success) {
-        setBrands(result.data);
+        setBrands(result.brands || result.data || []);
       } else {
         console.error("Failed to fetch Brands:", result.error);
         notifications.show({ color: "red", message: "Failed to load brands." });
@@ -184,7 +184,7 @@ const Brand = () => {
 
       {loading ? (
         <p className="text-gray-500">Loading Brands...</p>
-      ) : brands && brands.length === 0 ? (
+      ) : !brands || brands.length === 0 ? (
         <p className="text-gray-500">No Brands found.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -198,7 +198,7 @@ const Brand = () => {
               </tr>
             </thead>
             <tbody>
-              {brands.map((brand) => (
+              {brands?.map((brand) => (
                 <tr key={brand.id} className="border-t">
                   <td className="py-2 px-4">{brand.id}</td>
                   <td className="py-2 px-4">{brand.name}</td>

@@ -36,7 +36,6 @@ import { useNavigate } from "react-router-dom";
 import {
   getEnquiryWithReplies,
   addEnquiryReply,
-  updateEnquiryStatus,
   deletePrintRequest,
   getAllUsersWithDetailedAddress,
 } from "../../utils/supabaseApi";
@@ -103,26 +102,30 @@ export default function PrintRequests() {
     async function getPrintRequests() {
       setLoading(true);
       setError("");
-      // Fetch print_requests joined with users with enhanced address structure
-      const { data: printRequests, error } = await supabase
-        .from("print_requests")
-        .select(
+      try {
+        const { data: printRequests, error } = await supabase
+          .from("print_requests")
+          .select(
+            `
+            *, 
+            users:user_id (
+              id, email, name, avatar, phone,
+              house_number, street_address, suite_unit_floor,
+              locality, area, city, state, postal_code, country, landmark
+            )
           `
-          *, 
-          users:user_id (
-            id, email, name, avatar, phone,
-            house_number, street_address, suite_unit_floor,
-            locality, area, city, state, postal_code, country, landmark
           )
-        `
-        )
-        .order("created_at", { ascending: false });
-      if (error) {
-        setError(error.message);
-      } else if (printRequests && printRequests.length > 0) {
-        setPrintRequests(printRequests);
+          .order("created_at", { ascending: false });
+        if (error) {
+          setError(error.message);
+        } else {
+          setPrintRequests(printRequests || []);
+        }
+      } catch (error) {
+        setError(error.message || "Failed to load print requests");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     getPrintRequests();
   }, []);
@@ -165,18 +168,6 @@ export default function PrintRequests() {
         .eq("id", selectedRequest.id);
 
       if (!error) {
-        // Also update the enquiry item price if this is linked to an enquiry
-        if (
-          selectedRequest.enquiry_id &&
-          (estimatedPrice > 0 || finalPrice > 0)
-        ) {
-          const priceToUpdate = finalPrice > 0 ? finalPrice : estimatedPrice;
-          await supabase
-            .from("enquiry_items")
-            .update({ price: priceToUpdate })
-            .eq("enquiry_id", selectedRequest.enquiry_id);
-        }
-
         setStatusUpdateSuccess(true);
         setPrintRequests((prevRequests) =>
           prevRequests.map((req) =>

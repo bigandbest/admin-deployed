@@ -55,12 +55,13 @@ const ProductSectionsManagement = () => {
       const result = await getAllProductSections();
 
       if (result.success) {
-        setSections(result.sections);
+        setSections(result.sections || result.data || []);
       } else {
         throw new Error(result.error || "Failed to fetch sections");
       }
     } catch (error) {
       console.error("Error fetching sections:", error);
+      setSections([]);
       notifications.show({
         title: "Error",
         message: "Failed to fetch product sections",
@@ -78,7 +79,7 @@ const ProductSectionsManagement = () => {
 
       if (result.success) {
         setSections(
-          sections.map((section) =>
+          (sections || []).map((section) =>
             section.id === sectionId
               ? { ...section, is_active: !section.is_active }
               : section
@@ -110,7 +111,7 @@ const ProductSectionsManagement = () => {
 
       if (result.success) {
         setSections(
-          sections.map((section) =>
+          (sections || []).map((section) =>
             section.id === selectedSection.id ? result.section : section
           )
         );
@@ -168,7 +169,7 @@ const ProductSectionsManagement = () => {
 
   // Move section up/down
   const moveSectionUp = (index) => {
-    if (index === 0) return;
+    if (!Array.isArray(sections) || index === 0) return;
     const newSections = [...sections];
     [newSections[index - 1], newSections[index]] = [
       newSections[index],
@@ -179,7 +180,7 @@ const ProductSectionsManagement = () => {
   };
 
   const moveSectionDown = (index) => {
-    if (index === sections.length - 1) return;
+    if (!Array.isArray(sections) || index === sections.length - 1) return;
     const newSections = [...sections];
     [newSections[index], newSections[index + 1]] = [
       newSections[index + 1],
@@ -225,94 +226,96 @@ const ProductSectionsManagement = () => {
         </Alert>
 
         <Card>
-          <Table striped highlightOnHover>
-            <thead>
-              <tr>
-                <th style={{ width: "80px" }}>Order</th>
-                <th>Section Name</th>
-                <th>Component</th>
-                <th>Status</th>
-                <th>Description</th>
-                <th style={{ width: "120px" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sections.map((section, index) => (
-                <tr key={section.id}>
-                  <td>
-                    <Flex align="center" gap="xs">
-                      <Badge variant="outline" size="sm">
-                        {section.display_order}
-                      </Badge>
-                      <Group gap="2">
-                        <Tooltip label="Move Up">
+          <div className="overflow-x-auto">
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: "80px" }}>Order</Table.Th>
+                  <Table.Th>Section Name</Table.Th>
+                  <Table.Th>Component</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Description</Table.Th>
+                  <Table.Th style={{ width: "120px" }}>Actions</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {Array.isArray(sections) && sections.map((section, index) => (
+                  <Table.Tr key={section.id}>
+                    <Table.Td>
+                      <Flex align="center" gap="xs">
+                        <Badge variant="outline" size="sm">
+                          {section.display_order}
+                        </Badge>
+                        <Group gap="2">
+                          <Tooltip label="Move Up">
+                            <ActionIcon
+                              variant="subtle"
+                              size="xs"
+                              disabled={index === 0}
+                              onClick={() => moveSectionUp(index)}
+                            >
+                              <IconArrowUp size={12} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Move Down">
+                            <ActionIcon
+                              variant="subtle"
+                              size="xs"
+                              disabled={index === sections.length - 1}
+                              onClick={() => moveSectionDown(index)}
+                            >
+                              <IconArrowDown size={12} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
+                      </Flex>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text fw={500}>{section.section_name}</Text>
+                      <Text size="xs" c="dimmed">
+                        {section.section_key}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{section.component_name}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Switch
+                        checked={section.is_active}
+                        onChange={() => toggleSectionStatus(section.id)}
+                        color="green"
+                        thumbIcon={
+                          section.is_active ? (
+                            <IconEye size={12} />
+                          ) : (
+                            <IconEyeOff size={12} />
+                          )
+                        }
+                      />
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed" lineClamp={2}>
+                        {section.description || "No description"}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <Tooltip label="Edit Section">
                           <ActionIcon
                             variant="subtle"
-                            size="xs"
-                            disabled={index === 0}
-                            onClick={() => moveSectionUp(index)}
+                            color="blue"
+                            onClick={() => openEdit(section)}
                           >
-                            <IconArrowUp size={12} />
-                          </ActionIcon>
-                        </Tooltip>
-                        <Tooltip label="Move Down">
-                          <ActionIcon
-                            variant="subtle"
-                            size="xs"
-                            disabled={index === sections.length - 1}
-                            onClick={() => moveSectionDown(index)}
-                          >
-                            <IconArrowDown size={12} />
+                            <IconEdit size={16} />
                           </ActionIcon>
                         </Tooltip>
                       </Group>
-                    </Flex>
-                  </td>
-                  <td>
-                    <Text fw={500}>{section.section_name}</Text>
-                    <Text size="xs" c="dimmed">
-                      {section.section_key}
-                    </Text>
-                  </td>
-                  <td>
-                    <Text size="sm">{section.component_name}</Text>
-                  </td>
-                  <td>
-                    <Switch
-                      checked={section.is_active}
-                      onChange={() => toggleSectionStatus(section.id)}
-                      color="green"
-                      thumbIcon={
-                        section.is_active ? (
-                          <IconEye size={12} />
-                        ) : (
-                          <IconEyeOff size={12} />
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <Text size="sm" c="dimmed" lineClamp={2}>
-                      {section.description || "No description"}
-                    </Text>
-                  </td>
-                  <td>
-                    <Group gap="xs">
-                      <Tooltip label="Edit Section">
-                        <ActionIcon
-                          variant="subtle"
-                          color="blue"
-                          onClick={() => openEdit(section)}
-                        >
-                          <IconEdit size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </div>
         </Card>
       </Stack>
 

@@ -210,9 +210,10 @@ const VideoCards = () => {
     try {
       const result = await getAllVideoCards();
       if (result.success) {
-        setVideoCards(result.data);
+        setVideoCards(result.videoCards || []);
       } else {
         console.error("Error fetching video cards:", result.error);
+        setVideoCards([]);
         notifications.show({
           color: "red",
           message: "Failed to load video cards.",
@@ -220,6 +221,7 @@ const VideoCards = () => {
       }
     } catch (error) {
       console.error("Error fetching video cards:", error);
+      setVideoCards([]);
       notifications.show({
         color: "red",
         message: "Failed to load video cards.",
@@ -315,7 +317,7 @@ const VideoCards = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {videoCards.map((card) => (
+        {(videoCards || []).map((card) => (
           <div
             key={card.id}
             className="bg-white rounded-lg shadow-md p-4 border border-gray-200"

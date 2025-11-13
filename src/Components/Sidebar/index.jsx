@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 import { getAllUsers } from "../../utils/supabaseApi";
-import { supabase } from "../../utils/supabase";
+// Removed direct Supabase import - using backend API endpoints instead
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -45,15 +45,23 @@ const Sidebar = ({ isOpen = true }) => {
 
   useEffect(() => {
     async function fetchCounts() {
-      const usersRes = await getAllUsers();
-      setUserCount(usersRes.users?.length || 0);
-      // Only count enquiries where status is 'pending' and type is not 'custom_printing'
-      const { data: enquiries } = await supabase
-        .from("enquiries")
-        .select()
-        .eq("status", "pending")
-        .or("type.is.null,type.neq.custom_printing");
-      setEnquiryCount(enquiries?.length || 0);
+      try {
+        const usersRes = await getAllUsers();
+        setUserCount(usersRes.users?.length || 0);
+        
+        // Fetch enquiries count from backend API
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/enquiries/count?status=pending`
+        );
+        const result = await response.json();
+        
+        if (result.success) {
+          setEnquiryCount(result.count || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+        setEnquiryCount(0);
+      }
     }
     fetchCounts();
   }, []);
