@@ -5,6 +5,9 @@ import { formatDateOnlyIST } from "./dateUtils";
 // Re-export all backend API functions for compatibility
 export * from './backendApi.js';
 
+// Admin Authentication (remove Supabase dependency)
+export const { adminLogin, adminLogout, getAdminMe } = backendApi;
+
 // Keep utility functions that don't require Supabase
 export { formatDateOnlyIST };
 

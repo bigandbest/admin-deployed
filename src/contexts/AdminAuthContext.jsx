@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase } from '../utils/supabase';
+import { adminLogin, adminLogout, getAdminMe } from '../utils/adminAuthApi';
 
 // Create context
 const AdminAuthContext = createContext();
@@ -69,33 +69,20 @@ export const AdminAuthProvider = ({ children }) => {
   useEffect(() => {
     setLoading(true);
     
-    const getInitialSession = async () => {
+    const checkAuthStatus = async () => {
       try {
-        // Add timeout to session check
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 10000)
-        );
+        const result = await getAdminMe();
         
-        const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
-        
-        if (error) {
-          console.error('Session check error:', error);
-          setError(error.message);
+        if (result.success && result.user) {
+          setCurrentUser(result.user);
+          setIsAdmin(result.user.user_metadata?.role === 'admin');
+          setError(null);
+        } else {
           setCurrentUser(null);
           setIsAdmin(false);
-        } else {
-          const session = data?.session;
-          if (session && session.user) {
-            setCurrentUser(session.user);
-            setIsAdmin(session.user.user_metadata?.role === 'admin');
-          } else {
-            setCurrentUser(null);
-            setIsAdmin(false);
-          }
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        console.error('Auth check error:', err);
         setError(err.message);
         setCurrentUser(null);
         setIsAdmin(false);
@@ -104,45 +91,25 @@ export const AdminAuthProvider = ({ children }) => {
       }
     };
     
-    getInitialSession();
-    
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      try {
-        if (session && session.user) {
-          setCurrentUser(session.user);
-          setIsAdmin(session.user.user_metadata?.role === 'admin');
-          setError(null);
-        } else {
-          setCurrentUser(null);
-          setIsAdmin(false);
-        }
-      } catch (err) {
-        console.error('Auth state change error:', err);
-        setError(err.message);
-      }
-    });
-    
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    checkAuthStatus();
   }, []);
 
   // Authentication functions
   const loginUser = async (email, password) => {
     try {
       setError(null);
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError(error.message);
-        return { success: false, error: error.message };
-      }
-      if (data.session && data.user) {
-        setCurrentUser(data.user);
-        setIsAdmin(data.user.user_metadata?.role === 'admin');
+      const result = await adminLogin(email, password);
+      
+      if (result.success && result.user) {
+        setCurrentUser(result.user);
+        const isAdminUser = result.user.user_metadata?.role === 'admin';
+        setIsAdmin(isAdminUser);
         startSessionTimeout();
-        return { success: true, user: data.user, isAdmin: data.user.user_metadata?.role === 'admin' };
+        return { success: true, user: result.user, isAdmin: isAdminUser };
+      } else {
+        setError(result.error);
+        return { success: false, error: result.error };
       }
-      return { success: false, error: 'Invalid credentials' };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
@@ -150,33 +117,14 @@ export const AdminAuthProvider = ({ children }) => {
   };
 
   const registerAdminUser = async (name, email, password) => {
-    try {
-      setError(null);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { displayName: name, role: 'admin' } }
-      });
-      if (error) {
-        setError(error.message);
-        return { success: false, error: error.message };
-      }
-      if (data.user) {
-        setCurrentUser(data.user);
-        setIsAdmin(true);
-        startSessionTimeout();
-        return { success: true, user: data.user };
-      }
-      return { success: false, error: 'Registration failed' };
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
-    }
+    // Admin registration should be handled through backend API
+    // For now, return not implemented
+    return { success: false, error: 'Admin registration not available through frontend' };
   };
 
   const logoutUser = async () => {
     try {
-      await supabase.auth.signOut();
+      await adminLogout();
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }

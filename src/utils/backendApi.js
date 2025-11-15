@@ -1,6 +1,44 @@
 // Backend API utility functions
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
+// Admin Authentication
+export async function adminLogin(email, password) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin-auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function adminLogout() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin-auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getAdminMe() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin-auth/me`, {
+      credentials: 'include'
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // Helper function to handle API responses
 const handleResponse = async (response) => {
   const data = await response.json();
