@@ -19,7 +19,6 @@ import {
   FaTag,
   FaTrademark,
   FaDatabase,
-  FaWallet,
   FaVideo,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
@@ -48,18 +47,18 @@ const Sidebar = ({ isOpen = true }) => {
       try {
         const usersRes = await getAllUsers();
         setUserCount(usersRes.users?.length || 0);
-        
+
         // Fetch enquiries count from backend API
         const response = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/enquiries/count?status=pending`
         );
         const result = await response.json();
-        
+
         if (result.success) {
           setEnquiryCount(result.count || 0);
         }
       } catch (error) {
-        console.error('Error fetching counts:', error);
+        console.error("Error fetching counts:", error);
         setEnquiryCount(0);
       }
     }
@@ -190,12 +189,6 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/users",
       badge: userCount,
       description: "Manage users, roles, add, delete, change role",
-    },
-    {
-      title: "Wallet Management",
-      icon: <FaWallet />,
-      path: "/wallet-management",
-      description: "Manage user wallets, transactions, and recharges",
     },
     {
       title: "Business Partners",

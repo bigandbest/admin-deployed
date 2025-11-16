@@ -68,7 +68,6 @@ import SavingZoneGroupProducts from "./Pages/SavingZone/SavingZoneGroupProducts.
 import YouMayLikeProducts from "./Pages/YouMayLike/YouMayLikeProducts.jsx";
 import Store from "./Components/Store/Store.jsx";
 import SubStore from "./Pages/SubStore/SubStore.jsx";
-import AdminWalletManagement from "./Pages/WalletManagement/index.jsx";
 import AddBanner from "./Pages/AddBanners/AddBanner.jsx";
 import AddBannerGroup from "./Pages/AddBanners/AddBannerGroup.jsx";
 import AddBannerGroupProducts from "./Pages/AddBanners/AddBannerGroupProducts.jsx";
@@ -205,10 +204,6 @@ function App() {
         {
           path: "/users",
           element: <UsersPage />,
-        },
-        {
-          path: "/wallet-management",
-          element: <AdminWalletManagement />,
         },
         {
           path: "/enquiry",

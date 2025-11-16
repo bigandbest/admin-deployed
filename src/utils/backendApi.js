@@ -1,14 +1,15 @@
 // Backend API utility functions
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 // Admin Authentication
 export async function adminLogin(email, password) {
   try {
     const response = await fetch(`${API_BASE_URL}/admin-auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -19,8 +20,8 @@ export async function adminLogin(email, password) {
 export async function adminLogout() {
   try {
     const response = await fetch(`${API_BASE_URL}/admin-auth/logout`, {
-      method: 'POST',
-      credentials: 'include'
+      method: "POST",
+      credentials: "include",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -31,7 +32,7 @@ export async function adminLogout() {
 export async function getAdminMe() {
   try {
     const response = await fetch(`${API_BASE_URL}/admin-auth/me`, {
-      credentials: 'include'
+      credentials: "include",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -43,7 +44,10 @@ export async function getAdminMe() {
 const handleResponse = async (response) => {
   const data = await response.json();
   if (!response.ok) {
-    return { success: false, error: data.error || data.message || "Request failed" };
+    return {
+      success: false,
+      error: data.error || data.message || "Request failed",
+    };
   }
   return { success: true, ...data };
 };
@@ -51,19 +55,19 @@ const handleResponse = async (response) => {
 // Helper function to create FormData for file uploads
 const createFormData = (data, fileField = null, file = null) => {
   const formData = new FormData();
-  
+
   // Add all data fields
-  Object.keys(data).forEach(key => {
+  Object.keys(data).forEach((key) => {
     if (data[key] !== null && data[key] !== undefined) {
       formData.append(key, data[key]);
     }
   });
-  
+
   // Add file if provided
   if (file && fileField) {
     formData.append(fileField, file);
   }
-  
+
   return formData;
 };
 
@@ -79,10 +83,10 @@ export async function getAllVideoBanners() {
 
 export async function addVideoBanner(videoBanner, videoFile) {
   try {
-    const formData = createFormData(videoBanner, 'video', videoFile);
+    const formData = createFormData(videoBanner, "video", videoFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/add`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -92,10 +96,10 @@ export async function addVideoBanner(videoBanner, videoFile) {
 
 export async function updateVideoBanner(id, videoBanner, videoFile) {
   try {
-    const formData = createFormData(videoBanner, 'video', videoFile);
+    const formData = createFormData(videoBanner, "video", videoFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/update/${id}`, {
-      method: 'PUT',
-      body: formData
+      method: "PUT",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -106,7 +110,7 @@ export async function updateVideoBanner(id, videoBanner, videoFile) {
 export async function deleteVideoBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/video-cards/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -117,9 +121,9 @@ export async function deleteVideoBanner(id) {
 export async function toggleVideoBannerStatus(id, status) {
   try {
     const response = await fetch(`${API_BASE_URL}/video-cards/update/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -148,10 +152,10 @@ export async function getBanner(id) {
 
 export async function addBanner(banner, imageFile) {
   try {
-    const formData = createFormData(banner, 'image', imageFile);
+    const formData = createFormData(banner, "image", imageFile);
     const response = await fetch(`${API_BASE_URL}/banner/add`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -161,10 +165,10 @@ export async function addBanner(banner, imageFile) {
 
 export async function updateBanner(id, banner, imageFile) {
   try {
-    const formData = createFormData(banner, 'image', imageFile);
+    const formData = createFormData(banner, "image", imageFile);
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
-      method: 'PUT',
-      body: formData
+      method: "PUT",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -175,7 +179,7 @@ export async function updateBanner(id, banner, imageFile) {
 export async function deleteBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -186,9 +190,9 @@ export async function deleteBanner(id) {
 export async function toggleBannerStatus(id, active) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active })
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -199,9 +203,9 @@ export async function toggleBannerStatus(id, active) {
 export async function toggleMobileBannerStatus(id, is_mobile) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_mobile })
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_mobile }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -226,9 +230,9 @@ export async function getAllUsers() {
 export async function addUser(user, password) {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...user, password })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...user, password }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -249,9 +253,9 @@ export async function getAllOrders() {
 export async function updateOrderStatus(id, status, adminNotes = "") {
   try {
     const response = await fetch(`${API_BASE_URL}/orders/status/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, adminNotes })
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, adminNotes }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -280,10 +284,10 @@ export async function getBrand(id) {
 
 export async function addBrand(brand, imageFile) {
   try {
-    const formData = createFormData(brand, 'image_url', imageFile);
+    const formData = createFormData(brand, "image_url", imageFile);
     const response = await fetch(`${API_BASE_URL}/brand/add`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -293,10 +297,10 @@ export async function addBrand(brand, imageFile) {
 
 export async function updateBrand(id, brand, imageFile) {
   try {
-    const formData = createFormData(brand, 'image_url', imageFile);
+    const formData = createFormData(brand, "image_url", imageFile);
     const response = await fetch(`${API_BASE_URL}/brand/update/${id}`, {
-      method: 'PUT',
-      body: formData
+      method: "PUT",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -307,7 +311,7 @@ export async function updateBrand(id, brand, imageFile) {
 export async function deleteBrand(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/brand/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -331,10 +335,10 @@ export async function getAllBannerGroups() {
 
 export async function addBannerGroup(bannerGroup, imageFile) {
   try {
-    const formData = createFormData(bannerGroup, 'image_url', imageFile);
+    const formData = createFormData(bannerGroup, "image_url", imageFile);
     const response = await fetch(`${API_BASE_URL}/banner-group/add`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -344,10 +348,10 @@ export async function addBannerGroup(bannerGroup, imageFile) {
 
 export async function updateBannerGroup(id, bannerGroup, imageFile) {
   try {
-    const formData = createFormData(bannerGroup, 'image_url', imageFile);
+    const formData = createFormData(bannerGroup, "image_url", imageFile);
     const response = await fetch(`${API_BASE_URL}/banner-group/update/${id}`, {
-      method: 'PUT',
-      body: formData
+      method: "PUT",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -358,7 +362,7 @@ export async function updateBannerGroup(id, bannerGroup, imageFile) {
 export async function deleteBannerGroup(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner-group/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -379,9 +383,12 @@ export async function getBannerGroupById(id) {
 export async function mapProductToBannerGroup(productId, bannerGroupId) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner-group-product/map`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: productId, add_banner_group_id: bannerGroupId })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: productId,
+        add_banner_group_id: bannerGroupId,
+      }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -391,11 +398,17 @@ export async function mapProductToBannerGroup(productId, bannerGroupId) {
 
 export async function removeProductFromBannerGroup(productId, bannerGroupId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/banner-group-product/remove`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: productId, add_banner_group_id: bannerGroupId })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/banner-group-product/remove`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: productId,
+          add_banner_group_id: bannerGroupId,
+        }),
+      }
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -404,7 +417,9 @@ export async function removeProductFromBannerGroup(productId, bannerGroupId) {
 
 export async function getBannerGroupsForProduct(productId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/banner-group-product/by-product/${productId}`);
+    const response = await fetch(
+      `${API_BASE_URL}/banner-group-product/by-product/${productId}`
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -413,7 +428,9 @@ export async function getBannerGroupsForProduct(productId) {
 
 export async function getProductsForBannerGroup(bannerGroupId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/banner-group-product/by-group/${bannerGroupId}`);
+    const response = await fetch(
+      `${API_BASE_URL}/banner-group-product/by-group/${bannerGroupId}`
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -424,9 +441,9 @@ export async function getProductsForBannerGroup(bannerGroupId) {
 export async function mapProductToBrand(productId, brandId) {
   try {
     const response = await fetch(`${API_BASE_URL}/brand-product/map`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: productId, brand_id: brandId })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId, brand_id: brandId }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -437,9 +454,9 @@ export async function mapProductToBrand(productId, brandId) {
 export async function removeProductFromBrand(productId, brandId) {
   try {
     const response = await fetch(`${API_BASE_URL}/brand-product/remove`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: productId, brand_id: brandId })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId, brand_id: brandId }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -449,7 +466,9 @@ export async function removeProductFromBrand(productId, brandId) {
 
 export async function getBrandsForProduct(productId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand-product/product/${productId}`);
+    const response = await fetch(
+      `${API_BASE_URL}/brand-product/product/${productId}`
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -489,9 +508,10 @@ export async function getAllCategories() {
 export async function getAllWarehouses(options = {}) {
   try {
     const params = new URLSearchParams();
-    if (options.type) params.append('type', options.type);
-    if (options.is_active !== undefined) params.append('is_active', options.is_active);
-    
+    if (options.type) params.append("type", options.type);
+    if (options.is_active !== undefined)
+      params.append("is_active", options.is_active);
+
     const response = await fetch(`${API_BASE_URL}/warehouses?${params}`);
     return await handleResponse(response);
   } catch (error) {
@@ -502,9 +522,9 @@ export async function getAllWarehouses(options = {}) {
 export async function createWarehouse(warehouseData) {
   try {
     const response = await fetch(`${API_BASE_URL}/warehouses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(warehouseData)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(warehouseData),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -524,9 +544,9 @@ export async function getSingleWarehouse(id) {
 export async function updateWarehouse(id, updateData) {
   try {
     const response = await fetch(`${API_BASE_URL}/warehouses/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateData)
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -537,7 +557,7 @@ export async function updateWarehouse(id, updateData) {
 export async function deleteWarehouse(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/warehouses/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -549,12 +569,12 @@ export async function deleteWarehouse(id) {
 export async function getAllZones(options = {}) {
   try {
     const params = new URLSearchParams();
-    Object.keys(options).forEach(key => {
+    Object.keys(options).forEach((key) => {
       if (options[key] !== undefined) {
         params.append(key, options[key]);
       }
     });
-    
+
     const response = await fetch(`${API_BASE_URL}/zones?${params}`);
     return await handleResponse(response);
   } catch (error) {
@@ -584,9 +604,9 @@ export async function getAllBulkOrders() {
 export async function updateBulkOrderStatus(id, status) {
   try {
     const response = await fetch(`${API_BASE_URL}/bulk-order/enquiry/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -607,9 +627,9 @@ export async function getAllCodOrders() {
 export async function updateCodOrderStatus(id, status) {
   try {
     const response = await fetch(`${API_BASE_URL}/cod-orders/status/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -629,11 +649,14 @@ export async function getAllReturnRequests() {
 
 export async function updateReturnRequestStatus(id, status) {
   try {
-    const response = await fetch(`${API_BASE_URL}/return-orders/admin/status/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/return-orders/admin/status/${id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -653,29 +676,10 @@ export async function getAllNotifications() {
 export async function createNotification(notification) {
   try {
     const response = await fetch(`${API_BASE_URL}/notifications/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(notification)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(notification),
     });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-// WALLET MANAGEMENT
-export async function getWalletStatistics() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/wallet/admin/statistics`);
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-export async function getUsersWithWallets() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/wallet/admin/users-with-wallets`);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -686,9 +690,9 @@ export async function getUsersWithWallets() {
 export async function updateProductStock(productId, stockData) {
   try {
     const response = await fetch(`${API_BASE_URL}/stock/${productId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(stockData)
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(stockData),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -727,9 +731,9 @@ export async function getActiveProductSections() {
 export async function updateProductSection(id, sectionData) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sectionData)
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sectionData),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -739,9 +743,12 @@ export async function updateProductSection(id, sectionData) {
 
 export async function toggleProductSectionStatus(id) {
   try {
-    const response = await fetch(`${API_BASE_URL}/product-sections/${id}/toggle`, {
-      method: 'PATCH'
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/product-sections/${id}/toggle`,
+      {
+        method: "PATCH",
+      }
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -751,9 +758,9 @@ export async function toggleProductSectionStatus(id) {
 export async function updateProductSectionOrder(sectionsOrder) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/order`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sections: sectionsOrder })
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sections: sectionsOrder }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -774,9 +781,9 @@ export async function getAllPromoBanners() {
 export async function addPromoBanner(banner) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(banner)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(banner),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -787,9 +794,9 @@ export async function addPromoBanner(banner) {
 export async function updatePromoBanner(id, banner) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/update/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(banner)
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(banner),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -800,7 +807,7 @@ export async function updatePromoBanner(id, banner) {
 export async function deletePromoBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -811,7 +818,7 @@ export async function deletePromoBanner(id) {
 export async function togglePromoBannerStatus(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/toggle/${id}`, {
-      method: 'PUT'
+      method: "PUT",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -820,20 +827,59 @@ export async function togglePromoBannerStatus(id) {
 }
 
 // Placeholder functions for compatibility (implement as needed)
-export const getshippingBanner = () => ({ success: false, error: "Not implemented" });
-export const addShippingBanner = () => ({ success: false, error: "Not implemented" });
-export const updateShippingBanner = () => ({ success: false, error: "Not implemented" });
-export const deleteShippingBanner = () => ({ success: false, error: "Not implemented" });
-export const toggleShippingBannerStatus = () => ({ success: false, error: "Not implemented" });
-export const getAllAdsBanners = () => ({ success: false, error: "Not implemented" });
-export const addAdsBanner = () => ({ success: false, error: "Not implemented" });
-export const updateAdsBanner = () => ({ success: false, error: "Not implemented" });
-export const deleteAdsBanner = () => ({ success: false, error: "Not implemented" });
-export const toggleAdsBannerStatus = () => ({ success: false, error: "Not implemented" });
+export const getshippingBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addShippingBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateShippingBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteShippingBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const toggleShippingBannerStatus = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getAllAdsBanners = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addAdsBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateAdsBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteAdsBanner = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const toggleAdsBannerStatus = () => ({
+  success: false,
+  error: "Not implemented",
+});
 export const addCategory = () => ({ success: false, error: "Not implemented" });
-export const updateCategory = () => ({ success: false, error: "Not implemented" });
-export const deleteCategory = () => ({ success: false, error: "Not implemented" });
-export const toggleCategoryStatus = () => ({ success: false, error: "Not implemented" });
+export const updateCategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteCategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const toggleCategoryStatus = () => ({
+  success: false,
+  error: "Not implemented",
+});
 export async function getAllSubcategories() {
   try {
     const response = await fetch(`${API_BASE_URL}/categories/subcategories`);
@@ -842,10 +888,22 @@ export async function getAllSubcategories() {
     return { success: false, error: error.message };
   }
 }
-export const getSubcategoriesByCategory = () => ({ success: false, error: "Not implemented" });
-export const addSubcategory = () => ({ success: false, error: "Not implemented" });
-export const updateSubcategory = () => ({ success: false, error: "Not implemented" });
-export const deleteSubcategory = () => ({ success: false, error: "Not implemented" });
+export const getSubcategoriesByCategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addSubcategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateSubcategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteSubcategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
 export async function getAllGroups() {
   try {
     const response = await fetch(`${API_BASE_URL}/categories/groups`);
@@ -854,17 +912,26 @@ export async function getAllGroups() {
     return { success: false, error: error.message };
   }
 }
-export const getGroupsBySubcategory = () => ({ success: false, error: "Not implemented" });
+export const getGroupsBySubcategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
 export const addGroup = () => ({ success: false, error: "Not implemented" });
 export const updateGroup = () => ({ success: false, error: "Not implemented" });
 export const deleteGroup = () => ({ success: false, error: "Not implemented" });
 export const addProduct = () => ({ success: false, error: "Not implemented" });
-export async function updateProduct(id, productData, displayImageFile, imageFiles, videoFile) {
+export async function updateProduct(
+  id,
+  productData,
+  displayImageFile,
+  imageFiles,
+  videoFile
+) {
   try {
     const formData = new FormData();
-    
+
     // Add product data
-    Object.keys(productData).forEach(key => {
+    Object.keys(productData).forEach((key) => {
       if (productData[key] !== null && productData[key] !== undefined) {
         if (Array.isArray(productData[key])) {
           formData.append(key, JSON.stringify(productData[key]));
@@ -873,10 +940,10 @@ export async function updateProduct(id, productData, displayImageFile, imageFile
         }
       }
     });
-    
+
     // Add files
     if (displayImageFile) {
-      formData.append('displayImage', displayImageFile);
+      formData.append("displayImage", displayImageFile);
     }
     if (imageFiles && imageFiles.length > 0) {
       imageFiles.forEach((file, index) => {
@@ -884,12 +951,12 @@ export async function updateProduct(id, productData, displayImageFile, imageFile
       });
     }
     if (videoFile) {
-      formData.append('video', videoFile);
+      formData.append("video", videoFile);
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/productsroute/update/${id}`, {
-      method: 'PUT',
-      body: formData
+      method: "PUT",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -899,7 +966,7 @@ export async function updateProduct(id, productData, displayImageFile, imageFile
 export async function deleteProduct(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/productsroute/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
@@ -908,22 +975,70 @@ export async function deleteProduct(id) {
 }
 export const updateUser = () => ({ success: false, error: "Not implemented" });
 export const deleteUser = () => ({ success: false, error: "Not implemented" });
-export const toggleUserStatus = () => ({ success: false, error: "Not implemented" });
-export const getDashboardData = () => ({ success: false, error: "Not implemented" });
-export const getAllEnquiries = () => ({ success: false, error: "Not implemented" });
-export const getEnquiryWithReplies = () => ({ success: false, error: "Not implemented" });
-export const addEnquiryReply = () => ({ success: false, error: "Not implemented" });
-export const updateEnquiryStatus = () => ({ success: false, error: "Not implemented" });
-export const deleteEnquiry = () => ({ success: false, error: "Not implemented" });
-export const getWebsiteSettings = () => ({ success: false, error: "Not implemented" });
-export const updateWebsiteSetting = () => ({ success: false, error: "Not implemented" });
-export const updateMultipleWebsiteSettings = () => ({ success: false, error: "Not implemented" });
-export const getSettingsByCategory = () => ({ success: false, error: "Not implemented" });
-export const upsertWebsiteSetting = () => ({ success: false, error: "Not implemented" });
-export const uploadWebsiteImage = () => ({ success: false, error: "Not implemented" });
-export const getPromotionalSettings = () => ({ success: false, error: "Not implemented" });
-export const updatePromotionalSetting = () => ({ success: false, error: "Not implemented" });
-export const updateMultiplePromotionalSettings = () => ({ success: false, error: "Not implemented" });
+export const toggleUserStatus = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getDashboardData = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getAllEnquiries = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getEnquiryWithReplies = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addEnquiryReply = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateEnquiryStatus = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteEnquiry = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getWebsiteSettings = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateWebsiteSetting = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateMultipleWebsiteSettings = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getSettingsByCategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const upsertWebsiteSetting = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const uploadWebsiteImage = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getPromotionalSettings = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updatePromotionalSetting = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateMultiplePromotionalSettings = () => ({
+  success: false,
+  error: "Not implemented",
+});
 // PRINT REQUESTS
 export async function getAllPrintRequests() {
   try {
@@ -936,7 +1051,9 @@ export async function getAllPrintRequests() {
 
 export async function getPrintRequestWithReplies(id) {
   try {
-    const response = await fetch(`${API_BASE_URL}/print-requests/${id}/replies`);
+    const response = await fetch(
+      `${API_BASE_URL}/print-requests/${id}/replies`
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -946,9 +1063,9 @@ export async function getPrintRequestWithReplies(id) {
 export async function addPrintRequestReply(id, message, isAdmin = true) {
   try {
     const response = await fetch(`${API_BASE_URL}/print-requests/${id}/reply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, is_admin: isAdmin })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, is_admin: isAdmin }),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -956,36 +1073,54 @@ export async function addPrintRequestReply(id, message, isAdmin = true) {
   }
 }
 
-export async function updatePrintRequestStatus(id, status, adminNote, estimatedPrice, finalPrice, priceNotes) {
+export async function updatePrintRequestStatus(
+  id,
+  status,
+  adminNote,
+  estimatedPrice,
+  finalPrice,
+  priceNotes
+) {
   try {
-    const response = await fetch(`${API_BASE_URL}/print-requests/${id}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        status, 
-        admin_note: adminNote, 
-        estimated_price: estimatedPrice, 
-        final_price: finalPrice, 
-        price_notes: priceNotes 
-      })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/print-requests/${id}/status`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          admin_note: adminNote,
+          estimated_price: estimatedPrice,
+          final_price: finalPrice,
+          price_notes: priceNotes,
+        }),
+      }
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
 
-export async function updatePrintRequestPricing(id, estimatedPrice, finalPrice, priceNotes) {
+export async function updatePrintRequestPricing(
+  id,
+  estimatedPrice,
+  finalPrice,
+  priceNotes
+) {
   try {
-    const response = await fetch(`${API_BASE_URL}/print-requests/${id}/pricing`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        estimated_price: estimatedPrice, 
-        final_price: finalPrice, 
-        price_notes: priceNotes 
-      })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/print-requests/${id}/pricing`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estimated_price: estimatedPrice,
+          final_price: finalPrice,
+          price_notes: priceNotes,
+        }),
+      }
+    );
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -995,35 +1130,98 @@ export async function updatePrintRequestPricing(id, estimatedPrice, finalPrice, 
 export async function deletePrintRequest(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/print-requests/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
-export const addUserWithDetailedAddress = () => ({ success: false, error: "Not implemented" });
-export const updateUserWithDetailedAddress = () => ({ success: false, error: "Not implemented" });
-export const getAllUsersWithDetailedAddress = () => ({ success: false, error: "Not implemented" });
-export const getUserAddresses = () => ({ success: false, error: "Not implemented" });
-export const migrateUserAddresses = () => ({ success: false, error: "Not implemented" });
-export const addUserAddress = () => ({ success: false, error: "Not implemented" });
-export const updateUserAddress = () => ({ success: false, error: "Not implemented" });
-export const deleteUserAddress = () => ({ success: false, error: "Not implemented" });
-export const setAddressAsDefault = () => ({ success: false, error: "Not implemented" });
-export const getStorageUsage = () => ({ success: false, error: "Not implemented" });
-export const listBucketFiles = () => ({ success: false, error: "Not implemented" });
-export const deleteStorageFile = () => ({ success: false, error: "Not implemented" });
+export const addUserWithDetailedAddress = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateUserWithDetailedAddress = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getAllUsersWithDetailedAddress = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getUserAddresses = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const migrateUserAddresses = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addUserAddress = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateUserAddress = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteUserAddress = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const setAddressAsDefault = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getStorageUsage = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const listBucketFiles = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const deleteStorageFile = () => ({
+  success: false,
+  error: "Not implemented",
+});
 export const getFileInfo = () => ({ success: false, error: "Not implemented" });
-export const getStorageAnalytics = () => ({ success: false, error: "Not implemented" });
-export const getZonalWarehouseAvailablePincodes = () => ({ success: false, error: "Not implemented" });
-export const getZonalWarehouseAvailablePincodesDirect = () => ({ success: false, error: "Not implemented" });
-export const getWarehouseProducts = () => ({ success: false, error: "Not implemented" });
-export const addProductToWarehouse = () => ({ success: false, error: "Not implemented" });
-export const updateWarehouseProduct = () => ({ success: false, error: "Not implemented" });
-export const removeProductFromWarehouse = () => ({ success: false, error: "Not implemented" });
-export const getWarehouseHierarchy = () => ({ success: false, error: "Not implemented" });
-export const getChildWarehouses = () => ({ success: false, error: "Not implemented" });
+export const getStorageAnalytics = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getZonalWarehouseAvailablePincodes = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getZonalWarehouseAvailablePincodesDirect = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getWarehouseProducts = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addProductToWarehouse = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const updateWarehouseProduct = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const removeProductFromWarehouse = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getWarehouseHierarchy = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getChildWarehouses = () => ({
+  success: false,
+  error: "Not implemented",
+});
 // VIDEO CARDS
 export async function getAllVideoCards() {
   try {
@@ -1036,10 +1234,10 @@ export async function getAllVideoCards() {
 
 export async function addVideoCard(videoCard, thumbnailFile) {
   try {
-    const formData = createFormData(videoCard, 'thumbnail', thumbnailFile);
+    const formData = createFormData(videoCard, "thumbnail", thumbnailFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/add`, {
-      method: 'POST',
-      body: formData
+      method: "POST",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -1049,10 +1247,10 @@ export async function addVideoCard(videoCard, thumbnailFile) {
 
 export async function updateVideoCard(id, videoCard, thumbnailFile) {
   try {
-    const formData = createFormData(videoCard, 'thumbnail', thumbnailFile);
+    const formData = createFormData(videoCard, "thumbnail", thumbnailFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/update/${id}`, {
-      method: 'PUT',
-      body: formData
+      method: "PUT",
+      body: formData,
     });
     return await handleResponse(response);
   } catch (error) {
@@ -1063,15 +1261,30 @@ export async function updateVideoCard(id, videoCard, thumbnailFile) {
 export async function deleteVideoCard(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/video-cards/delete/${id}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
-export const getProductsByCategory = () => ({ success: false, error: "Not implemented" });
-export const getProductCountByCategory = () => ({ success: false, error: "Not implemented" });
-export const checkCategoryHasProducts = () => ({ success: false, error: "Not implemented" });
-export const addProductWithWarehouse = () => ({ success: false, error: "Not implemented" });
-export const getZoneDetails = () => ({ success: false, error: "Not implemented" });
+export const getProductsByCategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getProductCountByCategory = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const checkCategoryHasProducts = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const addProductWithWarehouse = () => ({
+  success: false,
+  error: "Not implemented",
+});
+export const getZoneDetails = () => ({
+  success: false,
+  error: "Not implemented",
+});

@@ -1,9 +1,9 @@
 // Backend API integration - replaces direct Supabase calls
-import * as backendApi from './backendApi.js';
+import * as backendApi from "./backendApi.js";
 import { formatDateOnlyIST } from "./dateUtils";
 
 // Re-export all backend API functions for compatibility
-export * from './backendApi.js';
+export * from "./backendApi.js";
 
 // Admin Authentication (remove Supabase dependency)
 export const { adminLogin, adminLogout, getAdminMe } = backendApi;
@@ -19,7 +19,7 @@ export const {
   updateVideoBanner,
   deleteVideoBanner,
   toggleVideoBannerStatus,
-  
+
   // Banners
   getAllBanners,
   getBanner,
@@ -28,15 +28,15 @@ export const {
   deleteBanner,
   toggleBannerStatus,
   toggleMobileBannerStatus,
-  
+
   // Users
   getAllUsers,
   addUser,
-  
+
   // Orders
   getAllOrders,
   updateOrderStatus,
-  
+
   // Brands
   getAllBrands,
   getBrand,
@@ -44,81 +44,77 @@ export const {
   updateBrand,
   deleteBrand,
   getSingleBrand,
-  
+
   // Banner Groups
   getAllBannerGroups,
   addBannerGroup,
   updateBannerGroup,
   deleteBannerGroup,
   getBannerGroupById,
-  
+
   // Banner Group Products
   mapProductToBannerGroup,
   removeProductFromBannerGroup,
   getBannerGroupsForProduct,
   getProductsForBannerGroup,
-  
+
   // Brand Products
   mapProductToBrand,
   removeProductFromBrand,
   getBrandsForProduct,
   getProductsForBrand,
-  
+
   // Products
   getAllProducts,
-  
+
   // Categories
   getAllCategories,
-  
+
   // Warehouses
   getAllWarehouses,
   createWarehouse,
   getSingleWarehouse,
   updateWarehouse,
   deleteWarehouse,
-  
+
   // Zones
   getAllZones,
   getZoneStatistics,
-  
+
   // Bulk Orders
   getAllBulkOrders,
   updateBulkOrderStatus,
-  
+
   // COD Orders
   getAllCodOrders,
   updateCodOrderStatus,
-  
+
   // Return Orders
   getAllReturnRequests,
   updateReturnRequestStatus,
-  
+
   // Notifications
   getAllNotifications,
   createNotification,
-  
-  // Wallet
-  getWalletStatistics,
-  getUsersWithWallets,
-  
+
   // Stock
   updateProductStock,
   getProductStock,
-  
+
   // Product Sections
   getAllProductSections,
   getActiveProductSections,
   updateProductSection,
   toggleProductSectionStatus,
   updateProductSectionOrder,
-  
+
   // Promo Banners
   getAllPromoBanners,
   addPromoBanner,
   updatePromoBanner,
   deletePromoBanner,
   togglePromoBannerStatus,
-  
+
   // Placeholder functions (not yet implemented in backend)
   getshippingBanner,
   addShippingBanner,
@@ -201,9 +197,11 @@ export const {
   getProductCountByCategory,
   checkCategoryHasProducts,
   addProductWithWarehouse,
-  getZoneDetails
+  getZoneDetails,
 } = backendApi;
 
 // Note: All functions now use your backend API endpoints instead of direct Supabase calls
 // This provides better security, validation, and centralized business logic
-console.log('✅ API functions now use backend endpoints instead of direct Supabase calls');
+console.log(
+  "✅ API functions now use backend endpoints instead of direct Supabase calls"
+);
