@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 
 // Base URL for your saving zone backend APIs
-const API_URL = 'https://ecommerce-8342.onrender.com/api/saving-zone';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/saving-zone`;
 
 // Component to handle adding/editing a Saving Zone
 const SavingZoneForm = ({ initialData, onSave, onCancel }) => {
-  const [name, setName] = useState(initialData?.name || '');
+  const [name, setName] = useState(initialData?.name || "");
   const [image, setImage] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append('name', name);
+    formData.append("name", name);
     if (image) {
-      formData.append('image_url', image);
+      formData.append("image_url", image);
     }
 
     if (initialData) {
@@ -31,10 +31,15 @@ const SavingZoneForm = ({ initialData, onSave, onCancel }) => {
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
       <div className="bg-white p-8 rounded-md shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-4">{initialData ? 'Edit Saving Zone' : 'Add Saving Zone'}</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {initialData ? "Edit Saving Zone" : "Add Saving Zone"}
+        </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="name"
+            >
               Saving Zone Name
             </label>
             <input
@@ -48,7 +53,10 @@ const SavingZoneForm = ({ initialData, onSave, onCancel }) => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="image"
+            >
               Choose File
             </label>
             <input
@@ -58,7 +66,9 @@ const SavingZoneForm = ({ initialData, onSave, onCancel }) => {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             />
             {initialData && initialData.image_url && !image && (
-              <p className="text-sm text-gray-500 mt-2">Current image selected.</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Current image selected.
+              </p>
             )}
           </div>
           <div className="flex items-center justify-between">
@@ -73,7 +83,7 @@ const SavingZoneForm = ({ initialData, onSave, onCancel }) => {
               type="submit"
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
-              {initialData ? 'Update' : 'Add'}
+              {initialData ? "Update" : "Add"}
             </button>
           </div>
         </form>
@@ -94,7 +104,7 @@ const SavingZonesPage = () => {
       const response = await axios.get(`${API_URL}/list`);
       setSavingZones(response.data.savingZones);
     } catch (error) {
-      console.error('Error fetching saving zones:', error);
+      console.error("Error fetching saving zones:", error);
     }
   };
 
@@ -105,35 +115,35 @@ const SavingZonesPage = () => {
   const handleAdd = async (formData) => {
     try {
       await axios.post(`${API_URL}/add`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setIsFormVisible(false);
       fetchSavingZones(); // Refresh the list
     } catch (error) {
-      console.error('Error adding saving zone:', error);
+      console.error("Error adding saving zone:", error);
     }
   };
 
   const handleUpdate = async (id, formData) => {
     try {
       await axios.put(`${API_URL}/update/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setIsFormVisible(false);
       setEditingSavingZone(null);
       fetchSavingZones(); // Refresh the list
     } catch (error) {
-      console.error('Error updating saving zone:', error);
+      console.error("Error updating saving zone:", error);
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this saving zone?')) {
+    if (window.confirm("Are you sure you want to delete this saving zone?")) {
       try {
         await axios.delete(`${API_URL}/delete/${id}`);
         fetchSavingZones(); // Refresh the list
       } catch (error) {
-        console.error('Error deleting saving zone:', error);
+        console.error("Error deleting saving zone:", error);
       }
     }
   };
@@ -151,7 +161,7 @@ const SavingZonesPage = () => {
   return (
     <div className="p-8 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6">Saving Zones</h1>
-      <button 
+      <button
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-6 flex items-center"
         onClick={handleAddClick}
       >
@@ -189,31 +199,43 @@ const SavingZonesPage = () => {
               savingZones.map((savingZone) => (
                 <tr key={savingZone.id}>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{savingZone.id}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">
+                      {savingZone.id}
+                    </p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{savingZone.name}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">
+                      {savingZone.name}
+                    </p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <img src={savingZone.image_url} alt={savingZone.name} className="h-12 w-12 object-cover rounded-full" />
+                    <img
+                      src={savingZone.image_url}
+                      alt={savingZone.name}
+                      className="h-12 w-12 object-cover rounded-full"
+                    />
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                     <div className="flex space-x-2">
-                      <button 
+                      <button
                         className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded text-sm"
                         onClick={() => handleEditClick(savingZone)}
                       >
                         <FaEdit />
                       </button>
-                      <button 
+                      <button
                         className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded text-sm"
                         onClick={() => handleDelete(savingZone.id)}
                       >
                         <FaTrash />
                       </button>
-                      <button 
+                      <button
                         className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded text-sm"
-                        onClick={() => navigate(`/saving-zone-groups?savingZoneId=${savingZone.id}`)}
+                        onClick={() =>
+                          navigate(
+                            `/saving-zone-groups?savingZoneId=${savingZone.id}`
+                          )
+                        }
                       >
                         Groups
                       </button>
@@ -223,7 +245,9 @@ const SavingZonesPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="text-center py-4">No saving zones found.</td>
+                <td colSpan="4" className="text-center py-4">
+                  No saving zones found.
+                </td>
               </tr>
             )}
           </tbody>

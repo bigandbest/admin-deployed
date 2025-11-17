@@ -1,58 +1,72 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
-import { notifications } from '@mantine/notifications';
-import { supabaseAdmin } from '../../utils/supabase.js';
+import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import { notifications } from "@mantine/notifications";
+import { supabaseAdmin } from "../../utils/supabase.js";
 
-const API_URL = "https://ecommerce-8342.onrender.com/api/b&b-group";
-const BANDB_API_URL = "https://ecommerce-8342.onrender.com/api/bnb";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/b&b-group`;
+const BANDB_API_URL = `${import.meta.env.VITE_API_BASE_URL}/bnb`;
 
 // Component to handle adding/editing a B&B Group
 const BandBGroupForm = ({ initialData, onSave, onCancel, bandbId }) => {
-  const [name, setName] = useState(initialData?.name || '');
+  const [name, setName] = useState(initialData?.name || "");
   const [image, setImage] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append('name', name);
+    formData.append("name", name);
     if (image) {
-      formData.append('image_url', image);
+      formData.append("image_url", image);
     }
     // Add bandbId to the formData if it exists
     if (bandbId) {
-      formData.append('bnb_id', bandbId);
+      formData.append("bnb_id", bandbId);
     }
-      
+
     try {
       if (initialData) {
         // Update existing b&b group
         await axios.put(`${API_URL}/update/${initialData.id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { "Content-Type": "multipart/form-data" },
         });
-        notifications.show({ color: 'green', message: 'B&B Group updated successfully.' });
+        notifications.show({
+          color: "green",
+          message: "B&B Group updated successfully.",
+        });
       } else {
         // Add new b&b group
         await axios.post(`${API_URL}/add`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { "Content-Type": "multipart/form-data" },
         });
-        notifications.show({ color: 'green', message: 'B&B Group added successfully.' });
+        notifications.show({
+          color: "green",
+          message: "B&B Group added successfully.",
+        });
       }
       onSave(); // Call the callback from the parent to close the form and refresh the list
     } catch (error) {
-      console.error('Error saving b&b group:', error);
-      notifications.show({ color: 'red', message: 'Failed to save b&b group.' });
+      console.error("Error saving b&b group:", error);
+      notifications.show({
+        color: "red",
+        message: "Failed to save b&b group.",
+      });
     }
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
       <div className="bg-white p-8 rounded-md shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-4">{initialData ? 'Edit B&B Group' : 'Add B&B Group'}</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {initialData ? "Edit B&B Group" : "Add B&B Group"}
+        </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="name"
+            >
               B&B Group Name
             </label>
             <input
@@ -66,7 +80,10 @@ const BandBGroupForm = ({ initialData, onSave, onCancel, bandbId }) => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="image">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="image"
+            >
               Choose File
             </label>
             <input
@@ -88,7 +105,7 @@ const BandBGroupForm = ({ initialData, onSave, onCancel, bandbId }) => {
               type="submit"
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
-              {initialData ? 'Update' : 'Add'}
+              {initialData ? "Update" : "Add"}
             </button>
           </div>
         </form>
@@ -102,12 +119,12 @@ const BandBGroupPage = () => {
   const [bandbGroups, setBandBGroups] = useState([]);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingBandBGroup, setEditingBandBGroup] = useState(null);
-  const [bandbName, setBandBName] = useState('');
+  const [bandbName, setBandBName] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
   const queryParams = new URLSearchParams(location.search);
-  const bandbId = queryParams.get('bandbId');
+  const bandbId = queryParams.get("bandbId");
 
   const fetchBandBGroups = async () => {
     try {
@@ -119,12 +136,15 @@ const BandBGroupPage = () => {
         .from("bnb_group")
         .select("*")
         .eq("bnb_id", bandbId);
-      
+
       if (error) throw error;
       setBandBGroups(data);
     } catch (error) {
-      console.error('Error fetching B&B groups:', error);
-      notifications.show({ color: 'red', message: 'Failed to load B&B groups.' });
+      console.error("Error fetching B&B groups:", error);
+      notifications.show({
+        color: "red",
+        message: "Failed to load B&B groups.",
+      });
     }
   };
 
@@ -134,9 +154,12 @@ const BandBGroupPage = () => {
         const response = await axios.get(`${BANDB_API_URL}/${bandbId}`);
         setBandBName(response.data.bandb.name);
       } catch (error) {
-        console.error('Error fetching B&B name:', error);
-        setBandBName('Unknown');
-        notifications.show({ color: 'red', message: 'Failed to load B&B name.' });
+        console.error("Error fetching B&B name:", error);
+        setBandBName("Unknown");
+        notifications.show({
+          color: "red",
+          message: "Failed to load B&B name.",
+        });
       }
     }
   };
@@ -147,14 +170,20 @@ const BandBGroupPage = () => {
   }, [bandbId]);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this B&B group?')) {
+    if (window.confirm("Are you sure you want to delete this B&B group?")) {
       try {
         await axios.delete(`${API_URL}/delete/${id}`);
         fetchBandBGroups();
-        notifications.show({ color: 'green', message: 'B&B Group deleted successfully.' });
+        notifications.show({
+          color: "green",
+          message: "B&B Group deleted successfully.",
+        });
       } catch (error) {
-        console.error('Error deleting b&b group:', error);
-        notifications.show({ color: 'red', message: 'Failed to delete b&b group.' });
+        console.error("Error deleting b&b group:", error);
+        notifications.show({
+          color: "red",
+          message: "Failed to delete b&b group.",
+        });
       }
     }
   };
@@ -173,7 +202,7 @@ const BandBGroupPage = () => {
     <div className="p-8 bg-gray-100 min-h-screen">
       <button
         className="text-blue-500 hover:underline mb-4"
-        onClick={() => navigate('/b&b')}
+        onClick={() => navigate("/b&b")}
       >
         ← Back to B&Bs
       </button>
@@ -226,14 +255,22 @@ const BandBGroupPage = () => {
               bandbGroups.map((group) => (
                 <tr key={group.id}>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{group.id}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">
+                      {group.id}
+                    </p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{group.name}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">
+                      {group.name}
+                    </p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                     {group.image_url && (
-                      <img src={group.image_url} alt={group.name} className="h-12 w-12 object-cover rounded-full" />
+                      <img
+                        src={group.image_url}
+                        alt={group.name}
+                        className="h-12 w-12 object-cover rounded-full"
+                      />
                     )}
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
@@ -252,7 +289,9 @@ const BandBGroupPage = () => {
                       </button>
                       <button
                         className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded text-sm"
-                        onClick={() => navigate(`/b&b-groups-products/${group.id}`)}
+                        onClick={() =>
+                          navigate(`/b&b-groups-products/${group.id}`)
+                        }
                       >
                         Products
                       </button>
@@ -262,7 +301,9 @@ const BandBGroupPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="text-center py-4">No B&B groups found.</td>
+                <td colSpan="4" className="text-center py-4">
+                  No B&B groups found.
+                </td>
               </tr>
             )}
           </tbody>

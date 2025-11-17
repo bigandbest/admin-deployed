@@ -28,10 +28,6 @@ const WalletManagement = () => {
   const [notifyUser, setNotifyUser] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    fetchWallets();
-  }, [currentPage, searchTerm, statusFilter, fetchWallets]);
-
   const fetchWallets = useCallback(async () => {
     try {
       setLoading(true);
@@ -57,6 +53,10 @@ const WalletManagement = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    fetchWallets();
+  }, [currentPage, searchTerm, statusFilter, fetchWallets]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);

@@ -1,18 +1,19 @@
 // components/BusinessUsersList.jsx
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 const BusinessUsersList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-
   const fetchBusinessUsers = async () => {
     try {
-      const res = await axios.get('https://ecommerce-8342.onrender.com/api/business/business-users'); // update if deployed
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/business/business-users`
+      );
       setUsers(res.data);
     } catch (err) {
-      console.error('Error fetching business users:', err.message);
+      console.error("Error fetching business users:", err.message);
     } finally {
       setLoading(false);
     }
@@ -30,13 +31,28 @@ const BusinessUsersList = () => {
       <ul className="space-y-2">
         {users.map((user) => (
           <li key={user.id} className="border p-3 rounded-md shadow-sm">
-            <p><strong>First Name:</strong> {user.first_name}</p>
-            <p><strong>Last Name:</strong> {user.last_name}</p>
-            <p><strong>Business Type:</strong> {user.business_type}</p>
-            <p><strong>PAN:</strong> {user.pan}</p>
-            <p><strong>GSTIN:</strong> {user.gstin}</p>
-            <p><strong>Phone No:</strong> {user.phone_no}</p>
-            <p><strong>date of creation:</strong>{user.created_at}</p>
+            <p>
+              <strong>First Name:</strong> {user.first_name}
+            </p>
+            <p>
+              <strong>Last Name:</strong> {user.last_name}
+            </p>
+            <p>
+              <strong>Business Type:</strong> {user.business_type}
+            </p>
+            <p>
+              <strong>PAN:</strong> {user.pan}
+            </p>
+            <p>
+              <strong>GSTIN:</strong> {user.gstin}
+            </p>
+            <p>
+              <strong>Phone No:</strong> {user.phone_no}
+            </p>
+            <p>
+              <strong>date of creation:</strong>
+              {user.created_at}
+            </p>
           </li>
         ))}
       </ul>

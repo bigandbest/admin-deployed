@@ -26,14 +26,6 @@ const WalletTransactions = () => {
   const [pagination, setPagination] = useState(null);
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    if (activeTab === "transactions") {
-      fetchTransactions();
-    } else {
-      fetchAuditLogs();
-    }
-  }, [activeTab, currentPage, filters, fetchTransactions, fetchAuditLogs]);
-
   const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
@@ -88,6 +80,14 @@ const WalletTransactions = () => {
       setLoading(false);
     }
   }, [currentPage, filters]);
+
+  useEffect(() => {
+    if (activeTab === "transactions") {
+      fetchTransactions();
+    } else {
+      fetchAuditLogs();
+    }
+  }, [activeTab, currentPage, filters, fetchTransactions, fetchAuditLogs]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));

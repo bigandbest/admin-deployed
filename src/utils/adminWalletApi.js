@@ -1,5 +1,5 @@
 // src/utils/adminWalletApi.js
-const API_BASE = "https://ecommerce-8342.onrender.com/api/admin";
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/admin`;
 
 // Helper function to make authenticated API requests
 const makeAuthenticatedRequest = async (url, options = {}) => {
@@ -232,6 +232,19 @@ export const getStatusColor = (status) => {
   return colorMap[status] || "text-gray-600 bg-gray-100";
 };
 
+export const getTransactionTypeColor = (type) => {
+  const colorMap = {
+    credit: "text-green-600 bg-green-100",
+    debit: "text-red-600 bg-red-100",
+    refund: "text-blue-600 bg-blue-100",
+    purchase: "text-purple-600 bg-purple-100",
+    wallet_credit: "text-emerald-600 bg-emerald-100",
+    wallet_debit: "text-orange-600 bg-orange-100",
+  };
+
+  return colorMap[type] || "text-gray-600 bg-gray-100";
+};
+
 // Export transaction data to CSV
 export const exportTransactionData = (
   transactions,
@@ -283,5 +296,33 @@ export const exportTransactionData = (
   } catch (error) {
     console.error("Error exporting transaction data:", error);
     throw new Error("Failed to export transaction data");
+  }
+};
+
+// Export wallet transactions with filters
+export const exportWalletTransactions = async (
+  userId = "",
+  type = "",
+  status = "",
+  startDate = "",
+  endDate = ""
+) => {
+  try {
+    const queryParams = new URLSearchParams({
+      ...(userId && { userId }),
+      ...(type && { type }),
+      ...(status && { status }),
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+    });
+
+    const response = await makeAuthenticatedRequest(
+      `${API_BASE}/wallet-transactions/export?${queryParams}`
+    );
+
+    return response;
+  } catch (error) {
+    console.error("Error exporting wallet transactions:", error);
+    throw error;
   }
 };

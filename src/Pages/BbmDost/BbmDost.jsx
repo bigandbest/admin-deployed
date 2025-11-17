@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const BbmDost = () => {
   const [editingDost, setEditingDost] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -22,9 +24,7 @@ const BbmDost = () => {
   // ✅ Fetch all Dosts
   const fetchDosts = async () => {
     try {
-      const res = await axios.get(
-        "https://ecommerce-8342.onrender.com/api/bbm-dost/all"
-      );
+      const res = await axios.get(`${API_BASE_URL}/bbm-dost/all`);
       setDosts(res.data.dosts || []);
     } catch (err) {
       console.error("Failed to fetch BBM Dosts:", err);
@@ -41,9 +41,7 @@ const BbmDost = () => {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(
-        `https://ecommerce-8342.onrender.com/api/bbm-dost/${id}`
-      );
+      await axios.delete(`${API_BASE_URL}/bbm-dost/${id}`);
       await fetchDosts();
     } catch (err) {
       alert("Failed to delete BBM Dost");
@@ -93,15 +91,9 @@ const BbmDost = () => {
 
     try {
       if (editingDost) {
-        await axios.put(
-          `https://ecommerce-8342.onrender.com/api/bbm-dost/${editingDost.id}`,
-          form
-        );
+        await axios.put(`${API_BASE_URL}/bbm-dost/${editingDost.id}`, form);
       } else {
-        await axios.post(
-          "https://ecommerce-8342.onrender.com/api/bbm-dost/add",
-          form
-        );
+        await axios.post(`${API_BASE_URL}/bbm-dost/add`, form);
       }
 
       await fetchDosts();

@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
-import { FaTrash, FaPlus, FaTimes } from 'react-icons/fa';
-import { notifications } from '@mantine/notifications';
-import { getAllProducts } from '../../utils/supabaseApi';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useParams, useNavigate } from "react-router-dom";
+import { FaTrash, FaPlus, FaTimes } from "react-icons/fa";
+import { notifications } from "@mantine/notifications";
+import { getAllProducts } from "../../utils/supabaseApi";
 
-const API_URL_PRODUCTS = 'https://ecommerce-8342.onrender.com/api/saving-zone-group-product';
-const API_URL_ALL_PRODUCTS = 'https://ecommerce-8342.onrender.com/api/productsroute';
-const API_URL_GROUP = 'https://ecommerce-8342.onrender.com/api/saving-zone-group';
+const API_URL_PRODUCTS = `${
+  import.meta.env.VITE_API_BASE_URL
+}/saving-zone-group-product`;
+const API_URL_ALL_PRODUCTS = `${
+  import.meta.env.VITE_API_BASE_URL
+}/productsroute`;
+const API_URL_GROUP = `${import.meta.env.VITE_API_BASE_URL}/saving-zone-group`;
 
 const SavingZoneGroupProducts = () => {
   const { id } = useParams();
@@ -25,11 +29,16 @@ const SavingZoneGroupProducts = () => {
       setGroup(groupRes.data.savingZoneGroup);
 
       // Fetch the products associated with this Saving Zone Group
-      const productsRes = await axios.get(`${API_URL_PRODUCTS}/getProductsByGroup/${id}`);
+      const productsRes = await axios.get(
+        `${API_URL_PRODUCTS}/getProductsByGroup/${id}`
+      );
       setProducts(productsRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      notifications.show({ color: 'red', message: 'Failed to load group data.' });
+      console.error("Error fetching data:", error);
+      notifications.show({
+        color: "red",
+        message: "Failed to load group data.",
+      });
     }
   };
 
@@ -52,23 +61,33 @@ const SavingZoneGroupProducts = () => {
   }, [id]);
 
   const handleRemoveProduct = async (productId) => {
-    if (window.confirm('Are you sure you want to remove this product from the group?')) {
+    if (
+      window.confirm(
+        "Are you sure you want to remove this product from the group?"
+      )
+    ) {
       try {
         await axios.delete(`${API_URL_PRODUCTS}/remove`, {
-          data: { product_id: productId, saving_zone_group_id: id }
+          data: { product_id: productId, saving_zone_group_id: id },
         });
-        notifications.show({ color: 'green', message: 'Product removed successfully.' });
+        notifications.show({
+          color: "green",
+          message: "Product removed successfully.",
+        });
         fetchGroupData(); // Refresh the product list
       } catch (error) {
-        console.error('Error removing product:', error);
-        notifications.show({ color: 'red', message: 'Failed to remove product.' });
+        console.error("Error removing product:", error);
+        notifications.show({
+          color: "red",
+          message: "Failed to remove product.",
+        });
       }
     }
   };
 
   const handleAddProduct = async () => {
     if (!selectedProduct) {
-      notifications.show({ color: 'red', message: 'Please select a product.' });
+      notifications.show({ color: "red", message: "Please select a product." });
       return;
     }
     try {
@@ -76,13 +95,16 @@ const SavingZoneGroupProducts = () => {
         product_id: selectedProduct,
         saving_zone_group_id: id,
       });
-      notifications.show({ color: 'green', message: 'Product added successfully.' });
+      notifications.show({
+        color: "green",
+        message: "Product added successfully.",
+      });
       setShowAddProductModal(false);
       setSelectedProduct(null);
       fetchGroupData(); // Refresh the product list
     } catch (error) {
-      console.error('Error adding product:', error);
-      notifications.show({ color: 'red', message: 'Failed to add product.' });
+      console.error("Error adding product:", error);
+      notifications.show({ color: "red", message: "Failed to add product." });
     }
   };
 
@@ -94,12 +116,14 @@ const SavingZoneGroupProducts = () => {
     <div className="p-8 bg-gray-100 min-h-screen">
       <button
         className="text-blue-500 hover:underline mb-4"
-        onClick={() => navigate('/saving-zone-groups')}
+        onClick={() => navigate("/saving-zone-groups")}
       >
         ← Back to the Groups
       </button>
 
-      <h1 className="text-3xl font-bold mb-2">Manage Products for the Saving Zone Group: {group.name}</h1>
+      <h1 className="text-3xl font-bold mb-2">
+        Manage Products for the Saving Zone Group: {group.name}
+      </h1>
       <p className="text-gray-600 mb-6">ID: {group.id}</p>
 
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -108,7 +132,7 @@ const SavingZoneGroupProducts = () => {
           <select
             className="flex-1 shadow border rounded py-2 px-3 text-gray-700"
             onChange={(e) => setSelectedProduct(e.target.value)}
-            value={selectedProduct || ''}
+            value={selectedProduct || ""}
           >
             <option value="">Select a product</option>
             {allProducts.map((p) => (
@@ -146,7 +170,9 @@ const SavingZoneGroupProducts = () => {
               products.map((p) => (
                 <tr key={p.product_id}>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{p.products.name}</p>
+                    <p className="text-gray-900 whitespace-no-wrap">
+                      {p.products.name}
+                    </p>
                   </td>
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                     <button
@@ -160,7 +186,9 @@ const SavingZoneGroupProducts = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="2" className="text-center py-4">No products in this group.</td>
+                <td colSpan="2" className="text-center py-4">
+                  No products in this group.
+                </td>
               </tr>
             )}
           </tbody>

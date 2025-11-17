@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_URL = "https://ecommerce-8342.onrender.com/api/you-may-like-products";
-const API_URL_ALL_PRODUCTS =
-  "https://ecommerce-8342.onrender.com/api/productsroute";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/you-may-like-products`;
+const API_URL_ALL_PRODUCTS = `${
+  import.meta.env.VITE_API_BASE_URL
+}/productsroute`;
 
 const YouMayLikeProducts = () => {
   const [youMayLikeProducts, setYouMayLikeProducts] = useState([]);
@@ -25,7 +26,9 @@ const YouMayLikeProducts = () => {
   const fetchAllProducts = async () => {
     try {
       const res = await axios.get(`${API_URL_ALL_PRODUCTS}/allproducts`);
-      setAllProducts(Array.isArray(res.data) ? res.data : res.data?.products || []);
+      setAllProducts(
+        Array.isArray(res.data) ? res.data : res.data?.products || []
+      );
     } catch (err) {
       console.error("Failed to fetch all products:", err);
       setAllProducts([]);

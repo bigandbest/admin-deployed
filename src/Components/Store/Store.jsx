@@ -15,15 +15,15 @@ export default function StoreAdmin() {
   const [editingId, setEditingId] = useState(null);
 
   // The base URL for your API endpoints.
-  const API_BASE_URL = "https://ecommerce-8342.onrender.com/api/stores";
+  const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/stores`;
 
   // --- API Handlers ---
-  
+
   /** Fetches all stores from the API and updates the state. */
   const fetchStores = async () => {
     try {
       // The backend route for getting all stores is just "/", so use the base URL.
-      const res = await axios.get(`${API_BASE_URL}/fetch`); 
+      const res = await axios.get(`${API_BASE_URL}/fetch`);
       setStores(res.data.stores);
     } catch (err) {
       console.error("Fetch stores error:", err);
@@ -102,7 +102,10 @@ export default function StoreAdmin() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Manage Section</h1>
 
-      <form onSubmit={handleSubmit} className="mb-6 space-y-3 bg-gray-100 p-4 rounded">
+      <form
+        onSubmit={handleSubmit}
+        className="mb-6 space-y-3 bg-gray-100 p-4 rounded"
+      >
         <input
           type="text"
           placeholder="Store Name"
@@ -136,11 +139,14 @@ export default function StoreAdmin() {
             className="w-32 h-32 object-contain rounded mb-2"
           />
         )}
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+        >
           {editingId ? "Update Store" : "Add Store"}
         </button>
       </form>
-      
+
       <table className="w-full border-collapse border">
         <thead>
           <tr className="bg-gray-200">
@@ -166,7 +172,12 @@ export default function StoreAdmin() {
               </td>
               <td className="border px-4 py-2">{store.name}</td>
               <td className="border px-4 py-2">
-                <a href={store.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                <a
+                  href={store.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline"
+                >
                   {store.link}
                 </a>
               </td>

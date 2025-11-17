@@ -1,23 +1,28 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [expanded, setExpanded] = useState(null);
 
   const fetchOrders = async () => {
-    const res = await axios.get("https://ecommerce-8342.onrender.com/api/order/all");
+    const res = await axios.get(`${API_BASE_URL}/order/all`);
     setOrders(res.data.orders || []);
   };
 
   const deleteOrder = async (order_id) => {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
-    await axios.delete(`https://ecommerce-8342.onrender.com/api/order/delete/${order_id}`);
+    await axios.delete(`${API_BASE_URL}/order/delete/${order_id}`);
     fetchOrders(); // Refresh list
   };
 
   const updateOrder = async (id, status, adminnotes) => {
-    await axios.put(`https://ecommerce-8342.onrender.com/api/order/status/${id}`, { status, adminnotes });
+    await axios.put(`${API_BASE_URL}/order/status/${id}`, {
+      status,
+      adminnotes,
+    });
     fetchOrders(); // Refresh
   };
 
@@ -34,7 +39,9 @@ const AdminOrders = () => {
           <div key={order.id} className="bg-white p-4 rounded-lg shadow-md">
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-semibold text-gray-800">Order ID: {order.id}</p>
+                <p className="font-semibold text-gray-800">
+                  Order ID: {order.id}
+                </p>
                 <p>User ID: {order.user_id}</p>
                 <p>Razorpay Payment ID: {order.razorpay_payment_id}</p>
                 {/* <p>User ID: {order.razorpay_order_id}</p>
@@ -49,14 +56,19 @@ const AdminOrders = () => {
                   <p>Email: {order.users?.email || "Not Provided"}</p>
                   <p>Phone: {order.users?.phone || "Not Provided"}</p>
 
-                  <p>Address: {order.address} {order.city} {order.state} {order.pincode} {order.country}</p>
+                  <p>
+                    Address: {order.address} {order.city} {order.state}{" "}
+                    {order.pincode} {order.country}
+                  </p>
                   <p>GPS Address: {order.shipping_gps_address}</p>
                 </div>
               </div>
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setExpanded(expanded === order.id ? null : order.id)}
+                  onClick={() =>
+                    setExpanded(expanded === order.id ? null : order.id)
+                  }
                   className="bg-blue-100 text-blue-700 px-3 py-1 rounded"
                 >
                   {expanded === order.id ? "Hide Items" : "View Items"}
@@ -71,7 +83,12 @@ const AdminOrders = () => {
             </div>
 
             {expanded === order.id && (
-              <OrderItems orderId={order.id} onUpdate={updateOrder} status={order.status} adminnotes={order.adminnotes} />
+              <OrderItems
+                orderId={order.id}
+                onUpdate={updateOrder}
+                status={order.status}
+                adminnotes={order.adminnotes}
+              />
             )}
           </div>
         ))}
@@ -85,12 +102,13 @@ const OrderItems = ({ orderId, onUpdate, status, adminnotes }) => {
   const [form, setForm] = useState({ status, adminnotes });
 
   useEffect(() => {
-    axios.get(`https://ecommerce-8342.onrender.com/api/orderItems/order/${orderId}`).then((res) => {
+    axios.get(`${API_BASE_URL}/orderItems/order/${orderId}`).then((res) => {
       setItems(res.data.items || []);
     });
   }, [orderId]);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = () => {
     onUpdate(orderId, form.status, form.adminnotes);
@@ -118,7 +136,7 @@ const OrderItems = ({ orderId, onUpdate, status, adminnotes }) => {
         <label className="block text-sm font-medium">Admin Notes</label>
         <textarea
           name="adminnotes"
-          value={form.adminnotes??""}
+          value={form.adminnotes ?? ""}
           onChange={handleChange}
           className="border px-2 py-1 rounded w-full"
         />
@@ -139,7 +157,11 @@ const OrderItems = ({ orderId, onUpdate, status, adminnotes }) => {
               {item.products?.name || "Unknown Product"} — Qty: {item.quantity}
             </p>
             {item.products?.image && (
-              <img src={item.products.image} alt="product" className="w-16 h-16 object-cover mt-1" />
+              <img
+                src={item.products.image}
+                alt="product"
+                className="w-16 h-16 object-cover mt-1"
+              />
             )}
           </div>
         ))}

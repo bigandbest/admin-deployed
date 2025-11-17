@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { adminLogin, adminLogout, getAdminMe } from '../utils/adminAuthApi';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
+import { adminLogin, adminLogout, getAdminMe } from "../utils/adminAuthApi";
 
 // Create context
 const AdminAuthContext = createContext();
@@ -24,7 +30,7 @@ export const AdminAuthProvider = ({ children }) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     // Set a new timeout
     timeoutRef.current = setTimeout(() => {
       // Log the user out when the session expires
@@ -44,45 +50,51 @@ export const AdminAuthProvider = ({ children }) => {
     if (currentUser && isAdmin) {
       // Start the initial timeout
       startSessionTimeout();
-      
+
       // Events that reset the timeout
-      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-      
+      const events = [
+        "mousedown",
+        "mousemove",
+        "keypress",
+        "scroll",
+        "touchstart",
+      ];
+
       // Add event listeners
-      events.forEach(event => {
+      events.forEach((event) => {
         window.addEventListener(event, resetSessionTimeout);
       });
-      
+
       // Clean up event listeners
       return () => {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
         }
-        
-        events.forEach(event => {
+
+        events.forEach((event) => {
           window.removeEventListener(event, resetSessionTimeout);
         });
       };
     }
   }, [currentUser, isAdmin]);
-  
+
   useEffect(() => {
     setLoading(true);
-    
+
     const checkAuthStatus = async () => {
       try {
         const result = await getAdminMe();
-        
+
         if (result.success && result.user) {
           setCurrentUser(result.user);
-          setIsAdmin(result.user.user_metadata?.role === 'admin');
+          setIsAdmin(result.user.user_metadata?.role === "admin");
           setError(null);
         } else {
           setCurrentUser(null);
           setIsAdmin(false);
         }
       } catch (err) {
-        console.error('Auth check error:', err);
+        console.error("Auth check error:", err);
         setError(err.message);
         setCurrentUser(null);
         setIsAdmin(false);
@@ -90,7 +102,7 @@ export const AdminAuthProvider = ({ children }) => {
         setLoading(false);
       }
     };
-    
+
     checkAuthStatus();
   }, []);
 
@@ -99,11 +111,15 @@ export const AdminAuthProvider = ({ children }) => {
     try {
       setError(null);
       const result = await adminLogin(email, password);
-      
+
       if (result.success && result.user) {
         setCurrentUser(result.user);
-        const isAdminUser = result.user.user_metadata?.role === 'admin';
+        const isAdminUser = result.user.user_metadata?.role === "admin";
         setIsAdmin(isAdminUser);
+        // Store the access token in localStorage
+        if (result.session?.access_token) {
+          localStorage.setItem("admin_token", result.session.access_token);
+        }
         startSessionTimeout();
         return { success: true, user: result.user, isAdmin: isAdminUser };
       } else {
@@ -119,7 +135,10 @@ export const AdminAuthProvider = ({ children }) => {
   const registerAdminUser = async (name, email, password) => {
     // Admin registration should be handled through backend API
     // For now, return not implemented
-    return { success: false, error: 'Admin registration not available through frontend' };
+    return {
+      success: false,
+      error: "Admin registration not available through frontend",
+    };
   };
 
   const logoutUser = async () => {
@@ -130,6 +149,7 @@ export const AdminAuthProvider = ({ children }) => {
       }
       setCurrentUser(null);
       setIsAdmin(false);
+      localStorage.removeItem("admin_token");
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -157,7 +177,7 @@ export const AdminAuthProvider = ({ children }) => {
     login: loginUser,
     register: registerAdminUser,
     logout: logoutUser,
-    resetSessionTimeout
+    resetSessionTimeout,
   };
 
   return (
