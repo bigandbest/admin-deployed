@@ -84,6 +84,8 @@ import ProductSectionsManagement from "./Pages/ProductSections/index.jsx";
 import StoreSectionMapping from "./Pages/StoreSectionMapping/StoreSectionMapping.jsx";
 import CodOrders from "./Pages/CodOrders/CodOrders.jsx";
 import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
+import WalletManagement from "./Pages/WalletManagement/index.jsx";
+import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -155,6 +157,20 @@ const spotlightActions = [
     description: "Manage delivery zones and pincodes",
     icon: <FaBoxOpen size={18} />,
     onClick: () => (window.location.href = "/delivery-zones"),
+  },
+  {
+    id: "wallet-management",
+    label: "Wallet Management",
+    description: "Manage user wallets and balances",
+    icon: <FaBoxOpen size={18} />,
+    onClick: () => (window.location.href = "/wallet-management"),
+  },
+  {
+    id: "wallet-transactions",
+    label: "Wallet Transactions",
+    description: "View wallet transactions and audit logs",
+    icon: <FaBoxOpen size={18} />,
+    onClick: () => (window.location.href = "/wallet-transactions"),
   },
 ];
 
@@ -393,6 +409,14 @@ function App() {
         {
           path: "/delivery-zones",
           element: <DeliveryZones />,
+        },
+        {
+          path: "/wallet-management",
+          element: <WalletManagement />,
+        },
+        {
+          path: "/wallet-transactions",
+          element: <WalletTransactions />,
         },
       ],
     },

@@ -191,6 +191,18 @@ const Sidebar = ({ isOpen = true }) => {
       description: "Manage users, roles, add, delete, change role",
     },
     {
+      title: "Wallet Management",
+      icon: <FaList />,
+      path: "/wallet-management",
+      description: "Manage user wallets, balances, and operations",
+    },
+    {
+      title: "Wallet Transactions",
+      icon: <FaList />,
+      path: "/wallet-transactions",
+      description: "View wallet transactions and audit logs",
+    },
+    {
       title: "Business Partners",
       icon: <FaList />,
       path: "/business-data",
