@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
+import ProductModal from "../../Components/Warehouse/ProductModal";
 import {
   getAllWarehouses,
   createWarehouse,
@@ -11,9 +12,11 @@ import {
   addProduct,
   updateProduct,
   deleteProduct,
+  addProductToWarehouse,
   getZonalWarehouseAvailablePincodes,
   getZonalWarehouseAvailablePincodesDirect,
 } from "../../utils/supabaseApi";
+import { getZoneProductVisibility } from "../../utils/zoneApi";
 
 const WarehouseManagement = () => {
   const [activeTab, setActiveTab] = useState("warehouses");
@@ -22,6 +25,10 @@ const WarehouseManagement = () => {
   const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedZoneId, setSelectedZoneId] = useState("all");
+  const [zoneVisibility, setZoneVisibility] = useState(null);
+  const [zoneVisibilityLoading, setZoneVisibilityLoading] = useState(false);
+  const [zoneVisibilityError, setZoneVisibilityError] = useState("");
 
   // Modal states
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
@@ -48,6 +55,10 @@ const WarehouseManagement = () => {
     delivery_type: "zonal",
     warehouse_assignments: [],
     description: "",
+    category_id: "",
+    initial_stock: 100,
+    minimum_threshold: 10,
+    cost_per_unit: 0,
   });
 
   // Fetch all data
@@ -69,7 +80,7 @@ const WarehouseManagement = () => {
     try {
       const result = await getAllProducts();
       if (result.success) {
-        setProducts(result.products || []);
+        setProducts(result.products || result.data || []);
       } else {
         setError("Failed to fetch products: " + result.error);
       }
@@ -83,7 +94,7 @@ const WarehouseManagement = () => {
     try {
       const result = await getAllZones({ active_only: "true" });
       if (result.success) {
-        setZones(result.data);
+        setZones(result.data || []);
       } else {
         setError("Failed to fetch zones: " + result.error);
       }
@@ -105,6 +116,49 @@ const WarehouseManagement = () => {
       console.error("Failed to fetch warehouse hierarchy:", err);
     }
   }, []);
+
+  const fetchZoneVisibility = useCallback(
+    async (zoneId) => {
+      if (!zoneId || zoneId === "all") {
+        setZoneVisibility(null);
+        setZoneVisibilityError("");
+        return;
+      }
+
+      setZoneVisibilityLoading(true);
+      try {
+        const normalizedZoneId = Number(zoneId);
+        if (Number.isNaN(normalizedZoneId)) {
+          throw new Error("Invalid zone selection");
+        }
+
+        const result = await getZoneProductVisibility(normalizedZoneId);
+        if (result?.success) {
+          setZoneVisibility(result);
+          setZoneVisibilityError("");
+        } else {
+          setZoneVisibility(null);
+          setZoneVisibilityError(
+            result?.error || "Failed to load zone visibility data"
+          );
+        }
+      } catch (visibilityError) {
+        setZoneVisibility(null);
+        setZoneVisibilityError(
+          visibilityError.message ||
+            "Failed to load zone visibility data"
+        );
+      } finally {
+        setZoneVisibilityLoading(false);
+      }
+    },
+    []
+  );
+
+  const refreshZoneVisibility = useCallback(() => {
+    if (!selectedZoneId || selectedZoneId === "all") return;
+    fetchZoneVisibility(selectedZoneId);
+  }, [selectedZoneId, fetchZoneVisibility]);
 
   // Handle warehouse operations
   const handleWarehouseSubmit = async () => {
@@ -185,9 +239,18 @@ const WarehouseManagement = () => {
   // Handle product operations
   const handleProductSubmit = async () => {
     try {
+      // Validate required fields
+      if (!productForm.name || !productForm.price || !productForm.category_id) {
+        setError("Name, price, and category are required");
+        return;
+      }
+
       const payload = {
         ...productForm,
         price: parseFloat(productForm.price),
+        initial_stock: parseInt(productForm.initial_stock) || 100,
+        minimum_threshold: parseInt(productForm.minimum_threshold) || 10,
+        cost_per_unit: parseFloat(productForm.cost_per_unit) || 0,
       };
 
       if (editingProduct) {
@@ -202,6 +265,29 @@ const WarehouseManagement = () => {
           setError("Failed to create product: " + result.error);
           return;
         }
+
+        // If warehouse assignments are specified, add product to those warehouses
+        const productId = result.data?.id || result.id;
+        if (result.success && productId && productForm.warehouse_assignments.length > 0) {
+          for (const assignment of productForm.warehouse_assignments) {
+            try {
+              const warehouseId = typeof assignment === 'object' ? assignment.warehouse_id : assignment;
+              const stockQuantity = typeof assignment === 'object' ? assignment.stock_quantity : payload.initial_stock;
+              
+              if (warehouseId && stockQuantity > 0) {
+                await addProductToWarehouse(
+                  warehouseId,
+                  productId,
+                  stockQuantity,
+                  payload.minimum_threshold,
+                  payload.cost_per_unit
+                );
+              }
+            } catch (warehouseError) {
+              console.error(`Failed to add product to warehouse:`, warehouseError);
+            }
+          }
+        }
       }
 
       setShowProductModal(false);
@@ -212,9 +298,14 @@ const WarehouseManagement = () => {
         delivery_type: "zonal",
         warehouse_assignments: [],
         description: "",
+        category_id: "",
+        initial_stock: 100,
+        minimum_threshold: 10,
+        cost_per_unit: 0,
       });
 
       await fetchProducts();
+      refreshZoneVisibility();
       setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save product");
@@ -230,6 +321,7 @@ const WarehouseManagement = () => {
       const result = await deleteProduct(productId);
       if (result.success) {
         await fetchProducts();
+        refreshZoneVisibility();
         setError("");
       } else {
         setError("Failed to delete product: " + result.error);
@@ -254,6 +346,10 @@ const WarehouseManagement = () => {
     };
     loadData();
   }, [fetchWarehouses, fetchProducts, fetchZones, fetchWarehouseHierarchy]);
+
+  useEffect(() => {
+    fetchZoneVisibility(selectedZoneId);
+  }, [selectedZoneId, fetchZoneVisibility]);
 
   if (loading) {
     return (
@@ -460,6 +556,10 @@ const WarehouseManagement = () => {
               delivery_type: product.delivery_type || "zonal",
               warehouse_assignments: product.warehouse_assignments || [],
               description: product.description || "",
+              category_id: product.category_id || "",
+              initial_stock: product.initial_stock || 100,
+              minimum_threshold: product.minimum_threshold || 10,
+              cost_per_unit: product.cost_per_unit || 0,
             });
             setShowProductModal(true);
           }}
@@ -472,9 +572,18 @@ const WarehouseManagement = () => {
               delivery_type: "zonal",
               warehouse_assignments: [],
               description: "",
+              category_id: "",
+              initial_stock: 100,
+              minimum_threshold: 10,
+              cost_per_unit: 0,
             });
             setShowProductModal(true);
           }}
+          selectedZoneId={selectedZoneId}
+          onZoneChange={setSelectedZoneId}
+          zoneVisibility={zoneVisibility}
+          zoneVisibilityLoading={zoneVisibilityLoading}
+          zoneVisibilityError={zoneVisibilityError}
         />
       )}
 
@@ -507,6 +616,7 @@ const WarehouseManagement = () => {
           setData={setProductForm}
           onSubmit={handleProductSubmit}
           warehouses={warehouses}
+          zones={zones}
           isEditing={!!editingProduct}
         />
       )}
@@ -797,18 +907,183 @@ WarehousesTab.propTypes = {
 };
 
 // Products Tab Component
-const ProductsTab = ({ products, warehouses, onEdit, onDelete, onAdd }) => {
+const ProductsTab = ({
+  products,
+  warehouses,
+  onEdit,
+  onDelete,
+  onAdd,
+  selectedZoneId,
+  onZoneChange,
+  zoneVisibility,
+  zoneVisibilityLoading,
+  zoneVisibilityError,
+}) => {
+  const zonalWarehouses = useMemo(
+    () => warehouses.filter((warehouse) => warehouse.type === "zonal"),
+    [warehouses]
+  );
+
+  const warehouseMap = useMemo(() => {
+    const map = new Map();
+    warehouses.forEach((warehouse) => map.set(warehouse.id, warehouse));
+    return map;
+  }, [warehouses]);
+
+  const zoneVisibilityMap = useMemo(() => {
+    if (!zoneVisibility?.products) return null;
+    return new Map(
+      zoneVisibility.products.map((product) => [product.id, product])
+    );
+  }, [zoneVisibility]);
+
+  const renderAvailability = (product) => {
+    if (selectedZoneId !== "all") {
+      if (zoneVisibilityLoading) {
+        return (
+          <span className="text-xs text-gray-500">Loading visibility...</span>
+        );
+      }
+
+      if (zoneVisibilityError) {
+        return (
+          <span className="text-xs text-red-500">{zoneVisibilityError}</span>
+        );
+      }
+
+      const zoneProduct = zoneVisibilityMap?.get(product.id);
+      if (!zoneProduct) {
+        return (
+          <span className="inline-flex px-2 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-full">
+            Unavailable in selected zone
+          </span>
+        );
+      }
+
+      if (zoneProduct.visibility === "zone_available") {
+        return (
+          <div className="space-y-1">
+            <span className="inline-flex px-2 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-full">
+              Zone level stock available
+            </span>
+            {zoneProduct.zone_assignment && (
+              <p className="text-xs text-gray-600">
+                {zoneProduct.zone_assignment.available_quantity} units in{" "}
+                {zoneProduct.zone_assignment.warehouse_name}
+              </p>
+            )}
+          </div>
+        );
+      }
+
+      if (
+        zoneProduct.visibility === "division_only" &&
+        zoneProduct.division_available?.length
+      ) {
+        return (
+          <div className="space-y-1">
+            <span className="inline-flex px-2 py-1 text-xs font-medium bg-yellow-50 text-yellow-700 rounded-full">
+              Division-only coverage
+            </span>
+            <p className="text-xs text-gray-600">
+              Available in{" "}
+              {zoneProduct.division_available
+                .map((division) => division.warehouse_name)
+                .join(", ")}
+            </p>
+          </div>
+        );
+      }
+
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-full">
+          Unavailable in selected zone
+        </span>
+      );
+    }
+
+    const zonalAssignments =
+      product.warehouse_assignments?.filter((assignment) => {
+        const warehouse = warehouseMap.get(assignment.warehouse_id);
+        return (
+          warehouse?.type === "zonal" &&
+          Number.parseInt(assignment.stock_quantity, 10) > 0
+        );
+      }) || [];
+
+    const divisionAssignments =
+      product.warehouse_assignments?.filter((assignment) => {
+        const warehouse = warehouseMap.get(assignment.warehouse_id);
+        return (
+          warehouse?.type === "division" &&
+          Number.parseInt(assignment.stock_quantity, 10) > 0
+        );
+      }) || [];
+
+    if (
+      !product.warehouse_assignments ||
+      product.warehouse_assignments.length === 0
+    ) {
+      return (
+        <span className="text-xs text-gray-500">No warehouse assignments</span>
+      );
+    }
+
+    return (
+      <div className="space-y-1">
+        <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">
+          Zonal: {zonalAssignments.length}
+        </span>
+        <span className="inline-flex px-2 py-1 text-xs font-medium bg-purple-50 text-purple-700 rounded-full">
+          Divisions: {divisionAssignments.length}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm border">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Products</h3>
-        <button
-          onClick={onAdd}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
-        >
-          <span>➕</span>
-          <span>Add Product</span>
-        </button>
+      <div className="px-6 py-4 border-b border-gray-200 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Products</h3>
+            <p className="text-sm text-gray-600">
+              Manage zone-aware visibility and stock assignments.
+            </p>
+          </div>
+          <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            {zonalWarehouses.length > 0 && (
+              <select
+                value={selectedZoneId}
+                onChange={(event) => onZoneChange(event.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Zones</option>
+                {zonalWarehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              onClick={onAdd}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2 justify-center"
+            >
+              <span>➕</span>
+              <span>Add Product</span>
+            </button>
+          </div>
+        </div>
+        {selectedZoneId !== "all" && zoneVisibility?.zone && (
+          <div className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            Viewing availability for{" "}
+            <span className="font-semibold">
+              {zoneVisibility.zone.name}
+            </span>
+            . Zone level availability always takes precedence over divisions.
+          </div>
+        )}
       </div>
 
       {products.length === 0 ? (
@@ -839,7 +1114,7 @@ const ProductsTab = ({ products, warehouses, onEdit, onDelete, onAdd }) => {
                   Price & Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Warehouse Assignments
+                  Availability
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -879,29 +1154,8 @@ const ProductsTab = ({ products, warehouses, onEdit, onDelete, onAdd }) => {
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {product.warehouse_assignments &&
-                      product.warehouse_assignments.length > 0 ? (
-                        product.warehouse_assignments.map((assignment) => {
-                          const warehouse = warehouses.find(
-                            (w) => w.id === assignment.warehouse_id
-                          );
-                          return warehouse ? (
-                            <span
-                              key={warehouse.id}
-                              className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded"
-                            >
-                              {warehouse.name}: {assignment.stock_quantity}
-                            </span>
-                          ) : null;
-                        })
-                      ) : (
-                        <span className="text-xs text-gray-500">
-                          No assignments
-                        </span>
-                      )}
-                    </div>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {renderAvailability(product)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -950,6 +1204,11 @@ ProductsTab.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onAdd: PropTypes.func.isRequired,
+  selectedZoneId: PropTypes.string.isRequired,
+  onZoneChange: PropTypes.func.isRequired,
+  zoneVisibility: PropTypes.object,
+  zoneVisibilityLoading: PropTypes.bool,
+  zoneVisibilityError: PropTypes.string,
 };
 
 // Warehouse Modal Component
@@ -1468,261 +1727,6 @@ const WarehouseModal = ({
   );
 };
 
-// Product Modal Component
-const ProductModal = ({
-  isOpen,
-  onClose,
-  data,
-  setData,
-  onSubmit,
-  warehouses,
-  isEditing,
-}) => {
-  if (!isOpen) return null;
-
-  const handleWarehouseAssignmentChange = (warehouseId, stockQuantity) => {
-    const existingIndex = data.warehouse_assignments.findIndex(
-      (a) => a.warehouse_id === warehouseId
-    );
-
-    if (stockQuantity === "" || parseInt(stockQuantity) <= 0) {
-      // Remove assignment
-      if (existingIndex !== -1) {
-        setData({
-          ...data,
-          warehouse_assignments: data.warehouse_assignments.filter(
-            (a) => a.warehouse_id !== warehouseId
-          ),
-        });
-      }
-    } else {
-      // Add or update assignment
-      const newAssignments = [...data.warehouse_assignments];
-      if (existingIndex !== -1) {
-        newAssignments[existingIndex] = {
-          warehouse_id: warehouseId,
-          stock_quantity: parseInt(stockQuantity),
-        };
-      } else {
-        newAssignments.push({
-          warehouse_id: warehouseId,
-          stock_quantity: parseInt(stockQuantity),
-        });
-      }
-      setData({
-        ...data,
-        warehouse_assignments: newAssignments,
-      });
-    }
-  };
-
-  const getAssignedStock = (warehouseId) => {
-    const assignment = data.warehouse_assignments.find(
-      (a) => a.warehouse_id === warehouseId
-    );
-    return assignment ? assignment.stock_quantity.toString() : "";
-  };
-
-  const getRelevantWarehouses = () => {
-    if (data.delivery_type === "nationwide") {
-      return warehouses; // Show all warehouses for nationwide products
-    } else {
-      return warehouses.filter((w) => w.type === "zonal"); // Only zonal warehouses for zonal products
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-screen overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4">
-          {isEditing ? "Edit Product" : "Add New Product"}
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column - Basic Details */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                value={data.name}
-                onChange={(e) => setData({ ...data, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter product name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={data.price}
-                onChange={(e) => setData({ ...data, price: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter price"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Delivery Type *
-              </label>
-              <select
-                value={data.delivery_type}
-                onChange={(e) =>
-                  setData({
-                    ...data,
-                    delivery_type: e.target.value,
-                    warehouse_assignments: [],
-                  })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="nationwide">
-                  🌍 Nationwide Delivery (Zonal + Division)
-                </option>
-                <option value="zonal">
-                  🏙️ Zonal Delivery Only (No Division Fallback)
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                value={data.description}
-                onChange={(e) =>
-                  setData({ ...data, description: e.target.value })
-                }
-                rows={4}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter product description"
-              />
-            </div>
-          </div>
-
-          {/* Right Column - Warehouse Assignments */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">
-              Warehouse Stock Assignment
-              <div className="text-xs text-gray-500 mt-1">
-                {data.delivery_type === "nationwide"
-                  ? "Assign stock to zonal warehouses (required) and division warehouses (optional for better coverage)"
-                  : "Assign stock to zonal warehouses only (required) - no division warehouse fallback"}
-              </div>
-            </h4>
-
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {getRelevantWarehouses().map((warehouse) => (
-                <div
-                  key={warehouse.id}
-                  className="flex items-center space-x-3 p-3 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{warehouse.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {warehouse.type === "zonal" ? "🔵 Zonal" : "� Division"} •{" "}
-                      {warehouse.pincode}
-                    </div>
-                  </div>
-                  <div className="w-24">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Stock"
-                      value={getAssignedStock(warehouse.id)}
-                      onChange={(e) =>
-                        handleWarehouseAssignmentChange(
-                          warehouse.id,
-                          e.target.value
-                        )
-                      }
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              ))}
-
-              {getRelevantWarehouses().length === 0 && (
-                <div className="text-center py-4 text-gray-500">
-                  <div className="text-4xl mb-2">🏢</div>
-                  <div className="text-sm">
-                    {data.delivery_type === "zonal"
-                      ? "No zonal warehouses available. Create zonal warehouses first."
-                      : "No warehouses available."}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {data.warehouse_assignments.length === 0 && (
-              <div className="mt-2 text-red-500 text-xs">
-                Please assign stock to at least one warehouse
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSubmit}
-            disabled={
-              !data.name.trim() ||
-              !data.price ||
-              data.warehouse_assignments.length === 0
-            }
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {isEditing ? "Update Product" : "Create Product"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// PropTypes for ProductModal component
-ProductModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  data: PropTypes.shape({
-    name: PropTypes.string,
-    price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    delivery_type: PropTypes.string,
-    description: PropTypes.string,
-    warehouse_assignments: PropTypes.arrayOf(
-      PropTypes.shape({
-        warehouse_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        stock_quantity: PropTypes.number,
-      })
-    ),
-  }).isRequired,
-  setData: PropTypes.func.isRequired,
-  onSubmit: PropTypes.func.isRequired,
-  warehouses: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-      name: PropTypes.string,
-      type: PropTypes.string,
-      pincode: PropTypes.string,
-    })
-  ).isRequired,
-  isEditing: PropTypes.bool.isRequired,
-};
 
 // PropTypes for WarehouseModal component
 WarehouseModal.propTypes = {

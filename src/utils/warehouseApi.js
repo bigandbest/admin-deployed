@@ -358,3 +358,27 @@ export const createProductWithWarehouse = async (productData) => {
     };
   }
 };
+
+// Get visibility matrix for a specific product across zones and divisions
+export const getProductVisibilityMatrix = async (productId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/product-warehouse/products/${productId}/visibility`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Failed to get product visibility matrix:", error);
+    return {
+      success: false,
+      error: error.message,
+      zones: [],
+    };
+  }
+};

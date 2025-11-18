@@ -241,10 +241,11 @@ const WarehouseProducts = () => {
     }
     console.log(selectedProductId);
     try {
-      const result = await addProductToWarehouse(id, {
-        product_id: selectedProductId,
-        stock_quantity: parseInt(stockQuantity),
-      });
+      const result = await addProductToWarehouse(
+        id,
+        selectedProductId,
+        parseInt(stockQuantity)
+      );
       if (result.success) {
         setSelectedProductId("");
         setStockQuantity("");

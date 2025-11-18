@@ -487,7 +487,7 @@ export async function getProductsForBrand(brandId) {
 // PRODUCTS
 export async function getAllProducts() {
   try {
-    const response = await fetch(`${API_BASE_URL}/products/allproducts`);
+    const response = await fetch(`${API_BASE_URL}/productsroute/allproducts`);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -919,7 +919,43 @@ export const getGroupsBySubcategory = () => ({
 export const addGroup = () => ({ success: false, error: "Not implemented" });
 export const updateGroup = () => ({ success: false, error: "Not implemented" });
 export const deleteGroup = () => ({ success: false, error: "Not implemented" });
-export const addProduct = () => ({ success: false, error: "Not implemented" });
+export async function addProduct(productData, displayImageFile, imageFiles, videoFile) {
+  try {
+    const formData = new FormData();
+
+    // Add product data
+    Object.keys(productData).forEach((key) => {
+      if (productData[key] !== null && productData[key] !== undefined) {
+        if (Array.isArray(productData[key])) {
+          formData.append(key, JSON.stringify(productData[key]));
+        } else {
+          formData.append(key, productData[key]);
+        }
+      }
+    });
+
+    // Add files
+    if (displayImageFile) {
+      formData.append("displayImage", displayImageFile);
+    }
+    if (imageFiles && imageFiles.length > 0) {
+      imageFiles.forEach((file) => {
+        formData.append(`images`, file);
+      });
+    }
+    if (videoFile) {
+      formData.append("video", videoFile);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/admin/products`, {
+      method: "POST",
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function updateProduct(
   id,
   productData,
@@ -1190,34 +1226,77 @@ export const getStorageAnalytics = () => ({
   success: false,
   error: "Not implemented",
 });
-export const getZonalWarehouseAvailablePincodes = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const getZonalWarehouseAvailablePincodesDirect = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const getWarehouseProducts = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const addProductToWarehouse = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const updateWarehouseProduct = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const removeProductFromWarehouse = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const getWarehouseHierarchy = () => ({
-  success: false,
-  error: "Not implemented",
-});
+export async function getZonalWarehouseAvailablePincodes(warehouseId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/available-pincodes`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function getZonalWarehouseAvailablePincodesDirect(warehouseId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/pincodes`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function getWarehouseProducts(warehouseId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/products`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function addProductToWarehouse(warehouseId, productId, stockQuantity = 0, minimumThreshold = 10, costPerUnit = 0) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/products`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: productId,
+        stock_quantity: parseInt(stockQuantity) || 0,
+        minimum_threshold: parseInt(minimumThreshold) || 10,
+        cost_per_unit: parseFloat(costPerUnit) || 0
+      }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function updateWarehouseProduct(warehouseId, productId, updateData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/products/${productId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function removeProductFromWarehouse(warehouseId, productId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/products/${productId}`, {
+      method: "DELETE",
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function getWarehouseHierarchy() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/hierarchy`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export const getChildWarehouses = () => ({
   success: false,
   error: "Not implemented",

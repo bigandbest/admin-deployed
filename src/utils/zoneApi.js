@@ -225,6 +225,27 @@ export const getProductWithDelivery = async (productId, pincode) => {
   }
 };
 
+/**
+ * Get visibility of products for a specific zone with division fallback logic
+ */
+export const getZoneProductVisibility = async (zoneId) => {
+  if (!zoneId) {
+    throw new Error("Zone ID is required");
+  }
+
+  try {
+    const response = await api.get(`/zones/${zoneId}/product-visibility`);
+    return response.data;
+  } catch (error) {
+    console.error("Get zone product visibility error:", error);
+    throw new Error(
+      error.response?.data?.error ||
+        error.message ||
+        "Failed to load zone product visibility"
+    );
+  }
+};
+
 export default {
   fetchZones,
   fetchZoneById,
@@ -238,4 +259,5 @@ export default {
   updateProductDelivery,
   getProductsByDeliveryZone,
   getProductWithDelivery,
+  getZoneProductVisibility,
 };
