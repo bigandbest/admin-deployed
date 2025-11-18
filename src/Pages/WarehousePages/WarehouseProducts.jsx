@@ -6,7 +6,7 @@ import {
   updateWarehouseProduct,
   removeProductFromWarehouse,
   getSingleWarehouse,
-  getAllProducts,
+  getAvailableProductsForWarehouse,
   addProductToWarehouse,
 } from "../../utils/supabaseApi";
 
@@ -205,28 +205,17 @@ const WarehouseProducts = () => {
     }
   }, [id]);
 
-  // Fetch all available products
+  // Fetch available products for this warehouse (respects hierarchy)
   const fetchAllProducts = async () => {
-    console.log("🔄 Fetching all products from Supabase");
     try {
-      const result = await getAllProducts();
+      const result = await getAvailableProductsForWarehouse(id);
       if (result.success) {
         setAllProducts(result.products || []);
-        console.log(
-          "📦 Set allProducts:",
-          result.products?.length || 0,
-          "products"
-        );
       } else {
         console.error("❌ Failed to fetch products:", result.error);
       }
     } catch (err) {
       console.error("❌ Failed to fetch products:", err);
-      console.error("Error details:", {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-      });
       setError(
         "Failed to fetch products: " +
           (err.response?.data?.message || err.message)
@@ -239,7 +228,7 @@ const WarehouseProducts = () => {
       setError("Please select a product and enter valid stock quantity");
       return;
     }
-    console.log(selectedProductId);
+    
     try {
       const result = await addProductToWarehouse(
         id,

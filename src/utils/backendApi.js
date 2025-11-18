@@ -1250,6 +1250,14 @@ export async function getWarehouseProducts(warehouseId) {
     return { success: false, error: error.message };
   }
 }
+export async function getAvailableProductsForWarehouse(warehouseId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/available-products`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function addProductToWarehouse(warehouseId, productId, stockQuantity = 0, minimumThreshold = 10, costPerUnit = 0) {
   try {
     const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/products`, {

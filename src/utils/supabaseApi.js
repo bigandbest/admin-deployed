@@ -184,6 +184,7 @@ export const {
   getZonalWarehouseAvailablePincodes,
   getZonalWarehouseAvailablePincodesDirect,
   getWarehouseProducts,
+  getAvailableProductsForWarehouse,
   addProductToWarehouse,
   updateWarehouseProduct,
   removeProductFromWarehouse,
