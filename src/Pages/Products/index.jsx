@@ -16,12 +16,10 @@ import {
   Modal,
   Textarea,
   NumberInput,
-  FileInput,
   Switch,
   Skeleton,
   CloseButton,
   MultiSelect,
-  Radio,
   Divider,
 } from "@mantine/core";
 import {
@@ -29,7 +27,7 @@ import {
   createProductWithWarehouse,
 } from "../../utils/warehouseApi";
 import { fetchZones } from "../../utils/zoneApi";
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaSearch } from "react-icons/fa";
 
 // Small inline placeholder SVG for missing product images
 const PRODUCT_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160' viewBox='0 0 240 160'><rect width='100%' height='100%' fill='%23f8fafc'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23cbd5e1' font-family='sans-serif' font-size='14'>No Image</text></svg>`;
@@ -231,8 +229,6 @@ const FilterChips = ({
 };
 /* eslint-enable react/prop-types */
 
-// Empty product array - will be populated from Firebase
-
 // Format price to Indian Rupees
 const formatIndianPrice = (price) => {
   return new Intl.NumberFormat("en-IN", {
@@ -268,23 +264,12 @@ const ProductsPage = () => {
   const [groupFilter, setGroupFilter] = useState(null);
   const [activeFilter, setStatusFilter] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState(null);
-  const [visible, setVisible] = useState(true);
+  // step index for step-wise form in add/edit modal
+  const [formStep, setFormStep] = useState(0);
+  const [stepErrors, setStepErrors] = useState({});
+  const steps = ["Basic", "Pricing", "Attributes", "Media", "Warehouses"];
 
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
-  const [hoveredCategory, setHoveredCategory] = useState(null);
-  const [hoveredSubcategory, setHoveredSubcategory] = useState(null);
-  const [categorySearchQuery, setCategorySearchQuery] = useState("");
-  const [subcategorySearchQuery, setSubcategorySearchQuery] = useState("");
-  const [groupSearchQuery, setGroupSearchQuery] = useState("");
-  const [groupColumnSearchQuery, setGroupColumnSearchQuery] = useState("");
-  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
-  const [selectedProductForVariants, setSelectedProductForVariants] =
-    useState(null);
-
-  const [displayedItems, setDisplayedItems] = useState(10);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // Move newProduct state to the beginning of component before any functions that reference it
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: 0,
@@ -330,6 +315,104 @@ const ProductsPage = () => {
     enable_fallback: true,
     warehouse_notes: "",
   });
+
+  const isStepComplete = (index) => {
+    // Step-specific simple validation
+    switch (index) {
+      case 0:
+        return (
+          newProduct.name &&
+          newProduct.category_id &&
+          newProduct.subcategory_id &&
+          newProduct.group_id
+        );
+      case 1:
+        return Number(newProduct.price) > 0;
+      case 2:
+        return true;
+      case 3:
+        // media not required; mark complete if at least one image or video or YouTube link
+        return (
+          displayImageFile ||
+          (imageFiles && imageFiles.length > 0) ||
+          videoFile ||
+          newProduct.video
+        );
+      case 4:
+        return !!newProduct.warehouse_mapping_type;
+      default:
+        return false;
+    }
+  };
+
+  const validateStep = useCallback(
+    (index) => {
+      const errors = {};
+      if (index === 0) {
+        if (!newProduct.name) errors.name = "Product name is required.";
+        if (!newProduct.category_id) errors.category_id = "Category required.";
+        if (!newProduct.subcategory_id)
+          errors.subcategory_id = "Subcategory required.";
+        if (!newProduct.group_id) errors.group_id = "Group required.";
+      }
+      if (index === 1) {
+        if (!newProduct.price || Number(newProduct.price) <= 0)
+          errors.price = "Enter a valid price";
+        if (!newProduct.stock || Number(newProduct.stock) < 0)
+          errors.stock = "Stock cannot be negative";
+      }
+      if (index === 4) {
+        if (!newProduct.warehouse_mapping_type)
+          errors.warehouse_mapping_type = "Select a warehouse strategy";
+      }
+
+      setStepErrors((prev) => ({ ...prev, [index]: errors }));
+      return Object.keys(errors).length === 0;
+    },
+    [newProduct]
+  );
+
+  const scrollToStep = (index) => {
+    setFormStep(index);
+    const el = document.getElementById(`section-${index}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // focus first input inside the section if possible
+      const firstInput = el.querySelector("input, select, textarea, button");
+      if (firstInput) firstInput.focus();
+    }
+  };
+
+  // keyboard navigation for steps
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowRight") {
+        // validate current step before moving forward
+        if (formStep < steps.length - 1) {
+          if (validateStep(formStep))
+            setFormStep((s) => Math.min(s + 1, steps.length - 1));
+        }
+      } else if (e.key === "ArrowLeft") {
+        setFormStep((s) => Math.max(s - 1, 0));
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [formStep, steps.length, validateStep]);
+
+  const [currentProduct, setCurrentProduct] = useState(null);
+  const [visible, setVisible] = useState(true);
+
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [subcategorySearchQuery, setSubcategorySearchQuery] = useState("");
+  const [groupSearchQuery, setGroupSearchQuery] = useState("");
+  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
+  const [selectedProductForVariants, setSelectedProductForVariants] =
+    useState(null);
+
+  const [displayedItems, setDisplayedItems] = useState(10);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const itemsPerLoad = 10;
 
   const [imageFiles, setImageFiles] = useState([]); // for selected image files
@@ -354,18 +437,14 @@ const ProductsPage = () => {
     variant_features: "",
     shipping_amount: 0,
     is_default: false,
-    active: true
+    active: true,
   };
 
   const [brandOptions, setBrandOptions] = useState([]);
-  const [brandsLoading, setBrandsLoading] = useState(true);
   const [storeOptions, setStoreOptions] = useState([]);
-  const [storesLoading, setStoresLoading] = useState(true);
   const [warehousesLoading, setWarehousesLoading] = useState(false);
   const [centralWarehouses, setCentralWarehouses] = useState([]);
   const [zonalWarehouses, setZonalWarehouses] = useState([]);
-  const [zones, setZones] = useState([]);
-  const [zonesLoading, setZonesLoading] = useState(false);
 
   useEffect(() => {
     const fetchSetting = async () => {
@@ -374,12 +453,12 @@ const ProductsPage = () => {
           `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`
         );
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setVisible(result.data.is_visible);
         }
       } catch (error) {
-        console.error('Error fetching product grid settings:', error);
+        console.error("Error fetching product grid settings:", error);
       }
     };
 
@@ -391,23 +470,23 @@ const ProductsPage = () => {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ is_visible: !visible }),
         }
       );
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setVisible(!visible);
       } else {
-        console.error('Error updating visibility:', result.error);
+        console.error("Error updating visibility:", result.error);
       }
     } catch (error) {
-      console.error('Error updating visibility:', error);
+      console.error("Error updating visibility:", error);
     }
   };
 
@@ -419,15 +498,15 @@ const ProductsPage = () => {
           `${import.meta.env.VITE_API_BASE_URL}/admin/products`
         );
         const result = await response.json();
-        
+
         if (result.success && result.products) {
           setProducts(result.products);
         } else {
-          setError(result.error || 'Failed to fetch products');
+          setError(result.error || "Failed to fetch products");
         }
       } catch (error) {
-        console.error('Error fetching products:', error);
-        setError('Failed to fetch products');
+        console.error("Error fetching products:", error);
+        setError("Failed to fetch products");
       }
       setLoading(false);
     }
@@ -440,7 +519,6 @@ const ProductsPage = () => {
     fetchBrands();
     fetchStores();
     fetchWarehousesData();
-    fetchZonesData();
   }, [navigate]);
 
   // Fetch products from backend API
@@ -453,11 +531,11 @@ const ProductsPage = () => {
         `${import.meta.env.VITE_API_BASE_URL}/admin/products`
       );
       const result = await response.json();
-      
+
       if (result.success && result.products) {
         setProducts(result.products);
       } else {
-        setError(result.error || 'Failed to fetch products');
+        setError(result.error || "Failed to fetch products");
       }
     } catch (err) {
       console.error("Error fetching products:", err);
@@ -528,21 +606,6 @@ const ProductsPage = () => {
     }
   };
 
-  // Fetch zones for dropdown
-  const fetchZonesData = async () => {
-    setZonesLoading(true);
-    try {
-      const zonesResult = await fetchZones();
-      if (zonesResult.success) {
-        setZones(zonesResult.data || []);
-      }
-    } catch (err) {
-      console.error("Error fetching zones:", err);
-    } finally {
-      setZonesLoading(false);
-    }
-  };
-
   // Fetch categories for dropdown
   const fetchCategories = async () => {
     try {
@@ -559,7 +622,6 @@ const ProductsPage = () => {
 
   // Fetch brands for dropdown
   const fetchBrands = async () => {
-    setBrandsLoading(true);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/brand/list`
@@ -575,14 +637,11 @@ const ProductsPage = () => {
       }
     } catch (error) {
       console.error("Failed to fetch brands:", error);
-    } finally {
-      setBrandsLoading(false);
     }
   };
 
   // Fetch stores for dropdown
   const fetchStores = async () => {
-    setStoresLoading(true);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/recommended-stores/list`
@@ -598,8 +657,6 @@ const ProductsPage = () => {
       }
     } catch (error) {
       console.error("Failed to fetch stores:", error);
-    } finally {
-      setStoresLoading(false);
     }
   };
 
@@ -833,25 +890,25 @@ const ProductsPage = () => {
     setHasVariants(false);
     setVariants([]);
     setVariantImages({});
+    setFormStep(0);
     setModalOpen(true);
     // Refresh brand and store data
     fetchBrands();
     fetchStores();
     // Refresh warehouse and zone data
     fetchWarehousesData();
-    fetchZonesData();
   };
 
   const openEditModal = (product) => {
     setCurrentProduct(product);
     setNewProduct({ ...product });
+    setFormStep(0);
     setModalOpen(true);
     // Refresh brand and store data
     fetchBrands();
     fetchStores();
     // Refresh warehouse and zone data
     fetchWarehousesData();
-    fetchZonesData();
   };
 
   const handleSaveProduct = async () => {
@@ -933,13 +990,13 @@ const ProductsPage = () => {
 
     // Add variants data if enabled
     if (hasVariants && variants.length > 0) {
-      productPayload.variants = variants.map(variant => ({
+      productPayload.variants = variants.map((variant) => ({
         ...variant,
         variant_price: parseFloat(variant.variant_price) || 0,
         variant_old_price: parseFloat(variant.variant_old_price) || 0,
         variant_stock: parseInt(variant.variant_stock) || 0,
         variant_quantity: parseFloat(variant.variant_quantity) || 1,
-        shipping_amount: parseFloat(variant.shipping_amount) || 0
+        shipping_amount: parseFloat(variant.shipping_amount) || 0,
       }));
       productPayload.variant_images = variantImages;
     }
@@ -1020,25 +1077,31 @@ const ProductsPage = () => {
   const updateVariant = (index, field, value) => {
     const updatedVariants = [...variants];
     updatedVariants[index] = { ...updatedVariants[index], [field]: value };
-    
+
     // Auto-calculate discount if price fields change
-    if (field === 'variant_price' || field === 'variant_old_price') {
+    if (field === "variant_price" || field === "variant_old_price") {
       const variant = updatedVariants[index];
-      if (variant.variant_old_price && variant.variant_price && variant.variant_old_price > 0) {
+      if (
+        variant.variant_old_price &&
+        variant.variant_price &&
+        variant.variant_old_price > 0
+      ) {
         const discountPercent = Math.round(
-          ((variant.variant_old_price - variant.variant_price) / variant.variant_old_price) * 100
+          ((variant.variant_old_price - variant.variant_price) /
+            variant.variant_old_price) *
+            100
         );
         updatedVariants[index].variant_discount = Math.max(0, discountPercent);
       }
     }
-    
+
     setVariants(updatedVariants);
   };
 
   const removeVariant = (index) => {
     const updatedVariants = variants.filter((_, i) => i !== index);
     setVariants(updatedVariants);
-    
+
     // Remove variant image if exists
     const newVariantImages = { ...variantImages };
     delete newVariantImages[index];
@@ -1052,7 +1115,7 @@ const ProductsPage = () => {
   const setDefaultVariant = (index) => {
     const updatedVariants = variants.map((variant, i) => ({
       ...variant,
-      is_default: i === index
+      is_default: i === index,
     }));
     setVariants(updatedVariants);
   };
@@ -1079,6 +1142,7 @@ const ProductsPage = () => {
           />
         )}
       </Modal>
+
       <Card shadow="sm" p="lg" radius="md" className="mantine-card mb-6">
         <Group position="apart" className="mb-4">
           <div>
@@ -1940,1000 +2004,1159 @@ const ProductsPage = () => {
         size="lg"
       >
         <div className="flex flex-col gap-4">
-          <TextInput
-            label="Product Name"
-            placeholder="Enter product name"
-            required
-            value={newProduct.name}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, name: e.target.value })
-            }
-          />
-
-          <div className="flex flex-col md:flex-row gap-4">
-            <NumberInput
-              className="flex-1"
-              label="Price (₹)"
-              placeholder="Enter price"
-              required
-              value={newProduct.price}
-              onChange={(value) => {
-                const updatedProduct = { ...newProduct, price: value };
-                // Auto-calculate discount if old_price exists
-                if (
-                  updatedProduct.old_price &&
-                  updatedProduct.old_price > 0 &&
-                  value > 0
-                ) {
-                  const discountPercent = Math.round(
-                    ((updatedProduct.old_price - value) /
-                      updatedProduct.old_price) *
-                      100
-                  );
-                  updatedProduct.discount = Math.max(0, discountPercent);
-                }
-                setNewProduct(updatedProduct);
-              }}
-              min={0}
-            />
-            <NumberInput
-              className="flex-1"
-              label="Old Price (₹)"
-              placeholder="Enter old price (optional)"
-              value={newProduct.old_price}
-              onChange={(value) => {
-                const updatedProduct = { ...newProduct, old_price: value };
-                // Auto-calculate discount if current price exists
-                if (
-                  updatedProduct.price &&
-                  updatedProduct.price > 0 &&
-                  value > 0
-                ) {
-                  const discountPercent = Math.round(
-                    ((value - updatedProduct.price) / value) * 100
-                  );
-                  updatedProduct.discount = Math.max(0, discountPercent);
-                }
-                setNewProduct(updatedProduct);
-              }}
-              min={0}
-            />
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4">
-            <NumberInput
-              className="flex-1"
-              label="Discount (%)"
-              placeholder="Auto-calculate or enter manually"
-              value={newProduct.discount}
-              onChange={(value) => {
-                const updatedProduct = { ...newProduct, discount: value };
-                // Auto-calculate old price if current price and discount exist
-                if (
-                  updatedProduct.price &&
-                  updatedProduct.price > 0 &&
-                  value > 0
-                ) {
-                  const oldPrice = Math.round(
-                    updatedProduct.price / (1 - value / 100)
-                  );
-                  updatedProduct.old_price = oldPrice;
-                }
-                setNewProduct(updatedProduct);
-              }}
-              min={0}
-              max={100}
-              rightSection="%"
-            />
-            <NumberInput
-              className="flex-1"
-              label="Stock"
-              placeholder="Enter stock quantity"
-              required
-              value={newProduct.stock}
-              onChange={(value) =>
-                setNewProduct({ ...newProduct, stock: value })
-              }
-              min={0}
-            />
-          </div>
-
-          <NumberInput
-            label="Shipping Amount (₹)"
-            placeholder="Enter shipping amount"
-            value={newProduct.shipping_amount || 0}
-            onChange={(value) =>
-              setNewProduct({ ...newProduct, shipping_amount: value || 0 })
-            }
-            min={0}
-            rightSection="₹"
-            precision={2}
-            step={0.01}
-          />
-
-          {/* Discount Calculation Helper */}
-          {(newProduct.price > 0 ||
-            newProduct.old_price > 0 ||
-            newProduct.discount > 0) && (
-            <div className="p-5 bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700 shadow-sm">
-              <Text
-                size="sm"
-                weight={500}
-                className="mb-4 text-blue-800 dark:text-blue-300"
-              >
-                Pricing Helper
-              </Text>
-              <div className="grid grid-cols-3 gap-4 text-xs">
-                <div className="bg-white dark:bg-gray-800/50 p-3 rounded-md border border-gray-200 dark:border-gray-600">
-                  <Text
-                    color="dimmed"
-                    className="text-gray-600 dark:text-gray-400 font-medium mb-1"
+          {/* Step indicator (Tailwind only) */}
+          <div className="flex items-center gap-3 mb-3">
+            {["Basic", "Pricing", "Attributes", "Media", "Warehouses"].map(
+              (s, i) => (
+                <div key={s} className="flex-1">
+                  <div
+                    className={`flex items-center gap-3 p-2 rounded-md cursor-pointer ${
+                      formStep === i
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-gray-50 text-gray-600"
+                    }`}
+                    onClick={() => scrollToStep(i)}
                   >
-                    Current Price:
-                  </Text>
-                  <Text
-                    weight={600}
-                    className="text-gray-900 dark:text-gray-100 text-sm"
-                  >
-                    ₹{newProduct.price || 0}
-                  </Text>
-                </div>
-                <div className="bg-white dark:bg-gray-800/50 p-3 rounded-md border border-gray-200 dark:border-gray-600">
-                  <Text
-                    color="dimmed"
-                    className="text-gray-600 dark:text-gray-400 font-medium mb-1"
-                  >
-                    Old Price:
-                  </Text>
-                  <Text
-                    weight={600}
-                    className="text-gray-900 dark:text-gray-100 text-sm"
-                  >
-                    ₹{newProduct.old_price || 0}
-                  </Text>
-                </div>
-                <div className="bg-white dark:bg-gray-800/50 p-3 rounded-md border border-gray-200 dark:border-gray-600">
-                  <Text
-                    color="dimmed"
-                    className="text-gray-600 dark:text-gray-400 font-medium mb-1"
-                  >
-                    You Save:
-                  </Text>
-                  <Text
-                    weight={600}
-                    className="text-green-700 dark:text-green-400 text-sm"
-                  >
-                    {newProduct.old_price && newProduct.price
-                      ? `₹${newProduct.old_price - newProduct.price} (${
-                          newProduct.discount
-                        }%)`
-                      : "₹0 (0%)"}
-                  </Text>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Category Selection */}
-          <div className="space-y-3">
-            <Text size="sm" weight={500}>
-              Category Selection (Required)
-            </Text>
-
-            {newProduct.category_id ||
-            newProduct.subcategory_id ||
-            newProduct.group_id ? (
-              <div className="p-4 bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                <div className="flex items-center justify-between mb-3">
-                  <Text
-                    size="sm"
-                    weight={500}
-                    className="text-green-800 dark:text-green-300 flex items-center gap-2"
-                  >
-                    ✅ <span>Selected Categories</span>
-                  </Text>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    color="green"
-                    onClick={() => {
-                      setNewProduct({
-                        ...newProduct,
-                        category_id: "",
-                        subcategory_id: "",
-                        group_id: "",
-                      });
-                      setGroupSearchQuery("");
-                      setSelectedCategory(null);
-                      setSelectedSubcategory(null);
-                      setHoveredCategory(null);
-                      setHoveredSubcategory(null);
-                      setCategorySearchQuery("");
-                      setSubcategorySearchQuery("");
-                      setGroupColumnSearchQuery("");
-                    }}
-                  >
-                    Clear Selection
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  {newProduct.category_id && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <Text className="font-medium text-blue-700 dark:text-blue-300">
-                        {categories.find((c) => c.id === newProduct.category_id)
-                          ?.name || "Unknown Category"}
-                      </Text>
-                    </div>
-                  )}
-                  {newProduct.subcategory_id && (
-                    <div className="flex items-center gap-2 text-sm pl-4">
-                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                      <Text className="text-indigo-600 dark:text-indigo-400">
-                        {subcategories.find(
-                          (s) => s.id === newProduct.subcategory_id
-                        )?.name || "Unknown Subcategory"}
-                      </Text>
-                    </div>
-                  )}
-                  {newProduct.group_id && (
-                    <div className="flex items-center gap-2 text-sm pl-8">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <Text className="text-purple-600 dark:text-purple-400">
-                        {groups.find((g) => g.id === newProduct.group_id)
-                          ?.name || "Unknown Group"}
-                      </Text>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Quick Search */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Text
-                      weight={600}
-                      className="text-gray-800 dark:text-gray-200"
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                        formStep === i
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
                     >
-                      Quick Group Search
-                    </Text>
-                    <Text
-                      size="sm"
-                      className="text-gray-600 dark:text-gray-400"
-                    >
-                      Search and select a group directly. Category and
-                      subcategory will be auto-selected.
-                    </Text>
-                  </div>
-
-                  <TextInput
-                    placeholder="Search groups..."
-                    value={groupSearchQuery}
-                    onChange={(e) => setGroupSearchQuery(e.target.value)}
-                    leftSection={<FaSearch />}
-                    size="md"
-                  />
-
-                  {groupSearchQuery && (
-                    <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-                      {groups
-                        .filter((group) =>
-                          group.name
-                            .toLowerCase()
-                            .includes(groupSearchQuery.toLowerCase())
-                        )
-                        .map((group) => {
-                          const relatedSubcategory = subcategories.find(
-                            (sub) => sub.id === group.subcategory_id
-                          );
-                          const relatedCategory = categories.find(
-                            (cat) => cat.id === relatedSubcategory?.category_id
-                          );
-
-                          return (
-                            <div
-                              key={group.id}
-                              onClick={() => {
-                                setNewProduct({
-                                  ...newProduct,
-                                  category_id: relatedCategory?.id || "",
-                                  subcategory_id: relatedSubcategory?.id || "",
-                                  group_id: group.id,
-                                });
-                                setGroupSearchQuery("");
-                              }}
-                              className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 cursor-pointer transition-colors bg-white dark:bg-gray-700"
-                            >
-                              <div className="space-y-3">
-                                <Text
-                                  weight={600}
-                                  className="text-gray-800 dark:text-gray-200"
-                                >
-                                  {group.name}
-                                </Text>
-                                <div className="space-y-2 pl-3">
-                                  <div className="flex items-center gap-3 text-sm">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
-                                    <Text className="text-blue-600 dark:text-blue-400">
-                                      {relatedCategory?.name ||
-                                        "Unknown Category"}
-                                    </Text>
-                                  </div>
-                                  <div className="flex items-center gap-3 text-sm pl-5">
-                                    <div className="w-2 h-2 bg-indigo-500 rounded-full shrink-0"></div>
-                                    <Text className="text-indigo-600 dark:text-indigo-400">
-                                      {relatedSubcategory?.name ||
-                                        "Unknown Subcategory"}
-                                    </Text>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      {groups.filter((group) =>
-                        group.name
-                          .toLowerCase()
-                          .includes(groupSearchQuery.toLowerCase())
-                      ).length === 0 && (
-                        <div className="text-center py-6">
-                          <Text size="sm" color="dimmed">
-                            No groups found matching &ldquo;{groupSearchQuery}
-                            &rdquo;
-                          </Text>
-                        </div>
+                      {i + 1}
+                    </div>
+                    <div className="text-sm flex items-center gap-2">
+                      <span>{s}</span>
+                      {isStepComplete(i) && (
+                        <span className="text-green-600 font-semibold text-xs">
+                          ✓
+                        </span>
                       )}
                     </div>
-                  )}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+          {/* Progress bar */}
+          <div className="mt-2">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-2 bg-blue-500 rounded-full transition-all"
+                style={{
+                  width: `${
+                    (steps.filter((_, i) => isStepComplete(i)).length /
+                      steps.length) *
+                    100
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Basic Information */}
+          <div id="section-0" className={formStep === 0 ? "block" : "hidden"}>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Product Name *
+              </label>
+              <input
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm p-2 mt-1"
+                placeholder="Enter product name"
+                value={newProduct.name}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, name: e.target.value })
+                }
+                aria-required
+              />
+            </div>
+
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Category / Browse *
+              </label>
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Categories column */}
+                <div className="border rounded bg-white dark:bg-gray-800 p-2">
+                  <input
+                    type="text"
+                    placeholder="Search categories"
+                    value={categorySearchQuery}
+                    onChange={(e) => setCategorySearchQuery(e.target.value)}
+                    className="w-full rounded border border-gray-200 px-2 py-1 text-sm mb-2"
+                  />
+                  <div className="max-h-48 overflow-auto">
+                    {categories
+                      .filter((c) =>
+                        c.name
+                          .toLowerCase()
+                          .includes(categorySearchQuery.toLowerCase())
+                      )
+                      .map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setNewProduct({
+                              ...newProduct,
+                              category_id: c.id,
+                              subcategory_id: "",
+                              group_id: "",
+                            });
+                          }}
+                          className={`w-full text-left px-2 py-2 rounded mb-1 ${
+                            newProduct.category_id === c.id
+                              ? "bg-blue-50 border border-blue-200"
+                              : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm">{c.name}</div>
+                            {newProduct.category_id === c.id && (
+                              <div className="text-green-600 font-semibold">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
                 </div>
 
-                {/* Hover Navigation */}
-                <div className="border-t pt-6">
-                  <div className="space-y-2 mb-4">
+                {/* Subcategories column */}
+                <div className="border rounded bg-white dark:bg-gray-800 p-2">
+                  <input
+                    type="text"
+                    placeholder="Search subcategories"
+                    value={subcategorySearchQuery}
+                    onChange={(e) => setSubcategorySearchQuery(e.target.value)}
+                    className="w-full rounded border border-gray-200 px-2 py-1 text-sm mb-2"
+                    disabled={!newProduct.category_id}
+                  />
+                  <div className="max-h-48 overflow-auto">
+                    {subcategories
+                      .filter(
+                        (s) =>
+                          (!newProduct.category_id ||
+                            s.category_id === newProduct.category_id) &&
+                          s.name
+                            .toLowerCase()
+                            .includes(subcategorySearchQuery.toLowerCase())
+                      )
+                      .map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            setNewProduct({
+                              ...newProduct,
+                              subcategory_id: s.id,
+                              group_id: "",
+                            });
+                          }}
+                          className={`w-full text-left px-2 py-2 rounded mb-1 ${
+                            newProduct.subcategory_id === s.id
+                              ? "bg-blue-50 border border-blue-200"
+                              : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm">{s.name}</div>
+                            {newProduct.subcategory_id === s.id && (
+                              <div className="text-green-600 font-semibold">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Groups column */}
+                <div className="border rounded bg-white dark:bg-gray-800 p-2">
+                  <input
+                    type="text"
+                    placeholder="Search groups"
+                    value={groupSearchQuery}
+                    onChange={(e) => setGroupSearchQuery(e.target.value)}
+                    className="w-full rounded border border-gray-200 px-2 py-1 text-sm mb-2"
+                    disabled={!newProduct.subcategory_id}
+                  />
+                  <div className="max-h-48 overflow-auto">
+                    {groups
+                      .filter(
+                        (g) =>
+                          (!newProduct.subcategory_id ||
+                            g.subcategory_id === newProduct.subcategory_id) &&
+                          g.name
+                            .toLowerCase()
+                            .includes(groupSearchQuery.toLowerCase())
+                      )
+                      .map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() =>
+                            setNewProduct({ ...newProduct, group_id: g.id })
+                          }
+                          className={`w-full text-left px-2 py-2 rounded mb-1 ${
+                            newProduct.group_id === g.id
+                              ? "bg-blue-50 border border-blue-200"
+                              : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm">{g.name}</div>
+                            {newProduct.group_id === g.id && (
+                              <div className="text-green-600 font-semibold">
+                                ✓
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              </div>
+              {stepErrors[0]?.category_id && (
+                <p className="text-xs text-red-600">
+                  {stepErrors[0].category_id}
+                </p>
+              )}
+              {stepErrors[0]?.subcategory_id && (
+                <p className="text-xs text-red-600">
+                  {stepErrors[0].subcategory_id}
+                </p>
+              )}
+              {stepErrors[0]?.group_id && (
+                <p className="text-xs text-red-600">{stepErrors[0].group_id}</p>
+              )}
+            </div>
+
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Subcategory *
+              </label>
+              <select
+                value={newProduct.subcategory_id || ""}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    subcategory_id: e.target.value,
+                  })
+                }
+                className="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 p-2 text-sm"
+              >
+                <option value="">Select subcategory</option>
+                {subcategories
+                  .filter(
+                    (s) =>
+                      !newProduct.category_id ||
+                      s.category_id === newProduct.category_id
+                  )
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
+              {stepErrors[0]?.subcategory_id && (
+                <p className="text-xs text-red-600">
+                  {stepErrors[0].subcategory_id}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                Group *
+              </label>
+              <select
+                value={newProduct.group_id || ""}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, group_id: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 p-2 text-sm"
+              >
+                <option value="">Select group</option>
+                {groups
+                  .filter(
+                    (g) =>
+                      !newProduct.subcategory_id ||
+                      g.subcategory_id === newProduct.subcategory_id
+                  )
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+              </select>
+              {stepErrors[0]?.group_id && (
+                <p className="text-xs text-red-600">{stepErrors[0].group_id}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Pricing Information */}
+          <div id="section-1" className={formStep === 1 ? "block" : "hidden"}>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-sm text-gray-700">Price (₹)</label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Enter price"
+                  value={newProduct.price || ""}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value || 0);
+                    const updatedProduct = { ...newProduct, price: value };
+                    if (
+                      updatedProduct.old_price &&
+                      updatedProduct.old_price > 0 &&
+                      value > 0
+                    ) {
+                      const discountPercent = Math.round(
+                        ((updatedProduct.old_price - value) /
+                          updatedProduct.old_price) *
+                          100
+                      );
+                      updatedProduct.discount = Math.max(0, discountPercent);
+                    }
+                    setNewProduct(updatedProduct);
+                  }}
+                  className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm text-gray-700">
+                  Old Price (₹)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Enter old price (optional)"
+                  value={newProduct.old_price || ""}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value || 0);
+                    const updatedProduct = { ...newProduct, old_price: value };
+                    if (
+                      updatedProduct.price &&
+                      updatedProduct.price > 0 &&
+                      value > 0
+                    ) {
+                      const discountPercent = Math.round(
+                        ((value - updatedProduct.price) / value) * 100
+                      );
+                      updatedProduct.discount = Math.max(0, discountPercent);
+                    }
+                    setNewProduct(updatedProduct);
+                  }}
+                  className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm text-gray-700">
+                  Discount (%)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="Auto-calculate or enter manually"
+                    value={newProduct.discount || ""}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value || 0);
+                      const updatedProduct = { ...newProduct, discount: value };
+                      if (
+                        updatedProduct.price &&
+                        updatedProduct.price > 0 &&
+                        value > 0
+                      ) {
+                        const oldPrice = Math.round(
+                          updatedProduct.price / (1 - value / 100)
+                        );
+                        updatedProduct.old_price = oldPrice;
+                      }
+                      setNewProduct(updatedProduct);
+                    }}
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                  />
+                  <span className="absolute right-3 top-3 text-gray-600">
+                    %
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-4 mt-4">
+              <div className="flex-1">
+                <label className="block text-sm text-gray-700">Stock</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={newProduct.stock || ""}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      stock: parseInt(e.target.value || 0),
+                    })
+                  }
+                  className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm text-gray-700">
+                  Shipping Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={newProduct.shipping_amount || ""}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      shipping_amount: parseFloat(e.target.value || 0),
+                    })
+                  }
+                  className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Attributes - UOM, switches, description */}
+          <div id="section-2" className={formStep === 2 ? "block" : "hidden"}>
+            {/* Discount Calculation Helper */}
+            {(newProduct.price > 0 ||
+              newProduct.old_price > 0 ||
+              newProduct.discount > 0) && (
+              <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700 shadow-sm">
+                <Text
+                  size="sm"
+                  weight={500}
+                  className="mb-4 text-blue-800 dark:text-blue-300"
+                >
+                  Pricing Helper
+                </Text>
+                <div className="grid grid-cols-3 gap-4 text-xs">
+                  <div className="bg-white dark:bg-gray-800/50 p-3 rounded-md border border-gray-200 dark:border-gray-600">
+                    <Text
+                      color="dimmed"
+                      className="text-gray-600 dark:text-gray-400 font-medium mb-1"
+                    >
+                      Current Price:
+                    </Text>
                     <Text
                       weight={600}
-                      className="text-gray-800 dark:text-gray-200"
+                      className="text-gray-900 dark:text-gray-100 text-sm"
                     >
-                      Browse Categories
+                      ₹{newProduct.price || 0}
+                    </Text>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800/50 p-3 rounded-md border border-gray-200 dark:border-gray-600">
+                    <Text
+                      color="dimmed"
+                      className="text-gray-600 dark:text-gray-400 font-medium mb-1"
+                    >
+                      Old Price:
                     </Text>
                     <Text
-                      size="sm"
-                      className="text-gray-600 dark:text-gray-400"
+                      weight={600}
+                      className="text-gray-900 dark:text-gray-100 text-sm"
                     >
-                      Navigate through the category hierarchy by hovering or
-                      clicking.
+                      ₹{newProduct.old_price || 0}
                     </Text>
                   </div>
-                  <div className="flex h-72 border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800/50">
-                    {/* Categories Column */}
-                    <div className="w-1/3 border-r border-gray-200 dark:border-gray-600 p-4 bg-white dark:bg-gray-700">
-                      <Text
-                        weight={600}
-                        className="text-gray-800 dark:text-gray-200 mb-3 text-sm"
-                      >
-                        Categories
-                      </Text>
-                      <TextInput
-                        placeholder="Search categories..."
-                        value={categorySearchQuery}
-                        onChange={(e) => setCategorySearchQuery(e.target.value)}
-                        className="mb-3"
-                        size="xs"
-                      />
-                      <div className="space-y-2 max-h-44 overflow-y-auto">
-                        {categories
-                          .filter((cat) =>
-                            cat.name
-                              .toLowerCase()
-                              .includes(categorySearchQuery.toLowerCase())
-                          )
-                          .map((category) => (
-                            <div
-                              key={category.id}
-                              onMouseEnter={() => {
-                                setHoveredCategory(category);
-                                setHoveredSubcategory(null);
-                              }}
-                              onClick={() => {
-                                setSelectedCategory(category);
-                                setSelectedSubcategory(null);
-                              }}
-                              className={`p-3 rounded-lg cursor-pointer transition-colors text-xs ${
-                                selectedCategory?.id === category.id
-                                  ? "bg-blue-500 text-white shadow-sm"
-                                  : hoveredCategory?.id === category.id
-                                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                                  : "hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
-                              }`}
-                            >
-                              {category.name}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Subcategories Column */}
-                    <div className="w-1/3 border-r border-gray-200 dark:border-gray-600 p-4 bg-white dark:bg-gray-700">
-                      <Text
-                        weight={600}
-                        className="text-gray-800 dark:text-gray-200 mb-3 text-sm"
-                      >
-                        Subcategories
-                      </Text>
-                      <TextInput
-                        placeholder="Search subcategories..."
-                        value={subcategorySearchQuery}
-                        onChange={(e) =>
-                          setSubcategorySearchQuery(e.target.value)
-                        }
-                        className="mb-3"
-                        size="xs"
-                      />
-                      <div className="space-y-2 max-h-44 overflow-y-auto">
-                        {(hoveredCategory || selectedCategory) &&
-                          subcategories
-                            .filter(
-                              (sub) =>
-                                sub.category_id ===
-                                (hoveredCategory || selectedCategory)?.id
-                            )
-                            .filter((sub) =>
-                              sub.name
-                                .toLowerCase()
-                                .includes(subcategorySearchQuery.toLowerCase())
-                            )
-                            .map((subcategory) => (
-                              <div
-                                key={subcategory.id}
-                                onMouseEnter={() =>
-                                  setHoveredSubcategory(subcategory)
-                                }
-                                onClick={() => {
-                                  setSelectedSubcategory(subcategory);
-                                }}
-                                className={`p-3 rounded-lg cursor-pointer transition-colors text-xs ${
-                                  selectedSubcategory?.id === subcategory.id
-                                    ? "bg-indigo-500 text-white shadow-sm"
-                                    : hoveredSubcategory?.id === subcategory.id
-                                    ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                                    : "hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
-                                }`}
-                              >
-                                {subcategory.name}
-                              </div>
-                            ))}
-                      </div>
-                    </div>
-
-                    {/* Groups Column */}
-                    <div className="w-1/3 p-4 bg-white dark:bg-gray-700">
-                      <Text
-                        weight={600}
-                        className="text-gray-800 dark:text-gray-200 mb-3 text-sm"
-                      >
-                        Groups
-                      </Text>
-                      <TextInput
-                        placeholder="Search groups..."
-                        value={groupColumnSearchQuery}
-                        onChange={(e) =>
-                          setGroupColumnSearchQuery(e.target.value)
-                        }
-                        className="mb-3"
-                        size="xs"
-                      />
-                      <div className="space-y-2 max-h-44 overflow-y-auto">
-                        {(hoveredSubcategory || selectedSubcategory) &&
-                          groups
-                            .filter(
-                              (group) =>
-                                group.subcategory_id ===
-                                (hoveredSubcategory || selectedSubcategory)?.id
-                            )
-                            .filter((group) =>
-                              group.name
-                                .toLowerCase()
-                                .includes(groupColumnSearchQuery.toLowerCase())
-                            )
-                            .map((group) => (
-                              <div
-                                key={group.id}
-                                onClick={() => {
-                                  setNewProduct({
-                                    ...newProduct,
-                                    category_id:
-                                      (selectedCategory || hoveredCategory)
-                                        ?.id || "",
-                                    subcategory_id:
-                                      (
-                                        selectedSubcategory ||
-                                        hoveredSubcategory
-                                      )?.id || "",
-                                    group_id: group.id,
-                                  });
-                                  // Reset hover states
-                                  setSelectedCategory(null);
-                                  setSelectedSubcategory(null);
-                                  setHoveredCategory(null);
-                                  setHoveredSubcategory(null);
-                                  setCategorySearchQuery("");
-                                  setSubcategorySearchQuery("");
-                                  setGroupColumnSearchQuery("");
-                                }}
-                                className="p-3 rounded-lg cursor-pointer transition-colors text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-800 dark:hover:text-purple-200 text-gray-700 dark:text-gray-300 hover:shadow-sm"
-                              >
-                                {group.name}
-                              </div>
-                            ))}
-                      </div>
-                    </div>
+                  <div className="bg-white dark:bg-gray-800/50 p-3 rounded-md border border-gray-200 dark:border-gray-600">
+                    <Text
+                      color="dimmed"
+                      className="text-gray-600 dark:text-gray-400 font-medium mb-1"
+                    >
+                      You Save:
+                    </Text>
+                    <Text
+                      weight={600}
+                      className="text-green-700 dark:text-green-400 text-sm"
+                    >
+                      {newProduct.old_price && newProduct.price
+                        ? `₹${newProduct.old_price - newProduct.price} (${
+                            newProduct.discount
+                          }%)`
+                        : "₹0 (0%)"}
+                    </Text>
                   </div>
                 </div>
               </div>
             )}
-          </div>
 
-          <div className="flex flex-col gap-2">
-            <Text size="sm" weight={500}>
-              Unit of Measure (UOM)
-            </Text>
-            <div className="flex gap-3">
-              <NumberInput
-                className="flex-1"
-                label="Value"
-                placeholder="Enter value (e.g., 10)"
-                value={newProduct.uom_value || ""}
-                onChange={(value) => {
-                  const updatedProduct = { ...newProduct, uom_value: value };
-                  // Auto-generate UOM display
-                  if (value && updatedProduct.uom_unit) {
-                    updatedProduct.uom = `${value} ${updatedProduct.uom_unit}`;
-                  }
-                  setNewProduct(updatedProduct);
-                }}
-                min={0}
-              />
-              <Select
-                className="flex-1"
-                label="Unit"
-                placeholder="Select unit"
-                searchable
-                clearable
-                data={[
-                  { value: "kg", label: "Kilogram (kg)" },
-                  { value: "g", label: "Gram (g)" },
-                  { value: "l", label: "Litre (l)" },
-                  { value: "ml", label: "Millilitre (ml)" },
-                  { value: "packet", label: "Packet" },
-                  { value: "pcs", label: "Pieces (pcs)" },
-                  { value: "pack", label: "Pack" },
-                  { value: "box", label: "Box" },
-                  { value: "bottle", label: "Bottle" },
-                  { value: "can", label: "Can" },
-                  { value: "pouch", label: "Pouch" },
-                ]}
-                value={newProduct.uom_unit || null}
-                onChange={(value) => {
-                  const updatedProduct = { ...newProduct, uom_unit: value };
-                  // Auto-generate UOM display
-                  if (updatedProduct.uom_value && value) {
-                    updatedProduct.uom = `${updatedProduct.uom_value} ${value}`;
-                  }
-                  setNewProduct(updatedProduct);
-                }}
+            <div className="flex flex-col gap-2">
+              <Text size="sm" weight={500}>
+                Unit of Measure (UOM)
+              </Text>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm text-gray-700">Value</label>
+                  <input
+                    type="number"
+                    placeholder="Enter value (e.g., 10)"
+                    value={newProduct.uom_value || ""}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value || 0);
+                      const updatedProduct = {
+                        ...newProduct,
+                        uom_value: value,
+                      };
+                      if (value && updatedProduct.uom_unit) {
+                        updatedProduct.uom = `${value} ${updatedProduct.uom_unit}`;
+                      }
+                      setNewProduct(updatedProduct);
+                    }}
+                    min={0}
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                  />
+                </div>
+                <select
+                  className="flex-1 mt-1 rounded-md border border-gray-300 p-2 text-sm"
+                  value={newProduct.uom_unit || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const updatedProduct = { ...newProduct, uom_unit: value };
+                    if (updatedProduct.uom_value && value) {
+                      updatedProduct.uom = `${updatedProduct.uom_value} ${value}`;
+                    }
+                    setNewProduct(updatedProduct);
+                  }}
+                >
+                  <option value="">Select unit</option>
+                  <option value="kg">Kilogram (kg)</option>
+                  <option value="g">Gram (g)</option>
+                  <option value="l">Litre (l)</option>
+                  <option value="ml">Millilitre (ml)</option>
+                  <option value="packet">Packet</option>
+                  <option value="pcs">Pieces (pcs)</option>
+                  <option value="pack">Pack</option>
+                  <option value="box">Box</option>
+                  <option value="bottle">Bottle</option>
+                  <option value="can">Can</option>
+                  <option value="pouch">Pouch</option>
+                </select>
+              </div>
+              {newProduct.uom && (
+                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                  Display: <strong>{newProduct.uom}</strong>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm text-gray-700">
+                Product Description
+              </label>
+              <textarea
+                placeholder="Enter product description"
+                rows={3}
+                value={newProduct.description || ""}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, description: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
               />
             </div>
-            {newProduct.uom && (
-              <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                Display: <strong>{newProduct.uom}</strong>
-              </div>
-            )}
+
+            <div className="mt-4">
+              <label className="block text-sm text-gray-700">
+                Product Specifications
+              </label>
+              <textarea
+                placeholder={
+                  "Enter specifications (one per line)\nExample:\nElectric Wheelchairs/Scooters\nSolar Power Banks/Storage\nRV or Marine Power Systems"
+                }
+                rows={3}
+                value={newProduct.specifications || ""}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    specifications: e.target.value,
+                  })
+                }
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+              />
+            </div>
+
+            {/* Replaced Mantine Switches with native checkboxes (Tailwind-only) */}
+            <div className="flex items-center gap-4 mt-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.is_last_section}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      is_last_section: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">All Products Section Visibility</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.enquiry}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, enquiry: e.target.checked })
+                  }
+                />
+                <span className="text-sm">Activate Enquiry</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.active}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, active: e.target.checked })
+                  }
+                />
+                <span className="text-sm">Active</span>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-4 mt-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.in_stock}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, in_stock: e.target.checked })
+                  }
+                />
+                <span className="text-sm">In Stock</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.featured}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      featured: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Featured</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.most_orders}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      most_orders: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Most Orders</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.top_rating}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      top_rating: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Top Rating</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.limited_product}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      limited_product: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Limited Product</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.seasonal_product}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      seasonal_product: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Seasonal Product</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.international_product}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      international_product: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">International Product</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.top_sale}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      top_sale: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Top Sale</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.is_global}
+                  onChange={(e) =>
+                    setNewProduct({
+                      ...newProduct,
+                      is_global: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm">Global Product</span>
+              </label>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={newProduct.popular}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, popular: e.target.checked })
+                  }
+                />
+                <span className="text-sm">Popular</span>
+              </label>
+            </div>
           </div>
 
-          <Switch
-            label="All Products Section Visibility"
-            checked={newProduct.is_last_section}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                is_last_section: e.currentTarget.checked,
-              })
-            }
-            color="green"
-          />
-          <Switch
-            label="Activate Enquiry"
-            checked={newProduct.enquiry}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, enquiry: e.currentTarget.checked })
-            }
-            color="green"
-          />
-          <Switch
-            label="Active"
-            checked={newProduct.active}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, active: e.currentTarget.checked })
-            }
-            color="green"
-          />
+          {/* Media and Variants */}
+          <div id="section-3" className={formStep === 3 ? "block" : "hidden"}>
+            <div className="space-y-4">
+              <div>
+                <Text size="sm" weight={500}>
+                  Media
+                </Text>
+                <div className="mt-2">
+                  <label className="block text-sm text-gray-600">
+                    Display Image (Main Product Image)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setDisplayImageFile(e.target.files?.[0] || null)
+                    }
+                    className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-blue-600 file:text-white"
+                  />
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm text-gray-600">
+                    Product Images (Max 6)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) =>
+                      setImageFiles(
+                        Array.from(e.target.files || []).slice(0, 6)
+                      )
+                    }
+                    className="mt-1 block w-full text-sm text-gray-700"
+                  />
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm text-gray-600">
+                    Product Video (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                    className="mt-1 block w-full text-sm text-gray-700"
+                  />
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm text-gray-600">
+                    YouTube Video Link (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter YouTube video URL"
+                    value={newProduct.video}
+                    onChange={(e) =>
+                      setNewProduct({ ...newProduct, video: e.target.value })
+                    }
+                    className="mt-1 block w-full rounded-md border border-gray-300 bg-white dark:bg-gray-900 p-2 text-sm"
+                  />
+                </div>
+              </div>
 
-          <Switch
-            label="In Stock"
-            checked={newProduct.in_stock}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                in_stock: e.currentTarget.checked,
-              })
-            }
-            color="blue"
-          />
-
-          <Switch
-            label="Featured"
-            checked={newProduct.featured}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                featured: e.currentTarget.checked,
-              })
-            }
-            color="yellow"
-          />
-          <Switch
-            label="Most Orders"
-            checked={newProduct.most_orders}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                most_orders: e.currentTarget.checked,
-              })
-            }
-            color="pink"
-          />
-          <Switch
-            label="Top Rating"
-            checked={newProduct.top_rating}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                top_rating: e.currentTarget.checked,
-              })
-            }
-            color="black"
-          />
-          <Switch
-            label="Limited Product"
-            checked={newProduct.limited_product}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                limited_product: e.currentTarget.checked,
-              })
-            }
-            color="Cyan"
-          />
-          <Switch
-            label="Seasonal Product"
-            checked={newProduct.seasonal_product}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                seasonal_product: e.currentTarget.checked,
-              })
-            }
-            color="Purple"
-          />
-          <Switch
-            label="International Product"
-            checked={newProduct.international_product}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                international_product: e.currentTarget.checked,
-              })
-            }
-            color="DarkGreen"
-          />
-          <Switch
-            label="Top Sale"
-            checked={newProduct.top_sale}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                top_sale: e.currentTarget.checked,
-              })
-            }
-            color="Gold"
-          />
-          <Switch
-            label="Global Product"
-            checked={newProduct.is_global}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                is_global: e.currentTarget.checked,
-              })
-            }
-            color="Gray"
-          />
-
-          <Switch
-            label="Popular"
-            checked={newProduct.popular}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, popular: e.currentTarget.checked })
-            }
-            color="orange"
-          />
+              <div>
+                <div className="flex items-center justify-between">
+                  <Text size="sm" weight={600}>
+                    Variants
+                  </Text>
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    onClick={() => setVariantsModalOpen(true)}
+                  >
+                    Manage variants
+                  </Button>
+                </div>
+                <div className="mt-2">
+                  <Text size="xs" color="dimmed">
+                    {variants.length} variant(s) configured
+                  </Text>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Warehouse Distribution Flow */}
-          <Divider
-            label="📦 Warehouse & Stock Management"
-            labelPosition="center"
-            my="md"
-          />
+          <div id="section-4" className={formStep === 4 ? "block" : "hidden"}>
+            <Divider
+              label="📦 Warehouse & Stock Management"
+              labelPosition="center"
+              my="md"
+            />
 
-          {/* Warehouse Status & Refresh */}
-          <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-2">
-              <Text size="sm" weight={500}>
-                🏢 Available Warehouses (
-                {centralWarehouses.length + zonalWarehouses.length} total)
-              </Text>
-              <Button
-                variant="subtle"
-                size="xs"
-                onClick={fetchWarehousesData}
-                loading={warehousesLoading}
-                leftIcon={<span>🔄</span>}
+            {/* Warehouse Status & Refresh */}
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <Text size="sm" weight={500}>
+                  🏢 Available Warehouses (
+                  {centralWarehouses.length + zonalWarehouses.length} total)
+                </Text>
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={fetchWarehousesData}
+                  loading={warehousesLoading}
+                  leftIcon={<span>🔄</span>}
+                >
+                  Refresh
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <Text weight={500} className="mb-1 flex items-center gap-1">
+                    <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                    Central ({centralWarehouses.length})
+                  </Text>
+                  <div className="text-gray-600 dark:text-gray-400">
+                    {centralWarehouses.length === 0
+                      ? "No central warehouses available"
+                      : `${centralWarehouses.map((w) => w.name).join(", ")}`}
+                  </div>
+                </div>
+                <div>
+                  <Text weight={500} className="mb-1 flex items-center gap-1">
+                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    Zonal ({zonalWarehouses.length})
+                  </Text>
+                  <div className="text-gray-600 dark:text-gray-400">
+                    {zonalWarehouses.length === 0
+                      ? "No zonal warehouses available"
+                      : `${zonalWarehouses
+                          .slice(0, 3)
+                          .map((w) => w.name)
+                          .join(", ")}${
+                          zonalWarehouses.length > 3
+                            ? ` +${zonalWarehouses.length - 3} more`
+                            : ""
+                        }`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Flow Explanation */}
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+              <Text
+                size="sm"
+                weight={600}
+                className="mb-2 text-blue-800 dark:text-blue-300"
               >
-                Refresh
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <Text weight={500} className="mb-1 flex items-center gap-1">
-                  <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                  Central ({centralWarehouses.length})
-                </Text>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {centralWarehouses.length === 0
-                    ? "No central warehouses available"
-                    : `${centralWarehouses.map((w) => w.name).join(", ")}`}
-                </div>
-              </div>
-              <div>
-                <Text weight={500} className="mb-1 flex items-center gap-1">
-                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  Zonal ({zonalWarehouses.length})
-                </Text>
-                <div className="text-gray-600 dark:text-gray-400">
-                  {zonalWarehouses.length === 0
-                    ? "No zonal warehouses available"
-                    : `${zonalWarehouses
-                        .slice(0, 3)
-                        .map((w) => w.name)
-                        .join(", ")}${
-                        zonalWarehouses.length > 3
-                          ? ` +${zonalWarehouses.length - 3} more`
-                          : ""
-                      }`}
-                </div>
+                🔄 Product Distribution Flow
+              </Text>
+              <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
+                <span className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
+                  1. Add Product
+                </span>
+                <span>→</span>
+                <span className="bg-green-100 dark:bg-green-800 px-2 py-1 rounded">
+                  2. Auto Central
+                </span>
+                <span>→</span>
+                <span className="bg-purple-100 dark:bg-purple-800 px-2 py-1 rounded">
+                  3. Distribute to Zones
+                </span>
               </div>
             </div>
-          </div>
 
-          {/* Flow Explanation */}
-          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-            <Text
-              size="sm"
-              weight={600}
-              className="mb-2 text-blue-800 dark:text-blue-300"
-            >
-              🔄 Product Distribution Flow
-            </Text>
-            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
-              <span className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">
-                1. Add Product
-              </span>
-              <span>→</span>
-              <span className="bg-green-100 dark:bg-green-800 px-2 py-1 rounded">
-                2. Auto Central
-              </span>
-              <span>→</span>
-              <span className="bg-purple-100 dark:bg-purple-800 px-2 py-1 rounded">
-                3. Distribute to Zones
-              </span>
-            </div>
-          </div>
+            <div className="mb-4">
+              <Text size="sm" weight={500} className="mb-2">
+                🏢 Product Warehouse Strategy
+              </Text>
+              <Text size="xs" color="dimmed" className="mb-4">
+                Choose how this product should be distributed across warehouses
+                with intelligent fallback
+              </Text>
 
-          <div className="mb-4">
-            <Text size="sm" weight={500} className="mb-2">
-              🏢 Product Warehouse Strategy
-            </Text>
-            <Text size="xs" color="dimmed" className="mb-4">
-              Choose how this product should be distributed across warehouses
-              with intelligent fallback
-            </Text>
-
-            <Radio.Group
-              value={newProduct.warehouse_mapping_type}
-              onChange={(value) => {
-                const updatedProduct = {
-                  ...newProduct,
-                  warehouse_mapping_type: value,
-                  // Clear selections when changing strategy
-                  primary_warehouses: [],
-                  fallback_warehouses: [],
-                  assigned_warehouse_ids: [],
-                };
-                setNewProduct(updatedProduct);
-              }}
-            >
               <div className="space-y-4">
                 <div className="p-3 border border-green-200 dark:border-green-700 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <Radio
-                    value="auto_central_to_zonal"
-                    label={
-                      <div>
-                        <Text size="sm" weight={500}>
-                          🚀 Auto Nationwide Distribution (Recommended)
-                        </Text>
-                        <Text size="xs" color="dimmed" className="mt-1">
-                          Product distributed to all zonal warehouses → Smart
-                          fallback (Division → Zonal)
-                        </Text>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="warehouse_mapping_type"
+                      value="auto_central_to_zonal"
+                      checked={
+                        newProduct.warehouse_mapping_type ===
+                        "auto_central_to_zonal"
+                      }
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          warehouse_mapping_type: e.target.value,
+                          primary_warehouses: [],
+                          fallback_warehouses: [],
+                          assigned_warehouse_ids: [],
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="font-medium">
+                        🚀 Auto Nationwide Distribution (Recommended)
                       </div>
-                    }
-                    color="green"
-                  />
+                      <div className="text-xs text-gray-600">
+                        Product distributed to all zonal warehouses → Smart
+                        fallback (Division → Zonal)
+                      </div>
+                    </div>
+                  </label>
                 </div>
 
                 <div className="p-3 border border-blue-200 dark:border-blue-700 rounded-lg">
-                  <Radio
-                    value="selective_zonal"
-                    label={
-                      <div>
-                        <Text size="sm" weight={500}>
-                          🏪 Selective Zonal Distribution
-                        </Text>
-                        <Text size="xs" color="dimmed" className="mt-1">
-                          Choose specific zonal warehouses → Division warehouses
-                          as fallback when out of stock
-                        </Text>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="warehouse_mapping_type"
+                      value="selective_zonal"
+                      checked={
+                        newProduct.warehouse_mapping_type === "selective_zonal"
+                      }
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          warehouse_mapping_type: e.target.value,
+                          primary_warehouses: [],
+                          fallback_warehouses: [],
+                          assigned_warehouse_ids: [],
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="font-medium">
+                        🏪 Selective Zonal Distribution
                       </div>
-                    }
-                    color="blue"
-                  />
+                      <div className="text-xs text-gray-600">
+                        Choose specific zonal warehouses → Division warehouses
+                        as fallback when out of stock
+                      </div>
+                    </div>
+                  </label>
                 </div>
 
                 <div className="p-3 border border-purple-200 dark:border-purple-700 rounded-lg">
-                  <Radio
-                    value="zonal_only"
-                    label={
-                      <div>
-                        <Text size="sm" weight={500}>
-                          🏪 Zonal Warehouses Only (No Fallback)
-                        </Text>
-                        <Text size="xs" color="dimmed" className="mt-1">
-                          Distribute to zones only → NO central fallback →
-                          Regional products only
-                        </Text>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="warehouse_mapping_type"
+                      value="zonal_only"
+                      checked={
+                        newProduct.warehouse_mapping_type === "zonal_only"
+                      }
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          warehouse_mapping_type: e.target.value,
+                          primary_warehouses: [],
+                          fallback_warehouses: [],
+                          assigned_warehouse_ids: [],
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="font-medium">
+                        🏪 Zonal Warehouses Only (No Fallback)
                       </div>
-                    }
-                    color="purple"
-                  />
+                      <div className="text-xs text-gray-600">
+                        Distribute to zones only → NO central fallback →
+                        Regional products only
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
-            </Radio.Group>
-          </div>
+            </div>
 
-          {/* Auto Central to Zonal Distribution */}
-          {newProduct.warehouse_mapping_type === "auto_central_to_zonal" && (
-            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-              <div className="flex items-center gap-2 mb-3">
-                <Text size="sm" weight={600} color="green">
-                  🚀 Automatic Distribution Enabled
-                </Text>
-              </div>
-              <div className="space-y-2 text-sm text-green-700 dark:text-green-400">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-bold">
-                    1
-                  </span>
-                  <span>
-                    Product will be automatically added to central warehouse
-                    with <strong>{newProduct.stock || 100}</strong> units
-                  </span>
+            {/* Auto Central to Zonal Distribution */}
+            {newProduct.warehouse_mapping_type === "auto_central_to_zonal" && (
+              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <Text size="sm" weight={600} color="green">
+                    🚀 Automatic Distribution Enabled
+                  </Text>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-bold">
-                    2
-                  </span>
-                  <span>
-                    System will auto-distribute <strong>50 units each</strong>{" "}
-                    to{" "}
-                    {newProduct.primary_warehouses &&
-                    newProduct.primary_warehouses.length > 0
-                      ? `selected ${
-                          newProduct.primary_warehouses.length
-                        } zonal warehouse${
-                          newProduct.primary_warehouses.length > 1 ? "s" : ""
-                        }`
-                      : `all ${zonalWarehouses.length} zonal warehouses`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-bold">
-                    3
-                  </span>
-                  <span>
-                    Smart fallback: Zonal out of stock → Central → Other zones
-                    if needed
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
-                <div className="mb-3">
-                  <MultiSelect
-                    label="🎯 Select Target Zonal Warehouses"
-                    placeholder={
-                      warehousesLoading
-                        ? "Loading zonal warehouses..."
-                        : zonalWarehouses.length === 0
-                        ? "No zonal warehouses available"
-                        : "Choose which zonal warehouses to auto-distribute to"
-                    }
-                    data={zonalWarehouses.map((w) => ({
-                      value: String(w.id),
-                      label: `${w.parent_warehouse_id ? "└─ " : ""}${
-                        w.name
-                      } - ${
-                        w.parent_warehouse_id
-                          ? `Under: ${
-                              centralWarehouses.find(
-                                (c) => c.id === w.parent_warehouse_id
-                              )?.name || "Unknown"
-                            }`
-                          : "Independent"
-                      }`,
-                    }))}
-                    value={(newProduct.primary_warehouses || []).map(id => String(id))}
-                    onChange={(value) =>
-                      setNewProduct({
-                        ...newProduct,
-                        primary_warehouses: value || [],
-                      })
-                    }
-                    disabled={warehousesLoading}
-                    searchable
-                    clearable
-                    maxDropdownHeight={200}
-                    description="Select specific zonal warehouses for automatic distribution (leave empty to distribute to all)"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <Text weight={500} className="mb-1">
-                      📍 Selected Zonal Warehouses:
-                    </Text>
-                    <div className="space-y-1">
+                <div className="space-y-2 text-sm text-green-700 dark:text-green-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-bold">
+                      1
+                    </span>
+                    <span>
+                      Product will be automatically added to central warehouse
+                      with <strong>{newProduct.stock || 100}</strong> units
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-bold">
+                      2
+                    </span>
+                    <span>
+                      System will auto-distribute <strong>50 units each</strong>{" "}
+                      to{" "}
                       {newProduct.primary_warehouses &&
                       newProduct.primary_warehouses.length > 0
-                        ? zonalWarehouses
-                            .filter((w) =>
-                              newProduct.primary_warehouses.includes(
-                                w.id.toString()
+                        ? `selected ${
+                            newProduct.primary_warehouses.length
+                          } zonal warehouse${
+                            newProduct.primary_warehouses.length > 1 ? "s" : ""
+                          }`
+                        : `all ${zonalWarehouses.length} zonal warehouses`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center text-xs font-bold">
+                      3
+                    </span>
+                    <span>
+                      Smart fallback: Zonal out of stock → Central → Other zones
+                      if needed
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
+                  <div className="mb-3">
+                    <MultiSelect
+                      label="🎯 Select Target Zonal Warehouses"
+                      placeholder={
+                        warehousesLoading
+                          ? "Loading zonal warehouses..."
+                          : zonalWarehouses.length === 0
+                          ? "No zonal warehouses available"
+                          : "Choose which zonal warehouses to auto-distribute to"
+                      }
+                      data={zonalWarehouses.map((w) => ({
+                        value: String(w.id),
+                        label: `${w.parent_warehouse_id ? "└─ " : ""}${
+                          w.name
+                        } - ${
+                          w.parent_warehouse_id
+                            ? `Under: ${
+                                centralWarehouses.find(
+                                  (c) => c.id === w.parent_warehouse_id
+                                )?.name || "Unknown"
+                              }`
+                            : "Independent"
+                        }`,
+                      }))}
+                      value={(newProduct.primary_warehouses || []).map((id) =>
+                        String(id)
+                      )}
+                      onChange={(value) =>
+                        setNewProduct({
+                          ...newProduct,
+                          primary_warehouses: value || [],
+                        })
+                      }
+                      disabled={warehousesLoading}
+                      searchable
+                      clearable
+                      maxDropdownHeight={200}
+                      description="Select specific zonal warehouses for automatic distribution (leave empty to distribute to all)"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <Text weight={500} className="mb-1">
+                        📍 Selected Zonal Warehouses:
+                      </Text>
+                      <div className="space-y-1">
+                        {newProduct.primary_warehouses &&
+                        newProduct.primary_warehouses.length > 0
+                          ? zonalWarehouses
+                              .filter((w) =>
+                                newProduct.primary_warehouses.includes(
+                                  w.id.toString()
+                                )
                               )
-                            )
-                            .slice(0, 3)
-                            .map((w) => (
+                              .slice(0, 3)
+                              .map((w) => (
+                                <div
+                                  key={w.id}
+                                  className="flex items-center gap-1"
+                                >
+                                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                  <span>{w.name}</span>
+                                </div>
+                              ))
+                          : zonalWarehouses.slice(0, 3).map((w) => (
                               <div
                                 key={w.id}
                                 className="flex items-center gap-1"
@@ -2941,589 +3164,606 @@ const ProductsPage = () => {
                                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                                 <span>{w.name}</span>
                               </div>
-                            ))
-                        : zonalWarehouses.slice(0, 3).map((w) => (
-                            <div key={w.id} className="flex items-center gap-1">
-                              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                              <span>{w.name}</span>
-                            </div>
-                          ))}
-                      {(newProduct.primary_warehouses &&
-                      newProduct.primary_warehouses.length > 0
-                        ? zonalWarehouses.filter((w) =>
-                            newProduct.primary_warehouses.includes(
-                              w.id.toString()
-                            )
-                          ).length
-                        : zonalWarehouses.length) > 3 && (
-                        <Text size="xs" color="dimmed">
-                          ...and{" "}
-                          {(newProduct.primary_warehouses &&
-                          newProduct.primary_warehouses.length > 0
-                            ? zonalWarehouses.filter((w) =>
-                                newProduct.primary_warehouses.includes(
-                                  w.id.toString()
-                                )
-                              ).length
-                            : zonalWarehouses.length) - 3}{" "}
-                          more
-                        </Text>
-                      )}
+                            ))}
+                        {(newProduct.primary_warehouses &&
+                        newProduct.primary_warehouses.length > 0
+                          ? zonalWarehouses.filter((w) =>
+                              newProduct.primary_warehouses.includes(
+                                w.id.toString()
+                              )
+                            ).length
+                          : zonalWarehouses.length) > 3 && (
+                          <Text size="xs" color="dimmed">
+                            ...and{" "}
+                            {(newProduct.primary_warehouses &&
+                            newProduct.primary_warehouses.length > 0
+                              ? zonalWarehouses.filter((w) =>
+                                  newProduct.primary_warehouses.includes(
+                                    w.id.toString()
+                                  )
+                                ).length
+                              : zonalWarehouses.length) - 3}{" "}
+                            more
+                          </Text>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <Text weight={500} className="mb-1">
-                      🏢 Central Warehouses:
-                    </Text>
-                    <div className="space-y-1">
-                      {centralWarehouses.slice(0, 3).map((w) => (
-                        <div key={w.id} className="flex items-center gap-1">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                          <span>{w.name}</span>
-                        </div>
-                      ))}
-                      {centralWarehouses.length > 3 && (
-                        <Text size="xs" color="dimmed">
-                          ...and {centralWarehouses.length - 3} more
-                        </Text>
-                      )}
+                    <div>
+                      <Text weight={500} className="mb-1">
+                        🏢 Central Warehouses:
+                      </Text>
+                      <div className="space-y-1">
+                        {centralWarehouses.slice(0, 3).map((w) => (
+                          <div key={w.id} className="flex items-center gap-1">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                            <span>{w.name}</span>
+                          </div>
+                        ))}
+                        {centralWarehouses.length > 3 && (
+                          <Text size="xs" color="dimmed">
+                            ...and {centralWarehouses.length - 3} more
+                          </Text>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Selective Zonal with Central Fallback */}
-          {newProduct.warehouse_mapping_type === "selective_zonal" && (
-            <>
-              <MultiSelect
-                label="� Select Zonal Warehouses"
-                placeholder={
-                  warehousesLoading
-                    ? "Loading zonal warehouses..."
-                    : zonalWarehouses.length === 0
-                    ? "No zonal warehouses available"
-                    : "Choose specific zonal warehouses for this product"
-                }
-                data={zonalWarehouses.map((w) => {
-                  const parentWarehouse = centralWarehouses.find(
-                    (c) => c.id === w.parent_warehouse_id
-                  );
-                  return {
-                    value: String(w.id),
-                    label: parentWarehouse
-                      ? `└─ ${w.name} - Under: ${parentWarehouse.name}${
-                          w.zone_name ? ` (Zone: ${w.zone_name})` : ""
-                        }`
-                      : `${w.name}${
-                          w.zone_name ? ` - Zone: ${w.zone_name}` : ""
-                        }`,
-                  };
-                })}
-                value={(newProduct.primary_warehouses || []).map(id => String(id))}
-                onChange={(value) =>
-                  setNewProduct({ ...newProduct, primary_warehouses: value || [] })
-                }
-                disabled={warehousesLoading}
-                searchable
-                clearable
-                maxDropdownHeight={200}
-                description="Select which zonal warehouses should stock this product"
-              />
-
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-                <div className="flex items-center justify-between mb-2">
-                  <Text size="sm" weight={500}>
-                    🔄 Central Warehouse Fallback
-                  </Text>
-                  <Switch
-                    checked={newProduct.enable_fallback}
-                    onChange={(e) =>
-                      setNewProduct({
-                        ...newProduct,
-                        enable_fallback: e.currentTarget.checked,
-                      })
-                    }
-                    color="blue"
-                  />
-                </div>
-                <Text size="xs" color="dimmed">
-                  When enabled, if selected zonal warehouses run out of stock,
-                  customers can order from central warehouse
-                </Text>
-              </div>
-
-              {newProduct.enable_fallback && (
+            {/* Selective Zonal with Central Fallback */}
+            {newProduct.warehouse_mapping_type === "selective_zonal" && (
+              <>
                 <MultiSelect
-                  label="🏢 Central Fallback Warehouses"
+                  label="🏪 Select Zonal Warehouses"
                   placeholder={
                     warehousesLoading
-                      ? "Loading central warehouses..."
-                      : centralWarehouses.length === 0
-                      ? "No central warehouses available"
-                      : "Select central warehouses for fallback"
+                      ? "Loading zonal warehouses..."
+                      : zonalWarehouses.length === 0
+                      ? "No zonal warehouses available"
+                      : "Choose specific zonal warehouses for this product"
                   }
-                  data={centralWarehouses.map((w) => {
-                    const children = zonalWarehouses.filter(
-                      (z) => z.parent_warehouse_id === w.id
-                    ).length;
+                  data={zonalWarehouses.map((w) => {
+                    const parentWarehouse = centralWarehouses.find(
+                      (c) => c.id === w.parent_warehouse_id
+                    );
                     return {
                       value: String(w.id),
-                      label: `🏢 ${w.name} (${children} children)`,
+                      label: parentWarehouse
+                        ? `└─ ${w.name} - Under: ${parentWarehouse.name}${
+                            w.zone_name ? ` (Zone: ${w.zone_name})` : ""
+                          }`
+                        : `${w.name}${
+                            w.zone_name ? ` - Zone: ${w.zone_name}` : ""
+                          }`,
                     };
                   })}
-                  value={(newProduct.fallback_warehouses || []).map(id => String(id))}
+                  value={(newProduct.primary_warehouses || []).map((id) =>
+                    String(id)
+                  )}
                   onChange={(value) =>
-                    setNewProduct({ ...newProduct, fallback_warehouses: value || [] })
+                    setNewProduct({
+                      ...newProduct,
+                      primary_warehouses: value || [],
+                    })
                   }
                   disabled={warehousesLoading}
                   searchable
                   clearable
                   maxDropdownHeight={200}
-                  description="These warehouses will serve as backup when zonal warehouses are out of stock"
+                  description="Select which zonal warehouses should stock this product"
                 />
-              )}
-            </>
-          )}
 
-          {/* Central Only */}
-          {newProduct.warehouse_mapping_type === "central_only" && (
-            <>
-              <MultiSelect
-                label="🏢 Select Central Warehouses"
-                placeholder={
-                  warehousesLoading
-                    ? "Loading central warehouses..."
-                    : centralWarehouses.length === 0
-                    ? "No central warehouses available"
-                    : "Choose central warehouses for this product"
-                }
-                data={centralWarehouses.map((w) => ({
-                  value: String(w.id),
-                  label: `🏢 ${w.name} (${
-                    zonalWarehouses.filter(
-                      (z) => z.parent_warehouse_id === w.id
-                    ).length
-                  } children)`,
-                }))}
-                value={(newProduct.assigned_warehouse_ids || []).map(id => String(id))}
-                onChange={(value) =>
-                  setNewProduct({
-                    ...newProduct,
-                    assigned_warehouse_ids: value || [],
-                  })
-                }
-                disabled={warehousesLoading}
-                searchable
-                clearable
-                maxDropdownHeight={200}
-                description="Select which central warehouses should stock this product"
-              />
-
-              <div className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
-                <Text size="sm" weight={600} color="orange" className="mb-3">
-                  🏢 Central Warehouse Only Configuration
-                </Text>
-                <div className="space-y-2 text-sm text-orange-700 dark:text-orange-400">
-                  <div className="flex items-center gap-2">
-                    <span>📦</span>
-                    <span>
-                      Product will be stocked only in selected central
-                      warehouses
-                    </span>
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <Text size="sm" weight={500}>
+                      🔄 Central Warehouse Fallback
+                    </Text>
+                    <Switch
+                      checked={newProduct.enable_fallback}
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          enable_fallback: e.currentTarget.checked,
+                        })
+                      }
+                      color="blue"
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span>🚫</span>
-                    <span>
-                      No zonal distribution - customers order directly from
-                      central
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>🎯</span>
-                    <span>
-                      Best for: Bulk items, special products, or centralized
-                      inventory
-                    </span>
-                  </div>
-                </div>
-
-                {newProduct.assigned_warehouse_ids &&
-                  newProduct.assigned_warehouse_ids.length > 0 && (
-                    <div className="mt-3 p-2 bg-orange-100 dark:bg-orange-800/30 rounded">
-                      <Text size="xs" weight={500}>
-                        Selected Central Warehouses (
-                        {newProduct.assigned_warehouse_ids.length}):
-                      </Text>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {centralWarehouses
-                          .filter((w) =>
-                            newProduct.assigned_warehouse_ids.includes(
-                              w.id.toString()
-                            )
-                          )
-                          .map((w) => (
-                            <Badge
-                              key={w.id}
-                              variant="outline"
-                              color="orange"
-                              size="sm"
-                            >
-                              {w.name}
-                            </Badge>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-            </>
-          )}
-
-          {/* Zonal Only (No Fallback) */}
-          {newProduct.warehouse_mapping_type === "zonal_only" && (
-            <>
-              <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                <Text size="sm" weight={600} color="purple" className="mb-2">
-                  🏪 Zonal Warehouses Only (No Fallback)
-                </Text>
-                <Text size="xs" color="dimmed" className="mb-3">
-                  Product will be distributed only to zonal warehouses. When out
-                  of stock, customers cannot order from central warehouse.
-                </Text>
-                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-700">
-                  <Text size="xs" color="red" weight={500}>
-                    ⚠️ Warning: No fallback to central warehouse. Product may
-                    become unavailable in some regions.
+                  <Text size="xs" color="dimmed">
+                    When enabled, if selected zonal warehouses run out of stock,
+                    customers can order from central warehouse
                   </Text>
                 </div>
-              </div>
 
-              <MultiSelect
-                label="🏪 Select Zonal Warehouses"
-                placeholder={
-                  warehousesLoading
-                    ? "Loading zonal warehouses..."
-                    : zonalWarehouses.length === 0
-                    ? "No zonal warehouses available"
-                    : "Choose zonal warehouses (no central fallback)"
-                }
-                data={zonalWarehouses.map((w) => ({
-                  value: String(w.id),
-                  label: `${w.parent_warehouse_id ? "└─ " : ""}${w.name} - ${
-                    w.parent_warehouse_id
-                      ? `Under: ${
-                          centralWarehouses.find(
-                            (c) => c.id === w.parent_warehouse_id
-                          )?.name || "Unknown"
-                        }`
-                      : "Independent"
-                  }`,
-                }))}
-                value={(newProduct.primary_warehouses || []).map(id => String(id))}
-                onChange={(value) =>
-                  setNewProduct({ ...newProduct, primary_warehouses: value || [] })
-                }
-                disabled={warehousesLoading}
-                searchable
-                clearable
-                maxDropdownHeight={200}
-                description="Regional products only - no central warehouse fallback"
-              />
-            </>
-          )}
-
-          {/* Stock Distribution Settings */}
-          {(newProduct.warehouse_mapping_type === "auto_central_to_zonal" ||
-            newProduct.warehouse_mapping_type === "selective_zonal") && (
-            <div className="mb-4">
-              <Text size="sm" weight={500} className="mb-3">
-                📊 Stock Distribution Settings
-              </Text>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <NumberInput
-                  label="Initial Central Stock"
-                  placeholder="Total stock for central warehouse"
-                  value={newProduct.stock}
-                  onChange={(value) =>
-                    setNewProduct({ ...newProduct, stock: value })
-                  }
-                  min={1}
-                  description="Total units to add to central warehouse first"
-                />
-                <NumberInput
-                  label="Per-Zone Distribution"
-                  placeholder="Units per zonal warehouse"
-                  value={50}
-                  min={1}
-                  max={newProduct.stock}
-                  description="Units to distribute to each zonal warehouse"
-                  disabled={
-                    newProduct.warehouse_mapping_type ===
-                    "auto_central_to_zonal"
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Configuration Summary */}
-          {newProduct.warehouse_mapping_type && (
-            <div className="mb-4">
-              <Text size="sm" weight={500} className="mb-2">
-                📋 Configuration Summary
-              </Text>
-
-              {newProduct.warehouse_mapping_type ===
-                "auto_central_to_zonal" && (
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Text size="sm" color="green" weight={600}>
-                      🚀 Auto Distribution Active
-                    </Text>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <Text weight={500}>Initial Setup:</Text>
-                      <Text color="dimmed">
-                        • Central: {newProduct.stock || 100} units
-                      </Text>
-                      <Text color="dimmed">
-                        • Zonal:{" "}
-                        {newProduct.primary_warehouses &&
-                        newProduct.primary_warehouses.length > 0
-                          ? `${
-                              newProduct.primary_warehouses.length
-                            } selected warehouse${
-                              newProduct.primary_warehouses.length > 1
-                                ? "s"
-                                : ""
-                            }`
-                          : `${zonalWarehouses.length} warehouses`}{" "}
-                        × 50 units each
-                      </Text>
-                    </div>
-                    <div>
-                      <Text weight={500}>Fallback Logic:</Text>
-                      <Text color="dimmed">• Zonal → Central → Cross-zone</Text>
-                      <Text color="dimmed">• Smart inventory management</Text>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {newProduct.warehouse_mapping_type === "selective_zonal" && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-                  <Text size="sm" color="blue" weight={600}>
-                    🎯 Selective Zonal Configuration
-                  </Text>
-                  <div className="mt-2 space-y-1 text-xs">
-                    <Text color="dimmed">
-                      • Selected Zones:{" "}
-                      {(newProduct.primary_warehouses || []).length}
-                    </Text>
-                    <Text color="dimmed">
-                      • Central Fallback:{" "}
-                      {newProduct.enable_fallback
-                        ? "✅ Enabled"
-                        : "❌ Disabled"}
-                    </Text>
-                    {newProduct.enable_fallback && (
-                      <Text color="dimmed">
-                        • Fallback Warehouses:{" "}
-                        {(newProduct.fallback_warehouses || []).length}
-                      </Text>
+                {newProduct.enable_fallback && (
+                  <MultiSelect
+                    label="🏢 Central Fallback Warehouses"
+                    placeholder={
+                      warehousesLoading
+                        ? "Loading central warehouses..."
+                        : centralWarehouses.length === 0
+                        ? "No central warehouses available"
+                        : "Select central warehouses for fallback"
+                    }
+                    data={centralWarehouses.map((w) => {
+                      const children = zonalWarehouses.filter(
+                        (z) => z.parent_warehouse_id === w.id
+                      ).length;
+                      return {
+                        value: String(w.id),
+                        label: `🏢 ${w.name} (${children} children)`,
+                      };
+                    })}
+                    value={(newProduct.fallback_warehouses || []).map((id) =>
+                      String(id)
                     )}
-                  </div>
-                </div>
-              )}
+                    onChange={(value) =>
+                      setNewProduct({
+                        ...newProduct,
+                        fallback_warehouses: value || [],
+                      })
+                    }
+                    disabled={warehousesLoading}
+                    searchable
+                    clearable
+                    maxDropdownHeight={200}
+                    description="These warehouses will serve as backup when zonal warehouses are out of stock"
+                  />
+                )}
+              </>
+            )}
 
-              {newProduct.warehouse_mapping_type === "central_only" && (
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
-                  <Text size="sm" color="orange" weight={600}>
-                    🏢 Central Only Configuration
+            {/* Central Only */}
+            {newProduct.warehouse_mapping_type === "central_only" && (
+              <>
+                <MultiSelect
+                  label="🏢 Select Central Warehouses"
+                  placeholder={
+                    warehousesLoading
+                      ? "Loading central warehouses..."
+                      : centralWarehouses.length === 0
+                      ? "No central warehouses available"
+                      : "Choose central warehouses for this product"
+                  }
+                  data={centralWarehouses.map((w) => ({
+                    value: String(w.id),
+                    label: `🏢 ${w.name} (${
+                      zonalWarehouses.filter(
+                        (z) => z.parent_warehouse_id === w.id
+                      ).length
+                    } children)`,
+                  }))}
+                  value={(newProduct.assigned_warehouse_ids || []).map((id) =>
+                    String(id)
+                  )}
+                  onChange={(value) =>
+                    setNewProduct({
+                      ...newProduct,
+                      assigned_warehouse_ids: value || [],
+                    })
+                  }
+                  disabled={warehousesLoading}
+                  searchable
+                  clearable
+                  maxDropdownHeight={200}
+                  description="Select which central warehouses should stock this product"
+                />
+
+                <div className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+                  <Text size="sm" weight={600} color="orange" className="mb-3">
+                    🏢 Central Warehouse Only Configuration
                   </Text>
-                  <div className="mt-2 text-xs">
-                    <Text color="dimmed">
-                      • Selected Central Warehouses:{" "}
-                      {(newProduct.assigned_warehouse_ids || []).length} of{" "}
-                      {centralWarehouses.length}
-                    </Text>
-                    <Text color="dimmed">• Zonal Access: Not available</Text>
-                    <Text color="dimmed">• Fallback: Not needed</Text>
-                    {(newProduct.assigned_warehouse_ids || []).length > 0 && (
-                      <div className="mt-1">
-                        <Text color="dimmed">• Warehouses: </Text>
+                  <div className="space-y-2 text-sm text-orange-700 dark:text-orange-400">
+                    <div className="flex items-center gap-2">
+                      <span>📦</span>
+                      <span>
+                        Product will be stocked only in selected central
+                        warehouses
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>🚫</span>
+                      <span>
+                        No zonal distribution - customers order directly from
+                        central
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>🎯</span>
+                      <span>
+                        Best for: Bulk items, special products, or centralized
+                        inventory
+                      </span>
+                    </div>
+                  </div>
+
+                  {newProduct.assigned_warehouse_ids &&
+                    newProduct.assigned_warehouse_ids.length > 0 && (
+                      <div className="mt-3 p-2 bg-orange-100 dark:bg-orange-800/30 rounded">
+                        <Text size="xs" weight={500}>
+                          Selected Central Warehouses (
+                          {newProduct.assigned_warehouse_ids.length}):
+                        </Text>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {(newProduct.assigned_warehouse_ids || []).map(
-                            (warehouseId) => {
-                              const warehouse = centralWarehouses.find(
-                                (w) => w.id.toString() === warehouseId
-                              );
-                              return (
-                                warehouse && (
-                                  <Badge
-                                    key={warehouse.id}
-                                    variant="outline"
-                                    color="orange"
-                                    size="xs"
-                                  >
-                                    {warehouse.name}
-                                  </Badge>
-                                )
-                              );
-                            }
-                          )}
+                          {centralWarehouses
+                            .filter((w) =>
+                              newProduct.assigned_warehouse_ids.includes(
+                                w.id.toString()
+                              )
+                            )
+                            .map((w) => (
+                              <Badge
+                                key={w.id}
+                                variant="outline"
+                                color="orange"
+                                size="sm"
+                              >
+                                {w.name}
+                              </Badge>
+                            ))}
                         </div>
                       </div>
                     )}
-                  </div>
                 </div>
-              )}
+              </>
+            )}
 
-              {newProduct.warehouse_mapping_type === "zonal_only" && (
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                  <Text size="sm" color="purple" weight={600}>
-                    🏪 Zonal Only Configuration
+            {/* Zonal Only (No Fallback) */}
+            {newProduct.warehouse_mapping_type === "zonal_only" && (
+              <>
+                <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <Text size="sm" weight={600} color="purple" className="mb-2">
+                    🏪 Zonal Warehouses Only (No Fallback)
                   </Text>
-                  <div className="mt-2 text-xs">
-                    <Text color="dimmed">
-                      • Distribution: Selected zonal warehouses (
-                      {(newProduct.primary_warehouses || []).length})
-                    </Text>
-                    <Text color="dimmed">• Central Fallback: ❌ Disabled</Text>
-                    <Text color="red" weight={500}>
-                      • Risk: May become unavailable when zones are out of stock
+                  <Text size="xs" color="dimmed" className="mb-3">
+                    Product will be distributed only to zonal warehouses. When
+                    out of stock, customers cannot order from central warehouse.
+                  </Text>
+                  <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-700">
+                    <Text size="xs" color="red" weight={500}>
+                      ⚠️ Warning: No fallback to central warehouse. Product may
+                      become unavailable in some regions.
                     </Text>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Selected Warehouses Preview */}
-          {(newProduct.warehouse_mapping_type === "selective_zonal" ||
-            newProduct.warehouse_mapping_type === "zonal_only") &&
-            (newProduct.primary_warehouses || []).length > 0 && (
+                <MultiSelect
+                  label="🏪 Select Zonal Warehouses"
+                  placeholder={
+                    warehousesLoading
+                      ? "Loading zonal warehouses..."
+                      : zonalWarehouses.length === 0
+                      ? "No zonal warehouses available"
+                      : "Choose zonal warehouses (no central fallback)"
+                  }
+                  data={zonalWarehouses.map((w) => ({
+                    value: String(w.id),
+                    label: `${w.parent_warehouse_id ? "└─ " : ""}${w.name} - ${
+                      w.parent_warehouse_id
+                        ? `Under: ${
+                            centralWarehouses.find(
+                              (c) => c.id === w.parent_warehouse_id
+                            )?.name || "Unknown"
+                          }`
+                        : "Independent"
+                    }`,
+                  }))}
+                  value={(newProduct.primary_warehouses || []).map((id) =>
+                    String(id)
+                  )}
+                  onChange={(value) =>
+                    setNewProduct({
+                      ...newProduct,
+                      primary_warehouses: value || [],
+                    })
+                  }
+                  disabled={warehousesLoading}
+                  searchable
+                  clearable
+                  maxDropdownHeight={200}
+                  description="Regional products only - no central warehouse fallback"
+                />
+              </>
+            )}
+
+            {/* Stock Distribution Settings */}
+            {(newProduct.warehouse_mapping_type === "auto_central_to_zonal" ||
+              newProduct.warehouse_mapping_type === "selective_zonal") && (
               <div className="mb-4">
                 <Text size="sm" weight={500} className="mb-3">
-                  📍 Selected Warehouses Preview
+                  📊 Stock Distribution Settings
                 </Text>
-
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border">
-                  <div className="mb-3">
-                    <Text
-                      size="sm"
-                      weight={500}
-                      className="mb-2 flex items-center gap-2"
-                    >
-                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                      Primary Warehouses (
-                      {(newProduct.primary_warehouses || []).length})
-                    </Text>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {(newProduct.primary_warehouses || []).map(
-                        (warehouseId) => {
-                          const warehouse = zonalWarehouses.find(
-                            (w) => w.id.toString() === warehouseId
-                          );
-                          return (
-                            <div
-                              key={warehouseId}
-                              className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded"
-                            >
-                              <span className="text-blue-600">🏪</span>
-                              <div className="flex-1">
-                                <Text size="xs" weight={500}>
-                                  {warehouse?.name || warehouseId}
-                                </Text>
-                                <Text size="xs" color="dimmed">
-                                  Zone: {warehouse?.zone_name || "N/A"}
-                                </Text>
-                              </div>
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-
-                  {newProduct.warehouse_mapping_type === "selective_zonal" &&
-                    newProduct.enable_fallback &&
-                    (newProduct.fallback_warehouses || []).length > 0 && (
-                      <div>
-                        <Text
-                          size="sm"
-                          weight={500}
-                          className="mb-2 flex items-center gap-2"
-                        >
-                          <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
-                          Fallback Warehouses (
-                          {(newProduct.fallback_warehouses || []).length})
-                        </Text>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {(newProduct.fallback_warehouses || []).map(
-                            (warehouseId) => {
-                              const warehouse = centralWarehouses.find(
-                                (w) => w.id.toString() === warehouseId
-                              );
-                              return (
-                                <div
-                                  key={warehouseId}
-                                  className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded"
-                                >
-                                  <span className="text-orange-600">🏢</span>
-                                  <div className="flex-1">
-                                    <Text size="xs" weight={500}>
-                                      {warehouse?.name || warehouseId}
-                                    </Text>
-                                    <Text size="xs" color="dimmed">
-                                      Central Warehouse
-                                    </Text>
-                                  </div>
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      </div>
-                    )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <NumberInput
+                    label="Initial Central Stock"
+                    placeholder="Total stock for central warehouse"
+                    value={newProduct.stock}
+                    onChange={(value) =>
+                      setNewProduct({ ...newProduct, stock: value })
+                    }
+                    min={1}
+                    description="Total units to add to central warehouse first"
+                  />
+                  <NumberInput
+                    label="Per-Zone Distribution"
+                    placeholder="Units per zonal warehouse"
+                    value={50}
+                    min={1}
+                    max={newProduct.stock}
+                    description="Units to distribute to each zonal warehouse"
+                    disabled={
+                      newProduct.warehouse_mapping_type ===
+                      "auto_central_to_zonal"
+                    }
+                  />
                 </div>
               </div>
             )}
 
-          {/* Debug Information */}
-          <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-            <Text size="xs" weight={500} className="mb-1">
-              Debug Info:
-            </Text>
-            <Text size="xs" color="dimmed">
-              Strategy: {newProduct.warehouse_mapping_type || "not set"} |
-              Warehouses Loading: {warehousesLoading ? "Yes" : "No"} | Central:{" "}
-              {centralWarehouses.length} | Zonal: {zonalWarehouses.length} |
-              Selected Primary: {(newProduct.primary_warehouses || []).length} |
-              Selected Fallback: {(newProduct.fallback_warehouses || []).length}{" "}
-              | Fallback Enabled: {newProduct.enable_fallback ? "Yes" : "No"} |
-              Stock: {newProduct.stock || 100}
-            </Text>
+            {/* Configuration Summary */}
+            {newProduct.warehouse_mapping_type && (
+              <div className="mb-4">
+                <Text size="sm" weight={500} className="mb-2">
+                  📋 Configuration Summary
+                </Text>
+
+                {newProduct.warehouse_mapping_type ===
+                  "auto_central_to_zonal" && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Text size="sm" color="green" weight={600}>
+                        🚀 Auto Distribution Active
+                      </Text>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <Text weight={500}>Initial Setup:</Text>
+                        <Text color="dimmed">
+                          • Central: {newProduct.stock || 100} units
+                        </Text>
+                        <Text color="dimmed">
+                          • Zonal:{" "}
+                          {newProduct.primary_warehouses &&
+                          newProduct.primary_warehouses.length > 0
+                            ? `${
+                                newProduct.primary_warehouses.length
+                              } selected warehouse${
+                                newProduct.primary_warehouses.length > 1
+                                  ? "s"
+                                  : ""
+                              }`
+                            : `${zonalWarehouses.length} warehouses`}{" "}
+                          × 50 units each
+                        </Text>
+                      </div>
+                      <div>
+                        <Text weight={500}>Fallback Logic:</Text>
+                        <Text color="dimmed">
+                          • Zonal → Central → Cross-zone
+                        </Text>
+                        <Text color="dimmed">• Smart inventory management</Text>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {newProduct.warehouse_mapping_type === "selective_zonal" && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                    <Text size="sm" color="blue" weight={600}>
+                      🎯 Selective Zonal Configuration
+                    </Text>
+                    <div className="mt-2 space-y-1 text-xs">
+                      <Text color="dimmed">
+                        • Selected Zones:{" "}
+                        {(newProduct.primary_warehouses || []).length}
+                      </Text>
+                      <Text color="dimmed">
+                        • Central Fallback:{" "}
+                        {newProduct.enable_fallback
+                          ? "✅ Enabled"
+                          : "❌ Disabled"}
+                      </Text>
+                      {newProduct.enable_fallback && (
+                        <Text color="dimmed">
+                          • Fallback Warehouses:{" "}
+                          {(newProduct.fallback_warehouses || []).length}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {newProduct.warehouse_mapping_type === "central_only" && (
+                  <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+                    <Text size="sm" color="orange" weight={600}>
+                      🏢 Central Only Configuration
+                    </Text>
+                    <div className="mt-2 text-xs">
+                      <Text color="dimmed">
+                        • Selected Central Warehouses:{" "}
+                        {(newProduct.assigned_warehouse_ids || []).length} of{" "}
+                        {centralWarehouses.length}
+                      </Text>
+                      <Text color="dimmed">• Zonal Access: Not available</Text>
+                      <Text color="dimmed">• Fallback: Not needed</Text>
+                      {(newProduct.assigned_warehouse_ids || []).length > 0 && (
+                        <div className="mt-1">
+                          <Text color="dimmed">• Warehouses: </Text>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(newProduct.assigned_warehouse_ids || []).map(
+                              (warehouseId) => {
+                                const warehouse = centralWarehouses.find(
+                                  (w) => w.id.toString() === warehouseId
+                                );
+                                return (
+                                  warehouse && (
+                                    <Badge
+                                      key={warehouse.id}
+                                      variant="outline"
+                                      color="orange"
+                                      size="xs"
+                                    >
+                                      {warehouse.name}
+                                    </Badge>
+                                  )
+                                );
+                              }
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {newProduct.warehouse_mapping_type === "zonal_only" && (
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                    <Text size="sm" color="purple" weight={600}>
+                      🏪 Zonal Only Configuration
+                    </Text>
+                    <div className="mt-2 text-xs">
+                      <Text color="dimmed">
+                        • Distribution: Selected zonal warehouses (
+                        {(newProduct.primary_warehouses || []).length})
+                      </Text>
+                      <Text color="dimmed">
+                        • Central Fallback: ❌ Disabled
+                      </Text>
+                      <Text color="red" weight={500}>
+                        • Risk: May become unavailable when zones are out of
+                        stock
+                      </Text>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Selected Warehouses Preview */}
+            {(newProduct.warehouse_mapping_type === "selective_zonal" ||
+              newProduct.warehouse_mapping_type === "zonal_only") &&
+              (newProduct.primary_warehouses || []).length > 0 && (
+                <div className="mb-4">
+                  <Text size="sm" weight={500} className="mb-3">
+                    📍 Selected Warehouses Preview
+                  </Text>
+
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border">
+                    <div className="mb-3">
+                      <Text
+                        size="sm"
+                        weight={500}
+                        className="mb-2 flex items-center gap-2"
+                      >
+                        <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                        Primary Warehouses (
+                        {(newProduct.primary_warehouses || []).length})
+                      </Text>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(newProduct.primary_warehouses || []).map(
+                          (warehouseId) => {
+                            const warehouse = zonalWarehouses.find(
+                              (w) => w.id.toString() === warehouseId
+                            );
+                            return (
+                              <div
+                                key={warehouseId}
+                                className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded"
+                              >
+                                <span className="text-blue-600">🏪</span>
+                                <div className="flex-1">
+                                  <Text size="xs" weight={500}>
+                                    {warehouse?.name || warehouseId}
+                                  </Text>
+                                  <Text size="xs" color="dimmed">
+                                    Zone: {warehouse?.zone_name || "N/A"}
+                                  </Text>
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    {newProduct.warehouse_mapping_type === "selective_zonal" &&
+                      newProduct.enable_fallback &&
+                      (newProduct.fallback_warehouses || []).length > 0 && (
+                        <div>
+                          <Text
+                            size="sm"
+                            weight={500}
+                            className="mb-2 flex items-center gap-2"
+                          >
+                            <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+                            Fallback Warehouses (
+                            {(newProduct.fallback_warehouses || []).length})
+                          </Text>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {(newProduct.fallback_warehouses || []).map(
+                              (warehouseId) => {
+                                const warehouse = centralWarehouses.find(
+                                  (w) => w.id.toString() === warehouseId
+                                );
+                                return (
+                                  <div
+                                    key={warehouseId}
+                                    className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded"
+                                  >
+                                    <span className="text-orange-600">🏢</span>
+                                    <div className="flex-1">
+                                      <Text size="xs" weight={500}>
+                                        {warehouse?.name || warehouseId}
+                                      </Text>
+                                      <Text size="xs" color="dimmed">
+                                        Central Warehouse
+                                      </Text>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            )}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
+
+            {/* Debug Information */}
+            <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+              <Text size="xs" weight={500} className="mb-1">
+                Debug Info:
+              </Text>
+              <Text size="xs" color="dimmed">
+                Strategy: {newProduct.warehouse_mapping_type || "not set"} |
+                Warehouses Loading: {warehousesLoading ? "Yes" : "No"} |
+                Central: {centralWarehouses.length} | Zonal:{" "}
+                {zonalWarehouses.length} | Selected Primary:{" "}
+                {(newProduct.primary_warehouses || []).length} | Selected
+                Fallback: {(newProduct.fallback_warehouses || []).length} |
+                Fallback Enabled: {newProduct.enable_fallback ? "Yes" : "No"} |
+                Stock: {newProduct.stock || 100}
+              </Text>
+            </div>
+
+            <Textarea
+              label="Warehouse Notes"
+              placeholder="Special notes about warehouse assignment (optional)"
+              value={newProduct.warehouse_notes || ""}
+              onChange={(e) =>
+                setNewProduct({
+                  ...newProduct,
+                  warehouse_notes: e.target.value,
+                })
+              }
+              minRows={2}
+            />
           </div>
 
-          <Textarea
-            label="Warehouse Notes"
-            placeholder="Special notes about warehouse assignment (optional)"
-            value={newProduct.warehouse_notes || ""}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, warehouse_notes: e.target.value })
-            }
-            minRows={2}
-          />
-
           {/* Product Variants Section */}
-          <Divider
-            label="🎨 Product Variants"
-            labelPosition="center"
-            my="md"
-          />
+          <Divider label="🎨 Product Variants" labelPosition="center" my="md" />
 
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
@@ -3590,15 +3830,25 @@ const ProductsPage = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <TextInput
-                            label="Variant Name"
-                            placeholder="e.g., 10 KG, 5 KG, 1 Liter"
-                            value={variant.variant_name}
-                            onChange={(e) =>
-                              updateVariant(index, "variant_name", e.target.value)
-                            }
-                            required
-                          />
+                          <div>
+                            <label className="block text-sm text-gray-700">
+                              Variant Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., 10 KG, 5 KG, 1 Liter"
+                              value={variant.variant_name}
+                              onChange={(e) =>
+                                updateVariant(
+                                  index,
+                                  "variant_name",
+                                  e.target.value
+                                )
+                              }
+                              required
+                              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                            />
+                          </div>
 
                           <NumberInput
                             label="Variant Price (₹)"
@@ -3632,33 +3882,51 @@ const ProductsPage = () => {
                             required
                           />
 
-                          <TextInput
-                            label="Weight/Size"
-                            placeholder="e.g., 10kg, 500ml"
-                            value={variant.variant_weight}
-                            onChange={(e) =>
-                              updateVariant(index, "variant_weight", e.target.value)
-                            }
-                          />
+                          <div>
+                            <label className="block text-sm text-gray-700">
+                              Weight/Size
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., 10kg, 500ml"
+                              value={variant.variant_weight}
+                              onChange={(e) =>
+                                updateVariant(
+                                  index,
+                                  "variant_weight",
+                                  e.target.value
+                                )
+                              }
+                              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                            />
+                          </div>
 
-                          <Select
-                            label="Unit"
-                            placeholder="Select unit"
-                            data={[
-                              { value: "kg", label: "Kilogram (kg)" },
-                              { value: "g", label: "Gram (g)" },
-                              { value: "l", label: "Litre (l)" },
-                              { value: "ml", label: "Millilitre (ml)" },
-                              { value: "pcs", label: "Pieces (pcs)" },
-                              { value: "pack", label: "Pack" },
-                              { value: "box", label: "Box" },
-                              { value: "bottle", label: "Bottle" },
-                            ]}
-                            value={variant.variant_unit}
-                            onChange={(value) =>
-                              updateVariant(index, "variant_unit", value)
-                            }
-                          />
+                          <div className="mt-2">
+                            <label className="block text-sm text-gray-700">
+                              Unit
+                            </label>
+                            <select
+                              value={variant.variant_unit || ""}
+                              onChange={(e) =>
+                                updateVariant(
+                                  index,
+                                  "variant_unit",
+                                  e.target.value
+                                )
+                              }
+                              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                            >
+                              <option value="">Select unit</option>
+                              <option value="kg">Kilogram (kg)</option>
+                              <option value="g">Gram (g)</option>
+                              <option value="l">Litre (l)</option>
+                              <option value="ml">Millilitre (ml)</option>
+                              <option value="pcs">Pieces (pcs)</option>
+                              <option value="pack">Pack</option>
+                              <option value="box">Box</option>
+                              <option value="bottle">Bottle</option>
+                            </select>
+                          </div>
 
                           <NumberInput
                             label="Shipping Amount (₹)"
@@ -3682,30 +3950,48 @@ const ProductsPage = () => {
                             precision={1}
                           />
 
-                          <FileInput
-                            label="Variant Image"
-                            placeholder="Upload variant image"
-                            accept="image/*"
-                            icon={<FaUpload size={14} />}
-                            onChange={(file) => setVariantImage(index, file)}
-                            value={variantImages[index] || null}
-                          />
+                          <div>
+                            <label className="block text-sm text-gray-700">
+                              Variant Image
+                            </label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) =>
+                                setVariantImage(
+                                  index,
+                                  e.target.files?.[0] || null
+                                )
+                              }
+                              className="mt-1 w-full text-sm text-gray-700"
+                            />
+                          </div>
                         </div>
 
                         <div className="mt-4">
-                          <Textarea
-                            label="Variant Features"
-                            placeholder="Special features for this variant"
-                            value={variant.variant_features}
-                            onChange={(e) =>
-                              updateVariant(index, "variant_features", e.target.value)
-                            }
-                            minRows={2}
-                          />
+                          <div>
+                            <label className="block text-sm text-gray-700">
+                              Variant Features
+                            </label>
+                            <textarea
+                              placeholder="Special features for this variant"
+                              value={variant.variant_features}
+                              onChange={(e) =>
+                                updateVariant(
+                                  index,
+                                  "variant_features",
+                                  e.target.value
+                                )
+                              }
+                              rows={2}
+                              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+                            />
+                          </div>
                         </div>
 
                         {/* Variant Pricing Summary */}
-                        {(variant.variant_price > 0 || variant.variant_old_price > 0) && (
+                        {(variant.variant_price > 0 ||
+                          variant.variant_old_price > 0) && (
                           <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
                             <Text size="xs" weight={500} className="mb-2">
                               Pricing Summary:
@@ -3713,18 +3999,26 @@ const ProductsPage = () => {
                             <div className="grid grid-cols-3 gap-4 text-xs">
                               <div>
                                 <Text color="dimmed">Current Price:</Text>
-                                <Text weight={600}>₹{variant.variant_price || 0}</Text>
+                                <Text weight={600}>
+                                  ₹{variant.variant_price || 0}
+                                </Text>
                               </div>
                               <div>
                                 <Text color="dimmed">Old Price:</Text>
-                                <Text weight={600}>₹{variant.variant_old_price || 0}</Text>
+                                <Text weight={600}>
+                                  ₹{variant.variant_old_price || 0}
+                                </Text>
                               </div>
                               <div>
                                 <Text color="dimmed">Discount:</Text>
                                 <Text weight={600} color="green">
                                   {variant.variant_discount || 0}%
-                                  {variant.variant_old_price && variant.variant_price
-                                    ? ` (₹${variant.variant_old_price - variant.variant_price} off)`
+                                  {variant.variant_old_price &&
+                                  variant.variant_price
+                                    ? ` (₹${
+                                        variant.variant_old_price -
+                                        variant.variant_price
+                                      } off)`
                                     : ""}
                                 </Text>
                               </div>
@@ -3761,20 +4055,30 @@ const ProductsPage = () => {
                       <div>
                         <Text color="dimmed">Total Stock:</Text>
                         <Text weight={600}>
-                          {variants.reduce((sum, v) => sum + (v.variant_stock || 0), 0)}
+                          {variants.reduce(
+                            (sum, v) => sum + (v.variant_stock || 0),
+                            0
+                          )}
                         </Text>
                       </div>
                       <div>
                         <Text color="dimmed">Price Range:</Text>
                         <Text weight={600}>
-                          ₹{Math.min(...variants.map(v => v.variant_price || 0))} - 
-                          ₹{Math.max(...variants.map(v => v.variant_price || 0))}
+                          ₹
+                          {Math.min(
+                            ...variants.map((v) => v.variant_price || 0)
+                          )}{" "}
+                          - ₹
+                          {Math.max(
+                            ...variants.map((v) => v.variant_price || 0)
+                          )}
                         </Text>
                       </div>
                       <div>
                         <Text color="dimmed">Default Variant:</Text>
                         <Text weight={600}>
-                          {variants.find(v => v.is_default)?.variant_name || "None"}
+                          {variants.find((v) => v.is_default)?.variant_name ||
+                            "None"}
                         </Text>
                       </div>
                     </div>
@@ -3784,144 +4088,140 @@ const ProductsPage = () => {
             )}
           </div>
 
-          <TextInput
-            label="Category Name"
-            placeholder="Enter product Category Name"
-            minRows={3}
-            value={newProduct.category || ""}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, category: e.target.value })
-            }
-          />
+          <div className="mt-4">
+            <label className="block text-sm text-gray-700">Category Name</label>
+            <input
+              type="text"
+              placeholder="Enter product Category Name"
+              value={newProduct.category || ""}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, category: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+            />
+          </div>
 
           {/* Brand Selection */}
-          <Select
-            label="Brand Name (Recommended)"
-            placeholder="Select brand"
-            value={newProduct.brand_name || ""}
-            onChange={(value) =>
-              setNewProduct({ ...newProduct, brand_name: value })
-            }
-            data={brandOptions}
-            searchable
-            clearable
-            nothingFound="No brands found"
-            loading={brandsLoading}
-          />
+          <div className="mt-4">
+            <label className="block text-sm text-gray-700">
+              Brand Name (Recommended)
+            </label>
+            <select
+              value={newProduct.brand_name || ""}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, brand_name: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+            >
+              <option value="">Select brand</option>
+              {brandOptions.map((b) => (
+                <option key={b.value} value={b.value}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Store Selection */}
-          <Select
-            label="Store"
-            placeholder="Select store for the product"
-            value={newProduct.store_id || ""}
-            onChange={(value) =>
-              setNewProduct({ ...newProduct, store_id: value })
-            }
-            data={storeOptions}
-            searchable
-            clearable
-            nothingFound="No stores found"
-            loading={storesLoading}
-          />
+          <div className="mt-4">
+            <label className="block text-sm text-gray-700">Store</label>
+            <select
+              value={newProduct.store_id || ""}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, store_id: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+            >
+              <option value="">Select store</option>
+              {storeOptions.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <NumberInput
-            label="Rating"
-            placeholder="Enter rating (0-5)"
-            value={newProduct.rating}
-            onChange={(value) =>
-              setNewProduct({ ...newProduct, rating: value })
-            }
-            min={0}
-            max={5}
-            step={0.1}
-            precision={1}
-          />
+          <div className="mt-4">
+            <label className="block text-sm text-gray-700">Rating</label>
+            <input
+              type="number"
+              placeholder="Enter rating (0-5)"
+              value={newProduct.rating}
+              onChange={(e) =>
+                setNewProduct({
+                  ...newProduct,
+                  rating: parseFloat(e.target.value || 0),
+                })
+              }
+              min={0}
+              max={5}
+              step={0.1}
+              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+            />
+          </div>
 
-          <NumberInput
-            label="Review Count"
-            placeholder="Enter review count"
-            value={newProduct.review_count}
-            onChange={(value) =>
-              setNewProduct({ ...newProduct, review_count: value })
-            }
-            min={0}
-          />
-
-          <Textarea
-            label="Product Description"
-            placeholder="Enter product description"
-            minRows={3}
-            value={newProduct.description || ""}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, description: e.target.value })
-            }
-          />
-
-          <Textarea
-            label="Product Specifications"
-            placeholder="Enter specifications (one per line)&#10;Example:&#10;Electric Wheelchairs/Scooters&#10;Solar Power Banks/Storage&#10;RV or Marine Power Systems"
-            value={newProduct.specifications || ""}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, specifications: e.target.value })
-            }
-            autosize
-            minRows={3}
-          />
-
-          <FileInput
-            label="Display Image (Main Product Image)"
-            placeholder="Upload display image"
-            accept="image/*"
-            icon={<FaUpload size={14} />}
-            onChange={(file) => setDisplayImageFile(file)}
-            value={displayImageFile}
-            required
-          />
-          <FileInput
-            label="Product Images (Max 6)"
-            placeholder="Upload images"
-            accept="image/*"
-            icon={<FaUpload size={14} />}
-            multiple
-            onChange={(files) => setImageFiles(Array.from(files).slice(0, 6))}
-            value={imageFiles}
-          />
-          <FileInput
-            label="Product Video (Optional)"
-            placeholder="Upload a video"
-            accept="video/*"
-            icon={<FaUpload size={14} />}
-            onChange={(file) => setVideoFile(file)}
-            value={videoFile}
-          />
-          <TextInput
-            label="YouTube Video Link (Optional)"
-            placeholder="Enter YouTube video URL"
-            value={newProduct.video}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, video: e.target.value })
-            }
-          />
-          {/* // Helper function to upload display image to storage and return URL */}
-          {/* async function uploadDisplayImage(file) {
-  // TODO: Implement this function to upload the file to your storage (e.g., Supabase Storage)
-  // and return the public URL. Example:
-  // const { data, error } = await supabase.storage.from('product-images').upload(`display/${file.name}`, file);
-  // if (error) throw error;
-  // return supabase.storage.from('product-images').getPublicUrl(data.path).publicUrl;
-  // For now, just throw to indicate not implemented
-  throw new Error('uploadDisplayImage not implemented');
-}
- */}
-          <Group position="right" spacing="md" className="mt-4">
-            <Button variant="default" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button color="blue" onClick={handleSaveProduct}>
-              {currentProduct ? "Update Product" : "Add Product"}
-            </Button>
-          </Group>
+          <div className="mt-4">
+            <label className="block text-sm text-gray-700">Review Count</label>
+            <input
+              type="number"
+              placeholder="Enter review count"
+              value={newProduct.review_count}
+              onChange={(e) =>
+                setNewProduct({
+                  ...newProduct,
+                  review_count: parseInt(e.target.value || 0),
+                })
+              }
+              min={0}
+              className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
+            />
+          </div>
         </div>
+
+        <Group position="right" spacing="md" className="mt-4">
+          {formStep > 0 && (
+            <Button
+              variant="default"
+              onClick={() => setFormStep((s) => Math.max(s - 1, 0))}
+            >
+              Previous
+            </Button>
+          )}
+
+          {formStep < steps.length - 1 ? (
+            <Button
+              color="blue"
+              onClick={() =>
+                setFormStep((s) => Math.min(s + 1, steps.length - 1))
+              }
+            >
+              Next
+            </Button>
+          ) : null}
+
+          <Button
+            variant="default"
+            onClick={() => {
+              setModalOpen(false);
+              setFormStep(0);
+            }}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            color="blue"
+            onClick={() => {
+              if (formStep === steps.length - 1) {
+                handleSaveProduct();
+              } else {
+                setFormStep(steps.length - 1);
+              }
+            }}
+          >
+            {currentProduct ? "Update Product" : "Add Product"}
+          </Button>
+        </Group>
       </Modal>
 
       {/* Product Variants Modal */}
