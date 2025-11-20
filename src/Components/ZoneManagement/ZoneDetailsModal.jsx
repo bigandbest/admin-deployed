@@ -36,11 +36,20 @@ const ZoneDetailsModal = ({ opened, onClose, zone }) => {
     setLoading(true);
     try {
       const response = await fetchZoneById(zone.id);
+      console.log('Zone details response:', response); // Debug log
       if (response.success) {
-        setZoneDetails(response.data);
+        // Handle both response.data and response.zone structures
+        const zoneData = response.zone || response.data;
+        console.log('Zone data:', zoneData); // Debug log
+        setZoneDetails(zoneData);
       }
     } catch (error) {
       console.error("Failed to load zone details:", error);
+      // Fallback to using the zone prop if API fails
+      if (zone) {
+        console.log('Using fallback zone data:', zone);
+        setZoneDetails(zone);
+      }
     } finally {
       setLoading(false);
     }
@@ -59,14 +68,15 @@ const ZoneDetailsModal = ({ opened, onClose, zone }) => {
     onClose();
   };
 
-  // Filter pincodes based on search
-  const filteredPincodes =
-    zoneDetails?.pincodes?.filter(
-      (pincode) =>
-        pincode.pincode.includes(pincodeSearch) ||
-        pincode.city?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
-        pincode.state?.toLowerCase().includes(pincodeSearch.toLowerCase())
-    ) || [];
+  // Filter pincodes based on search - use zoneDetails first, fallback to zone prop
+  const pincodes = zoneDetails?.pincodes || zone?.pincodes || [];
+  console.log('Available pincodes:', pincodes); // Debug log
+  const filteredPincodes = pincodes.filter(
+    (pincode) =>
+      pincode.pincode.includes(pincodeSearch) ||
+      pincode.city?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      pincode.state?.toLowerCase().includes(pincodeSearch.toLowerCase())
+  );
 
   // Paginate pincodes
   const totalPages = Math.ceil(filteredPincodes.length / pincodesPerPage);
@@ -273,6 +283,15 @@ ZoneDetailsModal.propTypes = {
     is_active: PropTypes.bool,
     created_at: PropTypes.string,
     updated_at: PropTypes.string,
+    pincodes: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.number,
+        pincode: PropTypes.string,
+        city: PropTypes.string,
+        state: PropTypes.string,
+        is_active: PropTypes.bool,
+      })
+    ),
   }),
 };
 

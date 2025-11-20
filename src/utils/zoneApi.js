@@ -62,7 +62,16 @@ export const fetchZones = async (params = {}) => {
 export const fetchZoneById = async (zoneId) => {
   try {
     const response = await api.get(`/zones/${zoneId}`);
-    return response.data;
+    // Handle both response.data and response.data.zone structures
+    const responseData = response.data;
+    if (responseData.success) {
+      return {
+        success: true,
+        data: responseData.zone || responseData.data,
+        zone: responseData.zone || responseData.data
+      };
+    }
+    return responseData;
   } catch (error) {
     console.error("Fetch zone by ID error:", error);
     throw new Error(error.response?.data?.error || "Failed to fetch zone details");

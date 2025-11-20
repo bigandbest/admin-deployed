@@ -37,7 +37,7 @@ import { motion } from "framer-motion";
 import ZoneUploadModal from "../../Components/ZoneManagement/ZoneUploadModal";
 import ZoneForm from "../../Components/ZoneManagement/ZoneForm";
 import ZoneDetailsModal from "../../Components/ZoneManagement/ZoneDetailsModal";
-import { deleteZone, getZoneStatistics } from "../../utils/zoneApi";
+import { deleteZone, getZoneStatistics, fetchZoneById } from "../../utils/zoneApi";
 import { getAllZones } from "../../utils/supabaseApi";
 
 const DeliveryZones = () => {
@@ -183,8 +183,22 @@ const DeliveryZones = () => {
   };
 
   // Handle view zone details
-  const handleViewZone = (zone) => {
-    setSelectedZone(zone);
+  const handleViewZone = async (zone) => {
+    try {
+      // Try to fetch complete zone details with pincodes
+      const response = await fetchZoneById(zone.id);
+      if (response.success) {
+        const completeZone = response.zone || response.data;
+        setSelectedZone(completeZone);
+      } else {
+        // Fallback to the zone data we have
+        setSelectedZone(zone);
+      }
+    } catch (error) {
+      console.error('Failed to fetch zone details:', error);
+      // Fallback to the zone data we have
+      setSelectedZone(zone);
+    }
     openDetailsModal();
   };
 
