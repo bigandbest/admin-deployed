@@ -90,17 +90,17 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <RiDashboardFill />,
       path: "/",
     },
-    {
-      title: "Print Requests",
-      icon: <RiPrinterFill />,
-      path: "/print-requests",
-    },
-    {
-      title: "Enquiries",
-      icon: <RiQuestionnaireFill />,
-      path: "/enquiry",
-      badge: enquiryCount,
-    },
+    // {
+    //   title: "Print Requests",
+    //   icon: <RiPrinterFill />,
+    //   path: "/print-requests",
+    // },
+    // {
+    //   title: "Enquiries",
+    //   icon: <RiQuestionnaireFill />,
+    //   path: "/enquiry",
+    //   badge: enquiryCount,
+    // },
     {
       title: "Products",
       icon: <HiArchive />,
@@ -118,22 +118,22 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/product-sections",
       description: "Manage homepage product sections",
     },
-    {
-      title: "Banners",
-      icon: <GiTargetPoster />,
-      path: "/banners",
-    },
+    // {
+    //   title: "Banners",
+    //   icon: <GiTargetPoster />,
+    //   path: "/banners",
+    // },
     {
       title: "Video Cards",
       icon: <FaVideo />,
       path: "/video-cards",
     },
-    {
-      title: "Promotions",
-      icon: <FaTag />,
-      path: "/promotional-settings",
-      description: "Manage promotional banners, offers, and marketing content",
-    },
+    // {
+    //   title: "Promotions",
+    //   icon: <FaTag />,
+    //   path: "/promotional-settings",
+    //   description: "Manage promotional banners, offers, and marketing content",
+    // },
     {
       title: "Storage",
       icon: <FaDatabase />,
@@ -156,11 +156,11 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaPlus />,
       path: "/add-banner",
     },
-    {
-      title: "UniqueSections",
-      icon: <FaPlus />,
-      path: "/unique-sections",
-    },
+    // {
+    //   title: "UniqueSections",
+    //   icon: <FaPlus />,
+    //   path: "/unique-sections",
+    // },
     {
       title: "Brands",
       icon: <FaTrademark />,
@@ -171,11 +171,11 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaList />,
       path: "/bbm-dost",
     },
-    {
-      title: "Quick Picks",
-      icon: <FaList />,
-      path: "/quick-picks",
-    },
+    // {
+    //   title: "Quick Picks",
+    //   icon: <FaList />,
+    //   path: "/quick-picks",
+    // },
     // {
     //   title: "Orders",
     //   icon: <FaList />,
@@ -250,21 +250,21 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaList />,
       path: "/saving-zone",
     },
-    {
-      title: "Section",
-      icon: <FaList />,
-      path: "/section",
-    },
-    {
-      title: "Sub-Section",
-      icon: <FaList />,
-      path: "/sub-section",
-    },
-    {
-      title: "You May Like",
-      icon: <FaTrademark />,
-      path: "/youMayLikeProducts/:id",
-    },
+    // {
+    //   title: "Section",
+    //   icon: <FaList />,
+    //   path: "/section",
+    // },
+    // {
+    //   title: "Sub-Section",
+    //   icon: <FaList />,
+    //   path: "/sub-section",
+    // },
+    // {
+    //   title: "You May Like",
+    //   icon: <FaTrademark />,
+    //   path: "/youMayLikeProducts/:id",
+    // },
     {
       title: "Notifications",
       icon: <RiSettings4Fill />,
