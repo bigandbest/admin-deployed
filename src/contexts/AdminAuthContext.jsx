@@ -83,6 +83,9 @@ export const AdminAuthProvider = ({ children }) => {
 
     const checkAuthStatus = async () => {
       try {
+        // Check if we have a stored token
+        const storedToken = localStorage.getItem("admin_token");
+        
         const result = await getAdminMe();
 
         if (result.success && result.user) {
@@ -90,11 +93,17 @@ export const AdminAuthProvider = ({ children }) => {
           setIsAdmin(result.user.user_metadata?.role === "admin");
           setError(null);
         } else {
+          // If API call fails but we have a token, clear it
+          if (storedToken) {
+            localStorage.removeItem("admin_token");
+          }
           setCurrentUser(null);
           setIsAdmin(false);
         }
       } catch (err) {
         console.error("Auth check error:", err);
+        // Clear stored token on error
+        localStorage.removeItem("admin_token");
         setError(err.message);
         setCurrentUser(null);
         setIsAdmin(false);

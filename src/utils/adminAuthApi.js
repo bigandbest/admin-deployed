@@ -36,7 +36,15 @@ export const adminLogout = async () => {
 
 export const getAdminMe = async () => {
   try {
+    const token = localStorage.getItem('admin_token');
+    const headers = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/admin-auth/me`, {
+      headers,
       credentials: 'include'
     });
     return await handleResponse(response);

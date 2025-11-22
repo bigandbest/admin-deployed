@@ -202,6 +202,10 @@ function App() {
           element: <AddProduct />,
         },
         {
+          path: "/products/edit/:id",
+          element: <AddProduct />,
+        },
+        {
           path: "/categories",
           element: <CategoriesPage />,
         },

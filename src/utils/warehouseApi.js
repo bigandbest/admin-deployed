@@ -327,7 +327,7 @@ export const getProductStockSummary = async (productId) => {
 export const createProductWithWarehouse = async (productData) => {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/product-warehouse/products/create`,
+      `${API_BASE_URL}/productwarehouse/products/create`,
       {
         method: "POST",
         headers: {
