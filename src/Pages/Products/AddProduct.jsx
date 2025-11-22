@@ -45,6 +45,8 @@ const AddProduct = () => {
     discount: 0,
     stock: 0,
     category_id: "",
+    subcategory_id: "",
+    group_id: "",
     description: "",
     specifications: "",
     image: null,
@@ -60,6 +62,10 @@ const AddProduct = () => {
     weight_display: "",
     brand_name: "",
     store_id: "",
+    portion: "",
+    quantity: "",
+    faq: [],
+    images: [],
     product_type: "nationwide",
     warehouse_mapping_type: "auto_zonal_to_division",
     assigned_warehouse_ids: [],
@@ -90,6 +96,26 @@ const AddProduct = () => {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [groupSearchTerm, setGroupSearchTerm] = useState("");
+
+  // Filter groups based on search term and selected subcategory
+  const filteredGroups = React.useMemo(() => {
+    let filtered = groups;
+    
+    // Filter by subcategory if selected
+    if (form.subcategory_id) {
+      filtered = filtered.filter(group => group.subcategory_id === form.subcategory_id);
+    }
+    
+    // Filter by search term
+    if (groupSearchTerm) {
+      filtered = filtered.filter(group => 
+        group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [groups, form.subcategory_id, groupSearchTerm]);
 
   // Load product data for edit mode
   useEffect(() => {
@@ -296,14 +322,61 @@ const AddProduct = () => {
     }
   };
 
-  const nextStep = () => setActiveStep((current) => (current < 4 ? current + 1 : current));
+  const nextStep = () => setActiveStep((current) => (current < 5 ? current + 1 : current));
   const prevStep = () => setActiveStep((current) => (current > 0 ? current - 1 : current));
+
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+
+  const handleImageUpload = (files) => {
+    if (files) {
+      const fileArray = Array.from(files);
+      setImageFiles(prev => [...prev, ...fileArray].slice(0, 6));
+      
+      fileArray.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreviews(prev => [...prev, e.target.result].slice(0, 6));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeImage = (index) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addFAQ = () => {
+    setForm(prev => ({
+      ...prev,
+      faq: [...prev.faq, { question: '', answer: '' }]
+    }));
+  };
+
+  const updateFAQ = (index, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      faq: prev.faq.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const removeFAQ = (index) => {
+    setForm(prev => ({
+      ...prev,
+      faq: prev.faq.filter((_, i) => i !== index)
+    }));
+  };
 
   const steps = [
     { label: 'Basic Info', description: 'Product details' },
     { label: 'Category', description: 'Classification' },
     { label: 'Pricing', description: 'Price & stock' },
     { label: 'Media', description: 'Images & videos' },
+    { label: 'FAQ', description: 'Questions & answers' },
     { label: 'Warehouse', description: 'Distribution' }
   ];
 
@@ -337,6 +410,22 @@ const AddProduct = () => {
               size="md"
             />
             <div className="grid grid-cols-2 gap-4">
+              <TextInput
+                label="Portion"
+                placeholder="e.g., 500g, 1kg, 250ml"
+                value={form.portion}
+                onChange={(e) => setForm({ ...form, portion: e.target.value })}
+                size="md"
+              />
+              <TextInput
+                label="Quantity"
+                placeholder="e.g., Pack of 2, Single unit"
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                size="md"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <Select
                 label="Brand"
                 placeholder="Select brand"
@@ -364,6 +453,16 @@ const AddProduct = () => {
         return (
           <div className="space-y-6">
             <Text size="lg" weight={600}>Select Product Category</Text>
+            
+            {/* Search Bar for Groups */}
+            <TextInput
+              label="Search Groups"
+              placeholder="Type to search groups..."
+              value={groupSearchTerm}
+              onChange={(e) => setGroupSearchTerm(e.target.value)}
+              size="md"
+            />
+            
             <div className="grid grid-cols-3 gap-4 h-96">
               <Card className="p-4">
                 <Text weight={500} className="mb-3">Categories</Text>
@@ -406,21 +505,22 @@ const AddProduct = () => {
               <Card className="p-4">
                 <Text weight={500} className="mb-3">Groups</Text>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {groups
-                    .filter(group => group.subcategory_id === form.subcategory_id)
-                    .map((group) => (
-                      <div
-                        key={group.id}
-                        className={`p-3 rounded cursor-pointer transition-colors ${
-                          form.group_id === group.id
-                            ? 'bg-purple-500 text-white'
-                            : 'hover:bg-gray-100'
-                        }`}
-                        onClick={() => setForm({ ...form, group_id: group.id })}
-                      >
-                        {group.name}
-                      </div>
-                    ))}
+                  {filteredGroups.map((group) => (
+                    <div
+                      key={group.id}
+                      className={`p-3 rounded cursor-pointer transition-colors ${
+                        form.group_id === group.id
+                          ? 'bg-purple-500 text-white'
+                          : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => setForm({ ...form, group_id: group.id })}
+                    >
+                      {group.name}
+                      <Text size="xs" className="opacity-75 mt-1">
+                        {categories.find(c => c.id === subcategories.find(s => s.id === group.subcategory_id)?.category_id)?.name} → {subcategories.find(s => s.id === group.subcategory_id)?.name}
+                      </Text>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>
@@ -496,18 +596,33 @@ const AddProduct = () => {
         return (
           <div className="space-y-6">
             <FileInput
-              label="Main Product Image"
-              placeholder="Upload main image"
-              accept="image/*"
-              size="md"
-            />
-            <FileInput
-              label="Additional Images (Max 6)"
-              placeholder="Upload additional images"
+              label="Product Images (Max 6)"
+              placeholder="Upload product images"
               accept="image/*"
               multiple
+              onChange={handleImageUpload}
               size="md"
             />
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <TextInput
               label="YouTube Video URL"
               placeholder="Enter YouTube video URL (optional)"
@@ -518,6 +633,55 @@ const AddProduct = () => {
           </div>
         );
       case 4:
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <Text size="lg" weight={600}>Frequently Asked Questions</Text>
+              <Button onClick={addFAQ} size="sm">Add FAQ</Button>
+            </div>
+            {form.faq.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Text>No FAQs added yet. Click "Add FAQ" to get started.</Text>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {form.faq.map((faq, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <Text weight={500}>FAQ {index + 1}</Text>
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        onClick={() => removeFAQ(index)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      <TextInput
+                        label="Question"
+                        placeholder="Enter question"
+                        value={faq.question}
+                        onChange={(e) => updateFAQ(index, 'question', e.target.value)}
+                        size="sm"
+                      />
+                      <Textarea
+                        label="Answer"
+                        placeholder="Enter answer"
+                        value={faq.answer}
+                        onChange={(e) => updateFAQ(index, 'answer', e.target.value)}
+                        minRows={2}
+                        size="sm"
+                      />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 5:
         return (
           <div className="space-y-6">
             <Text size="lg" weight={600}>Warehouse Distribution</Text>
