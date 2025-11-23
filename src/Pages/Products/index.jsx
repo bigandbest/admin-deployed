@@ -117,7 +117,7 @@ const FilterChips = ({
     groups.find((g) => g.id === id)?.name || "Unknown";
 
   return (
-    <div className="flex flex-wrap items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 mb-6 shadow-sm">
+    <div className="flex flex-wrap items-center gap-3 p-4 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 mb-6 shadow-sm">
       <div className="flex items-center text-blue-800 font-semibold text-sm mr-2">
         <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -410,8 +410,6 @@ const ProductsPage = () => {
     }
   };
 
-
-
   // Filter products based on search and filters
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
@@ -587,14 +585,12 @@ const ProductsPage = () => {
   };
 
   const openAddModal = () => {
-    navigate('/products/add');
+    navigate("/products/add");
   };
 
   const openEditModal = (product) => {
     navigate(`/products/edit/${product.id}`);
   };
-
-
 
   const openVariantsModal = (product) => {
     setSelectedProductForVariants(product);
@@ -610,10 +606,8 @@ const ProductsPage = () => {
     setProductDetailModalOpen(true);
   };
 
-
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 p-6">
       <Modal
         opened={imagePreviewOpen}
         onClose={() => setImagePreviewOpen(false)}
@@ -655,15 +649,15 @@ const ProductsPage = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
               leftIcon={<FaPlus />}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-              onClick={() => navigate('/products/add')}
+              className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+              onClick={() => navigate("/products/add")}
             >
               Add New Product
             </Button>
 
             {/* <Button
               onClick={toggleVisibility}
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+              className="bg-linear-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
             >
               {visible ? "Hide Last Product Page" : "Show Last Product Page"}
             </Button> */}
@@ -671,7 +665,7 @@ const ProductsPage = () => {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 rounded-r-lg shadow-sm">
+          <div className="mb-6 p-4 bg-linear-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 rounded-r-lg shadow-sm">
             <div className="flex items-center">
               <svg
                 className="w-5 h-5 mr-2 text-red-500"
@@ -1068,8 +1062,6 @@ const ProductsPage = () => {
         </div>
       </Card>
 
-
-
       {/* Product Variants Modal */}
       <Modal
         opened={variantsModalOpen}
@@ -1103,7 +1095,7 @@ const ProductsPage = () => {
         onClose={() => setProductDetailModalOpen(false)}
         title={
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-linear-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
               <svg
                 className="w-5 h-5 text-white"
                 fill="none"
@@ -1337,7 +1329,7 @@ const ProductsPage = () => {
               <div className="flex flex-wrap gap-3">
                 <Button
                   color="blue"
-                  leftIcon={<FaEdit />}
+                  leftSection={<FaEdit />}
                   onClick={() => {
                     setProductDetailModalOpen(false);
                     openEditModal(selectedProductForDetail);
@@ -1358,7 +1350,7 @@ const ProductsPage = () => {
                 <Button
                   color="red"
                   variant="light"
-                  leftIcon={<FaTrash />}
+                  leftSection={<FaTrash />}
                   onClick={() => {
                     setProductDetailModalOpen(false);
                     handleDeleteProduct(selectedProductForDetail.id);
