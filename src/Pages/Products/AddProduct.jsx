@@ -24,7 +24,12 @@ import {
   Paper,
   Progress,
 } from "@mantine/core";
-import { FaArrowLeft, FaCheck, FaChevronRight, FaChevronLeft } from "react-icons/fa";
+import {
+  FaArrowLeft,
+  FaCheck,
+  FaChevronRight,
+  FaChevronLeft,
+} from "react-icons/fa";
 import { getAllCategories } from "../../utils/supabaseApi";
 import {
   fetchWarehouses,
@@ -101,19 +106,21 @@ const AddProduct = () => {
   // Filter groups based on search term and selected subcategory
   const filteredGroups = React.useMemo(() => {
     let filtered = groups;
-    
+
     // Filter by subcategory if selected
     if (form.subcategory_id) {
-      filtered = filtered.filter(group => group.subcategory_id === form.subcategory_id);
+      filtered = filtered.filter(
+        (group) => group.subcategory_id === form.subcategory_id
+      );
     }
-    
+
     // Filter by search term
     if (groupSearchTerm) {
-      filtered = filtered.filter(group => 
+      filtered = filtered.filter((group) =>
         group.name.toLowerCase().includes(groupSearchTerm.toLowerCase())
       );
     }
-    
+
     return filtered;
   }, [groups, form.subcategory_id, groupSearchTerm]);
 
@@ -133,10 +140,17 @@ const AddProduct = () => {
         const product = response.data.product;
         setForm({
           ...product,
-          warehouse_mapping_type: product.warehouse_mapping_type || "auto_zonal_to_division",
-          assigned_warehouse_ids: product.assigned_warehouse_ids || [],
-          primary_warehouses: product.primary_warehouses || [],
-          fallback_warehouses: product.fallback_warehouses || [],
+          warehouse_mapping_type:
+            product.warehouse_mapping_type || "auto_zonal_to_division",
+          assigned_warehouse_ids: (product.assigned_warehouse_ids || []).map(
+            (id) => id.toString()
+          ),
+          primary_warehouses: (product.primary_warehouses || []).map((id) =>
+            id.toString()
+          ),
+          fallback_warehouses: (product.fallback_warehouses || []).map((id) =>
+            id.toString()
+          ),
           enable_fallback: product.enable_fallback !== false,
           warehouse_notes: product.warehouse_notes || "",
         });
@@ -157,24 +171,24 @@ const AddProduct = () => {
         setCategoryOptions(
           result.categories.map((cat) => ({ value: cat.id, label: cat.name }))
         );
-        
+
         // Extract subcategories and groups from nested data
         const allSubcategories = [];
         const allGroups = [];
-        
-        result.categories.forEach(category => {
+
+        result.categories.forEach((category) => {
           if (category.subcategories) {
-            category.subcategories.forEach(subcategory => {
+            category.subcategories.forEach((subcategory) => {
               allSubcategories.push(subcategory);
               if (subcategory.groups) {
-                subcategory.groups.forEach(group => {
+                subcategory.groups.forEach((group) => {
                   allGroups.push(group);
                 });
               }
             });
           }
         });
-        
+
         setSubcategories(allSubcategories);
         setGroups(allGroups);
       }
@@ -183,7 +197,8 @@ const AddProduct = () => {
     async function fetchBrands() {
       setBrandsLoading(true);
       try {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+        const apiUrl =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
         const response = await axios.get(`${apiUrl}/brand/list`);
         if (response.data.success && response.data.brands) {
           setBrandOptions(
@@ -203,7 +218,8 @@ const AddProduct = () => {
     async function fetchStores() {
       setStoresLoading(true);
       try {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+        const apiUrl =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
         const response = await axios.get(`${apiUrl}/recommended-stores/list`);
         if (response.data.success && response.data.recommendedStores) {
           setStoreOptions(
@@ -228,14 +244,20 @@ const AddProduct = () => {
           const allWarehouses = allWarehousesResult.warehouses;
           const warehouseSelectOptions = allWarehouses.map((warehouse) => ({
             value: warehouse.id.toString(),
-            label: `${warehouse.parent_warehouse_id ? "└─ " : ""}${warehouse.name} (${warehouse.type})`,
+            label: `${warehouse.parent_warehouse_id ? "└─ " : ""}${
+              warehouse.name
+            } (${warehouse.type})`,
             type: warehouse.type,
             parent_warehouse_id: warehouse.parent_warehouse_id,
           }));
           setWarehouseOptions(warehouseSelectOptions);
 
-          const zonalWarehouses = allWarehouses.filter((w) => w.type === "zonal");
-          const divisionWarehouses = allWarehouses.filter((w) => w.type === "division");
+          const zonalWarehouses = allWarehouses.filter(
+            (w) => w.type === "zonal"
+          );
+          const divisionWarehouses = allWarehouses.filter(
+            (w) => w.type === "division"
+          );
 
           setZonalWarehouses(zonalWarehouses);
           setDivisionWarehouses(divisionWarehouses);
@@ -262,68 +284,118 @@ const AddProduct = () => {
     }
     setLoading(true);
 
-    const payload = { ...form };
-
-    if (payload.assigned_warehouse_ids && Array.isArray(payload.assigned_warehouse_ids)) {
-      payload.assigned_warehouse_ids = payload.assigned_warehouse_ids.map((id) => parseInt(id, 10));
-    }
-
-    if (payload.primary_warehouses && Array.isArray(payload.primary_warehouses)) {
-      payload.primary_warehouses = payload.primary_warehouses.map((id) => parseInt(id, 10));
-    }
-
-    if (payload.fallback_warehouses && Array.isArray(payload.fallback_warehouses)) {
-      payload.fallback_warehouses = payload.fallback_warehouses.map((id) => parseInt(id, 10));
-    }
-
-    payload.enable_fallback = Boolean(payload.enable_fallback);
-
-    switch (payload.warehouse_mapping_type) {
-      case "auto_zonal_to_division":
-        payload.warehouse_mapping_type = "nationwide";
-        payload.auto_distribute_to_zones = true;
-        break;
-      case "selective_zonal":
-        payload.warehouse_mapping_type = "zonal_with_fallback";
-        payload.auto_distribute_to_zones = false;
-        break;
-      case "zonal_only":
-        payload.warehouse_mapping_type = "zonal";
-        payload.auto_distribute_to_zones = false;
-        payload.enable_fallback = false;
-        break;
-      default:
-        payload.auto_distribute_to_zones = false;
-    }
-
-    payload.initial_stock = parseInt(payload.stock) || 100;
-    payload.zone_distribution_quantity = 50;
-
-    let result;
-    if (isEditMode) {
-      try {
-        const response = await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL}/admin/products/${id}/warehouse-mapping`,
-          payload
-        );
-        result = response.data;
-      } catch (error) {
-        result = { success: false, error: error.response?.data?.error || error.message };
+    try {
+      // Step 1: Upload images if any
+      let uploadedImageUrls = [];
+      if (imageFiles.length > 0) {
+        console.log("Uploading images...");
+        uploadedImageUrls = await uploadImages(imageFiles);
+        console.log("Uploaded image URLs:", uploadedImageUrls);
       }
-    } else {
-      result = await createProductWithWarehouse(payload);
-    }
-    
-    setLoading(false);
-    if (result.success) {
-      navigate("/products");
-    } else {
-      setError(result.error || (isEditMode ? "Failed to update product" : "Failed to add product"));
+
+      // Step 2: Prepare payload with uploaded image URLs
+      const payload = {
+        ...form,
+        images: uploadedImageUrls,
+        image: uploadedImageUrls[0] || null, // Set first image as main image
+        // Ensure stock is properly set
+        stock: parseInt(form.stock) || 0,
+        initial_stock: parseInt(form.stock) || 100,
+        stock_quantity: parseInt(form.stock) || 0,
+      };
+
+      // Convert warehouse arrays to integers
+      if (
+        payload.assigned_warehouse_ids &&
+        Array.isArray(payload.assigned_warehouse_ids)
+      ) {
+        payload.assigned_warehouse_ids = payload.assigned_warehouse_ids.map(
+          (id) => parseInt(id, 10)
+        );
+      }
+
+      if (
+        payload.primary_warehouses &&
+        Array.isArray(payload.primary_warehouses)
+      ) {
+        payload.primary_warehouses = payload.primary_warehouses.map((id) =>
+          parseInt(id, 10)
+        );
+      }
+
+      if (
+        payload.fallback_warehouses &&
+        Array.isArray(payload.fallback_warehouses)
+      ) {
+        payload.fallback_warehouses = payload.fallback_warehouses.map((id) =>
+          parseInt(id, 10)
+        );
+      }
+
+      payload.enable_fallback = Boolean(payload.enable_fallback);
+
+      switch (payload.warehouse_mapping_type) {
+        case "auto_zonal_to_division":
+          payload.warehouse_mapping_type = "nationwide";
+          payload.auto_distribute_to_zones = true;
+          break;
+        case "selective_zonal":
+          payload.warehouse_mapping_type = "zonal_with_fallback";
+          payload.auto_distribute_to_zones = false;
+          break;
+        case "zonal_only":
+          payload.warehouse_mapping_type = "zonal";
+          payload.auto_distribute_to_zones = false;
+          payload.enable_fallback = false;
+          break;
+        default:
+          payload.auto_distribute_to_zones = false;
+      }
+
+      payload.zone_distribution_quantity = 50;
+
+      // Step 3: Create or update product
+      let result;
+      if (isEditMode) {
+        try {
+          const response = await axios.put(
+            `${
+              import.meta.env.VITE_API_BASE_URL
+            }/admin/products/${id}/warehouse-mapping`,
+            payload
+          );
+          result = response.data;
+        } catch (error) {
+          result = {
+            success: false,
+            error: error.response?.data?.error || error.message,
+          };
+        }
+      } else {
+        result = await createProductWithWarehouse(payload);
+      }
+
+      if (result.success) {
+        console.log("Product saved successfully:", result);
+        navigate("/products");
+      } else {
+        setError(
+          result.error ||
+            (isEditMode ? "Failed to update product" : "Failed to add product")
+        );
+      }
+    } catch (error) {
+      console.error("Error in handleSubmit:", error);
+      setError("An error occurred while saving the product: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const nextStep = () => setActiveStep((current) => (current < 5 ? current + 1 : current));
-  const prevStep = () => setActiveStep((current) => (current > 0 ? current - 1 : current));
+  const nextStep = () =>
+    setActiveStep((current) => (current < 5 ? current + 1 : current));
+  const prevStep = () =>
+    setActiveStep((current) => (current > 0 ? current - 1 : current));
 
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -331,53 +403,104 @@ const AddProduct = () => {
   const handleImageUpload = (files) => {
     if (files) {
       const fileArray = Array.from(files);
-      setImageFiles(prev => [...prev, ...fileArray].slice(0, 6));
-      
-      fileArray.forEach(file => {
+      setImageFiles((prev) => [...prev, ...fileArray].slice(0, 6));
+
+      fileArray.forEach((file) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-          setImagePreviews(prev => [...prev, e.target.result].slice(0, 6));
+          setImagePreviews((prev) => [...prev, e.target.result].slice(0, 6));
         };
         reader.readAsDataURL(file);
       });
     }
   };
 
+  // Upload images to backend
+  const uploadImages = async (files) => {
+    const uploadedUrls = [];
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        // Get auth token for upload from localStorage (Supabase session)
+        const authToken = localStorage.getItem("admin_token");
+        const headers = {};
+
+        console.log("Raw auth token from localStorage:", authToken);
+
+        if (authToken) {
+          headers.Authorization = `Bearer ${authToken}`;
+          console.log("Added Authorization header with token");
+        } else {
+          console.warn("No admin_token found in localStorage");
+        }
+
+        console.log("Final upload headers:", headers);
+
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/upload/image`,
+          formData,
+          {
+            headers,
+            withCredentials: true,
+          }
+        );
+
+        if (response.data.success) {
+          uploadedUrls.push(response.data.imageUrl);
+          console.log(`Image uploaded successfully: ${response.data.imageUrl}`);
+        } else {
+          console.error("Image upload failed:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        if (error.response?.status === 401) {
+          console.error(
+            "Authentication failed for image upload. Please log in again."
+          );
+          // You might want to redirect to login here
+        }
+      }
+    }
+    return uploadedUrls;
+  };
+
   const removeImage = (index) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addFAQ = () => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
-      faq: [...prev.faq, { question: '', answer: '' }]
+      faq: [...prev.faq, { question: "", answer: "" }],
     }));
   };
 
   const updateFAQ = (index, field, value) => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
-      faq: prev.faq.map((item, i) => 
+      faq: prev.faq.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
-      )
+      ),
     }));
   };
 
   const removeFAQ = (index) => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
-      faq: prev.faq.filter((_, i) => i !== index)
+      faq: prev.faq.filter((_, i) => i !== index),
     }));
   };
 
   const steps = [
-    { label: 'Basic Info', description: 'Product details' },
-    { label: 'Category', description: 'Classification' },
-    { label: 'Pricing', description: 'Price & stock' },
-    { label: 'Media', description: 'Images & videos' },
-    { label: 'FAQ', description: 'Questions & answers' },
-    { label: 'Warehouse', description: 'Distribution' }
+    { label: "Basic Info", description: "Product details" },
+    { label: "Category", description: "Classification" },
+    { label: "Pricing", description: "Price & stock" },
+    { label: "Media", description: "Images & videos" },
+    { label: "FAQ", description: "Questions & answers" },
+    { label: "Warehouse", description: "Distribution" },
   ];
 
   const renderStepContent = () => {
@@ -397,7 +520,9 @@ const AddProduct = () => {
               label="Description"
               placeholder="Enter product description"
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
               minRows={4}
               size="md"
             />
@@ -405,7 +530,9 @@ const AddProduct = () => {
               label="Specifications"
               placeholder="Enter product specifications"
               value={form.specifications}
-              onChange={(e) => setForm({ ...form, specifications: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, specifications: e.target.value })
+              }
               minRows={3}
               size="md"
             />
@@ -452,8 +579,10 @@ const AddProduct = () => {
       case 1:
         return (
           <div className="space-y-6">
-            <Text size="lg" weight={600}>Select Product Category</Text>
-            
+            <Text size="lg" weight={600}>
+              Select Product Category
+            </Text>
+
             {/* Search Bar for Groups */}
             <TextInput
               label="Search Groups"
@@ -462,20 +591,29 @@ const AddProduct = () => {
               onChange={(e) => setGroupSearchTerm(e.target.value)}
               size="md"
             />
-            
+
             <div className="grid grid-cols-3 gap-4 h-96">
               <Card className="p-4">
-                <Text weight={500} className="mb-3">Categories</Text>
+                <Text weight={500} className="mb-3">
+                  Categories
+                </Text>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {categories.map((category) => (
                     <div
                       key={category.id}
                       className={`p-3 rounded cursor-pointer transition-colors ${
                         form.category_id === category.id
-                          ? 'bg-blue-500 text-white'
-                          : 'hover:bg-gray-100'
+                          ? "bg-blue-500 text-white"
+                          : "hover:bg-gray-100"
                       }`}
-                      onClick={() => setForm({ ...form, category_id: category.id, subcategory_id: '', group_id: '' })}
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          category_id: category.id,
+                          subcategory_id: "",
+                          group_id: "",
+                        })
+                      }
                     >
                       {category.name}
                     </div>
@@ -483,19 +621,27 @@ const AddProduct = () => {
                 </div>
               </Card>
               <Card className="p-4">
-                <Text weight={500} className="mb-3">Subcategories</Text>
+                <Text weight={500} className="mb-3">
+                  Subcategories
+                </Text>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {subcategories
-                    .filter(sub => sub.category_id === form.category_id)
+                    .filter((sub) => sub.category_id === form.category_id)
                     .map((subcategory) => (
                       <div
                         key={subcategory.id}
                         className={`p-3 rounded cursor-pointer transition-colors ${
                           form.subcategory_id === subcategory.id
-                            ? 'bg-indigo-500 text-white'
-                            : 'hover:bg-gray-100'
+                            ? "bg-indigo-500 text-white"
+                            : "hover:bg-gray-100"
                         }`}
-                        onClick={() => setForm({ ...form, subcategory_id: subcategory.id, group_id: '' })}
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            subcategory_id: subcategory.id,
+                            group_id: "",
+                          })
+                        }
                       >
                         {subcategory.name}
                       </div>
@@ -503,21 +649,37 @@ const AddProduct = () => {
                 </div>
               </Card>
               <Card className="p-4">
-                <Text weight={500} className="mb-3">Groups</Text>
+                <Text weight={500} className="mb-3">
+                  Groups
+                </Text>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {filteredGroups.map((group) => (
                     <div
                       key={group.id}
                       className={`p-3 rounded cursor-pointer transition-colors ${
                         form.group_id === group.id
-                          ? 'bg-purple-500 text-white'
-                          : 'hover:bg-gray-100'
+                          ? "bg-purple-500 text-white"
+                          : "hover:bg-gray-100"
                       }`}
                       onClick={() => setForm({ ...form, group_id: group.id })}
                     >
                       {group.name}
                       <Text size="xs" className="opacity-75 mt-1">
-                        {categories.find(c => c.id === subcategories.find(s => s.id === group.subcategory_id)?.category_id)?.name} → {subcategories.find(s => s.id === group.subcategory_id)?.name}
+                        {
+                          categories.find(
+                            (c) =>
+                              c.id ===
+                              subcategories.find(
+                                (s) => s.id === group.subcategory_id
+                              )?.category_id
+                          )?.name
+                        }{" "}
+                        →{" "}
+                        {
+                          subcategories.find(
+                            (s) => s.id === group.subcategory_id
+                          )?.name
+                        }
                       </Text>
                     </div>
                   ))}
@@ -580,13 +742,17 @@ const AddProduct = () => {
               <Switch
                 label="Product Active"
                 checked={form.active}
-                onChange={(e) => setForm({ ...form, active: e.currentTarget.checked })}
+                onChange={(e) =>
+                  setForm({ ...form, active: e.currentTarget.checked })
+                }
                 size="md"
               />
               <Switch
                 label="In Stock"
                 checked={form.in_stock}
-                onChange={(e) => setForm({ ...form, in_stock: e.currentTarget.checked })}
+                onChange={(e) =>
+                  setForm({ ...form, in_stock: e.currentTarget.checked })
+                }
                 size="md"
               />
             </div>
@@ -636,8 +802,12 @@ const AddProduct = () => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <Text size="lg" weight={600}>Frequently Asked Questions</Text>
-              <Button onClick={addFAQ} size="sm">Add FAQ</Button>
+              <Text size="lg" weight={600}>
+                Frequently Asked Questions
+              </Text>
+              <Button onClick={addFAQ} size="sm">
+                Add FAQ
+              </Button>
             </div>
             {form.faq.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
@@ -663,14 +833,18 @@ const AddProduct = () => {
                         label="Question"
                         placeholder="Enter question"
                         value={faq.question}
-                        onChange={(e) => updateFAQ(index, 'question', e.target.value)}
+                        onChange={(e) =>
+                          updateFAQ(index, "question", e.target.value)
+                        }
                         size="sm"
                       />
                       <Textarea
                         label="Answer"
                         placeholder="Enter answer"
                         value={faq.answer}
-                        onChange={(e) => updateFAQ(index, 'answer', e.target.value)}
+                        onChange={(e) =>
+                          updateFAQ(index, "answer", e.target.value)
+                        }
                         minRows={2}
                         size="sm"
                       />
@@ -684,10 +858,14 @@ const AddProduct = () => {
       case 5:
         return (
           <div className="space-y-6">
-            <Text size="lg" weight={600}>Warehouse Distribution</Text>
+            <Text size="lg" weight={600}>
+              Warehouse Distribution
+            </Text>
             <Radio.Group
               value={form.warehouse_mapping_type}
-              onChange={(value) => setForm({ ...form, warehouse_mapping_type: value })}
+              onChange={(value) =>
+                setForm({ ...form, warehouse_mapping_type: value })
+              }
             >
               <div className="space-y-4">
                 <Radio
@@ -707,13 +885,15 @@ const AddProduct = () => {
                 />
               </div>
             </Radio.Group>
-            {form.warehouse_mapping_type === 'selective_zonal' && (
+            {form.warehouse_mapping_type === "selective_zonal" && (
               <MultiSelect
                 label="Select Warehouses"
                 placeholder="Choose warehouses"
                 data={warehouseOptions}
-                value={form.assigned_warehouse_ids}
-                onChange={(values) => setForm({ ...form, assigned_warehouse_ids: values })}
+                value={form.assigned_warehouse_ids.map((id) => id.toString())}
+                onChange={(values) =>
+                  setForm({ ...form, assigned_warehouse_ids: values })
+                }
                 size="md"
               />
             )}
@@ -725,18 +905,18 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-blue-50">
       <Container size="xl" className="py-6">
         <Paper shadow="lg" radius="lg" className="overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+          <div className="bg-linear-to-r from-blue-600 to-purple-600 text-white p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <ActionIcon
                   variant="light"
                   color="white"
                   size="lg"
-                  onClick={() => navigate('/products')}
+                  onClick={() => navigate("/products")}
                 >
                   <FaArrowLeft />
                 </ActionIcon>
@@ -745,12 +925,13 @@ const AddProduct = () => {
                     {isEditMode ? "Edit Product" : "Add New Product"}
                   </Title>
                   <Text className="text-blue-100 mt-1">
-                    Step {activeStep + 1} of {steps.length}: {steps[activeStep].description}
+                    Step {activeStep + 1} of {steps.length}:{" "}
+                    {steps[activeStep].description}
                   </Text>
                 </div>
               </div>
               <Progress
-                value={(activeStep + 1) / steps.length * 100}
+                value={((activeStep + 1) / steps.length) * 100}
                 size="lg"
                 radius="xl"
                 className="w-48"
@@ -798,13 +979,13 @@ const AddProduct = () => {
               >
                 Previous
               </Button>
-              
+
               {activeStep === steps.length - 1 ? (
                 <Button
                   onClick={handleSubmit}
                   loading={loading}
                   size="md"
-                  className="bg-gradient-to-r from-green-500 to-green-600"
+                  className="bg-linear-to-r from-green-500 to-green-600"
                 >
                   {isEditMode ? "Update Product" : "Create Product"}
                 </Button>
@@ -813,7 +994,7 @@ const AddProduct = () => {
                   rightIcon={<FaChevronRight />}
                   onClick={nextStep}
                   size="md"
-                  className="bg-gradient-to-r from-blue-500 to-purple-600"
+                  className="bg-linear-to-r from-blue-500 to-purple-600"
                 >
                   Next Step
                 </Button>
