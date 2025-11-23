@@ -83,6 +83,7 @@ import BulkOrders from "./Pages/BulkOrders/BulkOrders.jsx";
 import ProductSectionsManagement from "./Pages/ProductSections/index.jsx";
 import StoreSectionMapping from "./Pages/StoreSectionMapping/StoreSectionMapping.jsx";
 import CodOrders from "./Pages/CodOrders/CodOrders.jsx";
+import UnifiedOrders from "./Pages/Orders/UnifiedOrders.jsx";
 import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
 import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
@@ -98,9 +99,8 @@ const MainLayout = () => {
     <div className="flex h-screen mantine-bg">
       <Sidebar isOpen={sidebarOpen} />
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? "ml-60" : "ml-[70px]"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "ml-60" : "ml-[70px]"
+          }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
@@ -409,6 +409,10 @@ function App() {
         {
           path: "/cod-orders",
           element: <CodOrders />,
+        },
+        {
+          path: "/all-orders",
+          element: <UnifiedOrders />,
         },
         {
           path: "/delivery-zones",
