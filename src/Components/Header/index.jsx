@@ -67,7 +67,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
   const navigate = useNavigate();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const theme = useMantineTheme();
-  const [userMenuOpened, setUserMenuOpened] = useState(false);
+
 
   const handleLogout = async () => {
     await logout();
@@ -184,9 +184,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
         <Menu
           width={260}
           position="bottom-end"
-          onClose={() => setUserMenuOpened(false)}
-          onOpen={() => setUserMenuOpened(true)}
-          opened={userMenuOpened}
+          transitionProps={{ transition: 'pop-top-right' }}
         >
           <Menu.Target>
             <UnstyledButton className="flex items-center">
