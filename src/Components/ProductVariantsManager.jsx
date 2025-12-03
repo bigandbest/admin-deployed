@@ -4,7 +4,12 @@ import { Button, TextInput, NumberInput, Select, Switch, Group, Text, Badge, Act
 import { FaTrash, FaPlus, FaUpload } from 'react-icons/fa';
 
 const ProductVariantsManager = ({ product }) => {
-  const [variants, setVariants] = useState([]);
+  // Initialize with variants from product if available
+  const initialVariants = product?.product_variants && Array.isArray(product.product_variants) 
+    ? product.product_variants.filter(v => v.active !== false)
+    : [];
+  
+  const [variants, setVariants] = useState(initialVariants);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newVariant, setNewVariant] = useState({
@@ -19,24 +24,52 @@ const ProductVariantsManager = ({ product }) => {
   const [variantImageFile, setVariantImageFile] = useState(null);
 
   useEffect(() => {
+    console.log('ProductVariantsManager - Product changed:', product);
+    
     if (product?.id) {
+      // First check if product already has variants in the response
+      if (product.product_variants && Array.isArray(product.product_variants) && product.product_variants.length > 0) {
+        // Filter active variants only
+        const activeVariants = product.product_variants.filter(v => v.active !== false);
+        console.log('Initializing with variants from product object:', activeVariants);
+        setVariants(activeVariants);
+      }
+      // Always fetch from API to ensure we have the latest data (in background)
       fetchVariants();
     }
-  }, [product?.id]);
+  }, [product?.id, product?.product_variants]);
 
   const fetchVariants = async () => {
+    if (!product?.id) return;
+    
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('product_variants')
-        .select('*')
-        .eq('product_id', product.id)
-        .order('variant_price');
+      // Use API endpoint - this is a public endpoint so no auth needed
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${API_BASE_URL}/product-variants/product/${product.id}/variants`);
+      const data = await response.json();
       
-      if (error) throw error;
-      setVariants(data || []);
+      console.log('Fetched variants from API for product', product.id, ':', data);
+      
+      if (data.success && data.variants && Array.isArray(data.variants)) {
+        console.log('Setting variants from API response:', data.variants);
+        setVariants(data.variants);
+      } else {
+        // If API doesn't return variants, use from product object
+        if (product.product_variants && Array.isArray(product.product_variants)) {
+          const activeVariants = product.product_variants.filter(v => v.active !== false);
+          console.log('API returned no variants, using from product object:', activeVariants);
+          setVariants(activeVariants);
+        }
+      }
     } catch (error) {
       console.error('Error fetching variants:', error);
+      // If fetch fails, use variants from product object if available
+      if (product.product_variants && Array.isArray(product.product_variants)) {
+        const activeVariants = product.product_variants.filter(v => v.active !== false);
+        console.log('Fetch failed, using variants from product object:', activeVariants);
+        setVariants(activeVariants);
+      }
     } finally {
       setLoading(false);
     }
@@ -159,14 +192,26 @@ const ProductVariantsManager = ({ product }) => {
           alt={product.name}
           className="w-16 h-16 object-contain rounded border"
         />
-        <div>
+        <div className="flex-1">
           <Text size="lg" weight={600}>{product.name}</Text>
           <Text size="sm" color="dimmed">Manage product variants</Text>
+          {variants.length > 0 && (
+            <Text size="xs" color="blue" className="mt-1">
+              {variants.length} active variant{variants.length !== 1 ? 's' : ''} found
+            </Text>
+          )}
         </div>
       </div>
 
       <div className="flex justify-between items-center">
-        <Text size="md" weight={500}>Product Variants ({variants.length})</Text>
+        <div>
+          <Text size="md" weight={500}>Product Variants ({variants.length})</Text>
+          {product?.product_variants && Array.isArray(product.product_variants) && (
+            <Text size="xs" color="dimmed">
+              {product.product_variants.length} variant(s) found in product object
+            </Text>
+          )}
+        </div>
         <Button
           leftIcon={<FaPlus />}
           onClick={() => setShowAddForm(!showAddForm)}
@@ -262,13 +307,21 @@ const ProductVariantsManager = ({ product }) => {
           <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded">
             <Text color="dimmed">No variants found for this product</Text>
             <Text size="sm" color="dimmed">Click "Add Variant" to create the first variant</Text>
+            {product?.product_variants && Array.isArray(product.product_variants) && product.product_variants.length > 0 && (
+              <div className="mt-4 p-3 bg-yellow-50 rounded">
+                <Text size="sm" color="orange">
+                  Note: Product has {product.product_variants.length} variant(s) but they are not being displayed.
+                  Please refresh or check console for errors.
+                </Text>
+              </div>
+            )}
           </div>
         ) : (
           variants.map(variant => (
             <div key={variant.id} className="flex items-center gap-3 p-3 border rounded bg-white">
-              {variant.variant_image && (
+              {(variant.variant_image_url || variant.variant_image) && (
                 <img
-                  src={variant.variant_image}
+                  src={variant.variant_image_url || variant.variant_image}
                   alt={variant.variant_name}
                   className="w-12 h-12 object-cover rounded border"
                 />

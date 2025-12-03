@@ -81,6 +81,7 @@ const AddProduct = () => {
     video: "",
   });
 
+  const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -154,6 +155,38 @@ const AddProduct = () => {
           enable_fallback: product.enable_fallback !== false,
           warehouse_notes: product.warehouse_notes || "",
         });
+
+        // Populate variants if they exist
+        if (
+          product.product_variants &&
+          Array.isArray(product.product_variants)
+        ) {
+          setVariants(
+            product.product_variants.map((v) => {
+              // Try to extract numeric weight from string like "10 kg"
+              let weightValue = v.variant_weight || "";
+              if (
+                v.variant_unit &&
+                weightValue.toLowerCase().endsWith(v.variant_unit.toLowerCase())
+              ) {
+                const lastIndex = weightValue
+                  .toLowerCase()
+                  .lastIndexOf(v.variant_unit.toLowerCase());
+                weightValue = weightValue.substring(0, lastIndex).trim();
+              }
+
+              return {
+                ...v,
+                variant_weight: weightValue,
+                variant_unit: v.variant_unit || "kg",
+                variant_price: v.variant_price || 0,
+                variant_old_price: v.variant_old_price || 0,
+                variant_stock: v.variant_stock || 0,
+                is_default: Boolean(v.is_default),
+              };
+            })
+          );
+        }
       }
     } catch (error) {
       console.error("Failed to fetch product for edit:", error);
@@ -244,9 +277,8 @@ const AddProduct = () => {
           const allWarehouses = allWarehousesResult.warehouses;
           const warehouseSelectOptions = allWarehouses.map((warehouse) => ({
             value: warehouse.id.toString(),
-            label: `${warehouse.parent_warehouse_id ? "└─ " : ""}${
-              warehouse.name
-            } (${warehouse.type})`,
+            label: `${warehouse.parent_warehouse_id ? "└─ " : ""}${warehouse.name
+              } (${warehouse.type})`,
             type: warehouse.type,
             parent_warehouse_id: warehouse.parent_warehouse_id,
           }));
@@ -359,8 +391,7 @@ const AddProduct = () => {
       if (isEditMode) {
         try {
           const response = await axios.put(
-            `${
-              import.meta.env.VITE_API_BASE_URL
+            `${import.meta.env.VITE_API_BASE_URL
             }/admin/products/${id}/warehouse-mapping`,
             payload
           );
@@ -377,11 +408,59 @@ const AddProduct = () => {
 
       if (result.success) {
         console.log("Product saved successfully:", result);
+
+        // Get the created product ID
+        const createdProductId = result.product?.id || result.productId || id;
+
+        // Create variants if any were added
+        if (variants.length > 0 && createdProductId) {
+          try {
+            const variantPromises = variants
+              .filter((v) => v.variant_name && v.variant_price)
+              .map(async (variant) => {
+                const variantData = {
+                  variant_name: variant.variant_name.trim(),
+                  variant_price: parseFloat(variant.variant_price) || 0,
+                  variant_old_price: variant.variant_old_price
+                    ? parseFloat(variant.variant_old_price)
+                    : null,
+                  variant_discount: 0,
+                  variant_stock: parseInt(variant.variant_stock) || 0,
+                  variant_weight: `${variant.variant_weight || ""} ${variant.variant_unit || "kg"}`.trim(),
+                  variant_unit: variant.variant_unit || "kg",
+                  shipping_amount: parseFloat(variant.shipping_amount) || 0,
+                  is_default: Boolean(variant.is_default),
+                  active: true,
+                };
+
+                const response = await axios.post(
+                  `${import.meta.env.VITE_API_BASE_URL}/product-variants/product/${createdProductId}/variants`,
+                  variantData,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                    },
+                  }
+                );
+                return response.data;
+              });
+
+            await Promise.all(variantPromises);
+            console.log("All variants created successfully");
+          } catch (variantError) {
+            console.error("Error creating variants:", variantError);
+            // Don't fail the whole operation if variants fail
+            setError(
+              "Product created successfully, but some variants failed to create. You can add them later."
+            );
+          }
+        }
+
         navigate("/products");
       } else {
         setError(
           result.error ||
-            (isEditMode ? "Failed to update product" : "Failed to add product")
+          (isEditMode ? "Failed to update product" : "Failed to add product")
         );
       }
     } catch (error) {
@@ -393,7 +472,7 @@ const AddProduct = () => {
   };
 
   const nextStep = () =>
-    setActiveStep((current) => (current < 5 ? current + 1 : current));
+    setActiveStep((current) => (current < 6 ? current + 1 : current));
   const prevStep = () =>
     setActiveStep((current) => (current > 0 ? current - 1 : current));
 
@@ -500,6 +579,7 @@ const AddProduct = () => {
     { label: "Pricing", description: "Price & stock" },
     { label: "Media", description: "Images & videos" },
     { label: "FAQ", description: "Questions & answers" },
+    { label: "Variants", description: "Product variants" },
     { label: "Warehouse", description: "Distribution" },
   ];
 
@@ -601,11 +681,10 @@ const AddProduct = () => {
                   {categories.map((category) => (
                     <div
                       key={category.id}
-                      className={`p-3 rounded cursor-pointer transition-colors ${
-                        form.category_id === category.id
+                      className={`p-3 rounded cursor-pointer transition-colors ${form.category_id === category.id
                           ? "bg-blue-500 text-white"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       onClick={() =>
                         setForm({
                           ...form,
@@ -630,11 +709,10 @@ const AddProduct = () => {
                     .map((subcategory) => (
                       <div
                         key={subcategory.id}
-                        className={`p-3 rounded cursor-pointer transition-colors ${
-                          form.subcategory_id === subcategory.id
+                        className={`p-3 rounded cursor-pointer transition-colors ${form.subcategory_id === subcategory.id
                             ? "bg-indigo-500 text-white"
                             : "hover:bg-gray-100"
-                        }`}
+                          }`}
                         onClick={() =>
                           setForm({
                             ...form,
@@ -656,11 +734,10 @@ const AddProduct = () => {
                   {filteredGroups.map((group) => (
                     <div
                       key={group.id}
-                      className={`p-3 rounded cursor-pointer transition-colors ${
-                        form.group_id === group.id
+                      className={`p-3 rounded cursor-pointer transition-colors ${form.group_id === group.id
                           ? "bg-purple-500 text-white"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       onClick={() => setForm({ ...form, group_id: group.id })}
                     >
                       {group.name}
@@ -856,6 +933,167 @@ const AddProduct = () => {
           </div>
         );
       case 5:
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <Text size="lg" weight={600}>
+                Product Variants
+              </Text>
+              <Button
+                onClick={() => {
+                  setVariants([
+                    ...variants,
+                    {
+                      variant_name: "",
+                      variant_price: 0,
+                      variant_old_price: 0,
+                      variant_discount: 0,
+                      variant_stock: 0,
+                      variant_weight: "",
+                      variant_unit: "kg",
+                      shipping_amount: 0,
+                      is_default: false,
+                    },
+                  ]);
+                }}
+                size="sm"
+              >
+                Add Variant
+              </Button>
+            </div>
+            <Text size="sm" color="dimmed" className="mb-4">
+              Add different size/weight variants for this product (e.g., 1kg, 2kg, 5kg). This is optional.
+            </Text>
+            {variants.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
+                <Text>No variants added yet.</Text>
+                <Text size="sm" className="mt-2">
+                  Click "Add Variant" to create product variants.
+                </Text>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {variants.map((variant, index) => (
+                  <Card key={index} className="p-4 border">
+                    <div className="flex justify-between items-start mb-4">
+                      <Text weight={500}>Variant {index + 1}</Text>
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        onClick={() => {
+                          setVariants(variants.filter((_, i) => i !== index));
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <TextInput
+                        label="Variant Name"
+                        placeholder="e.g., 10 kg Pack"
+                        required
+                        value={variant.variant_name}
+                        onChange={(e) => {
+                          const updated = [...variants];
+                          updated[index].variant_name = e.target.value;
+                          setVariants(updated);
+                        }}
+                        size="md"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <TextInput
+                          label="Weight Value"
+                          placeholder="e.g., 10"
+                          value={variant.variant_weight}
+                          onChange={(e) => {
+                            const updated = [...variants];
+                            updated[index].variant_weight = e.target.value;
+                            setVariants(updated);
+                          }}
+                          size="md"
+                        />
+                        <Select
+                          label="Unit"
+                          data={[
+                            { value: "kg", label: "kg" },
+                            { value: "g", label: "g" },
+                            { value: "l", label: "l" },
+                            { value: "ml", label: "ml" },
+                            { value: "pcs", label: "pcs" },
+                          ]}
+                          value={variant.variant_unit}
+                          onChange={(value) => {
+                            const updated = [...variants];
+                            updated[index].variant_unit = value;
+                            setVariants(updated);
+                          }}
+                          size="md"
+                        />
+                      </div>
+                      <NumberInput
+                        label="Price (₹)"
+                        placeholder="Enter price"
+                        required
+                        value={variant.variant_price}
+                        onChange={(value) => {
+                          const updated = [...variants];
+                          updated[index].variant_price = value;
+                          setVariants(updated);
+                        }}
+                        min={0}
+                        size="md"
+                      />
+                      <NumberInput
+                        label="Old Price (₹)"
+                        placeholder="Enter old price"
+                        value={variant.variant_old_price}
+                        onChange={(value) => {
+                          const updated = [...variants];
+                          updated[index].variant_old_price = value;
+                          setVariants(updated);
+                        }}
+                        min={0}
+                        size="md"
+                      />
+                      <NumberInput
+                        label="Stock Quantity"
+                        placeholder="Enter stock"
+                        value={variant.variant_stock}
+                        onChange={(value) => {
+                          const updated = [...variants];
+                          updated[index].variant_stock = value;
+                          setVariants(updated);
+                        }}
+                        min={0}
+                        size="md"
+                      />
+                      <div className="flex items-end">
+                        <Switch
+                          label="Set as Default Variant"
+                          checked={variant.is_default}
+                          onChange={(e) => {
+                            const updated = [...variants];
+                            if (e.currentTarget.checked) {
+                              // Unset other defaults
+                              updated.forEach((v, i) => {
+                                if (i !== index) v.is_default = false;
+                              });
+                            }
+                            updated[index].is_default = e.currentTarget.checked;
+                            setVariants(updated);
+                          }}
+                          size="md"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 6:
         return (
           <div className="space-y-6">
             <Text size="lg" weight={600}>

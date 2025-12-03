@@ -8,9 +8,11 @@ import {
   Badge,
   Alert,
   Switch,
-  Divider
+  Divider,
+  Tabs
 } from '@mantine/core';
 import { updateProductStock, getProductStock } from '../utils/stockApi';
+import VariantStockManager from './VariantStockManager';
 
 const StockManager = ({ 
   opened, 
@@ -86,42 +88,53 @@ const StockManager = ({
 
   const stockStatus = getCurrentStockStatus();
 
+  const [variantStockModalOpen, setVariantStockModalOpen] = useState(false);
+
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title="Manage Product Stock"
-      size="md"
-      centered
-    >
-      {product && (
-        <div className="space-y-4">
-          {/* Product Info */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <Text weight={600} className="mb-2">{product.name}</Text>
-            <div className="flex items-center gap-4">
-              <div>
-                <Text size="sm" color="dimmed">Current Stock:</Text>
-                <div className="flex items-center gap-2">
-                  <Text weight={500}>{product.stock || product.stock_quantity || 0}</Text>
-                  <Badge color={stockStatus.color} size="sm">
-                    {stockStatus.label}
+    <>
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title="Manage Product Stock"
+        size="lg"
+        centered
+      >
+        {product && (
+          <div className="space-y-4">
+            {/* Product Info */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <Text weight={600} className="mb-2">{product.name}</Text>
+              <div className="flex items-center gap-4">
+                <div>
+                  <Text size="sm" color="dimmed">Current Stock:</Text>
+                  <div className="flex items-center gap-2">
+                    <Text weight={500}>{product.stock || product.stock_quantity || 0}</Text>
+                    <Badge color={stockStatus.color} size="sm">
+                      {stockStatus.label}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Text size="sm" color="dimmed">In Stock Status:</Text>
+                  <Badge color={product.in_stock ? 'green' : 'red'} size="sm">
+                    {product.in_stock ? 'Available' : 'Unavailable'}
                   </Badge>
                 </div>
               </div>
-              <div>
-                <Text size="sm" color="dimmed">In Stock Status:</Text>
-                <Badge color={product.in_stock ? 'green' : 'red'} size="sm">
-                  {product.in_stock ? 'Available' : 'Unavailable'}
-                </Badge>
-              </div>
             </div>
-          </div>
 
-          <Divider />
+            <Divider />
 
-          {/* Stock Update Form */}
-          <div className="space-y-4">
+            {/* Tabs for Product Stock and Variant Stock */}
+            <Tabs defaultValue="product" className="mt-4">
+              <Tabs.List>
+                <Tabs.Tab value="product">Product Stock</Tabs.Tab>
+                <Tabs.Tab value="variants">Variant Stock</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="product" pt="md">
+                {/* Stock Update Form */}
+                <div className="space-y-4">
             <NumberInput
               label="New Stock Quantity"
               placeholder="Enter new stock quantity"
@@ -158,40 +171,72 @@ const StockManager = ({
             </div>
           </div>
 
-          {/* Error/Success Messages */}
-          {error && (
-            <Alert color="red" title="Error">
-              {error}
-            </Alert>
-          )}
+                </div>
 
-          {success && (
-            <Alert color="green" title="Success">
-              {success}
-            </Alert>
-          )}
+                {/* Error/Success Messages */}
+                {error && (
+                  <Alert color="red" title="Error">
+                    {error}
+                  </Alert>
+                )}
 
-          {/* Action Buttons */}
-          <Group position="right" spacing="md" className="mt-6">
-            <Button 
-              variant="default" 
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              color="blue" 
-              onClick={handleUpdateStock}
-              loading={loading}
-              disabled={stockQuantity === (product.stock || product.stock_quantity || 0)}
-            >
-              Update Stock
-            </Button>
-          </Group>
-        </div>
-      )}
-    </Modal>
+                {success && (
+                  <Alert color="green" title="Success">
+                    {success}
+                  </Alert>
+                )}
+
+                {/* Action Buttons */}
+                <Group position="right" spacing="md" className="mt-6">
+                  <Button 
+                    variant="default" 
+                    onClick={onClose}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    color="blue" 
+                    onClick={handleUpdateStock}
+                    loading={loading}
+                    disabled={stockQuantity === (product.stock || product.stock_quantity || 0)}
+                  >
+                    Update Stock
+                  </Button>
+                </Group>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="variants" pt="md">
+                <div className="space-y-4">
+                  <Alert color="blue" title="Variant Stock Management">
+                    Click the button below to manage stock for individual product variants.
+                  </Alert>
+                  <Group position="center">
+                    <Button 
+                      color="blue" 
+                      onClick={() => {
+                        setVariantStockModalOpen(true);
+                        onClose();
+                      }}
+                    >
+                      Manage Variant Stock
+                    </Button>
+                  </Group>
+                </div>
+              </Tabs.Panel>
+            </Tabs>
+          </div>
+        )}
+      </Modal>
+
+      {/* Variant Stock Manager Modal */}
+      <VariantStockManager
+        opened={variantStockModalOpen}
+        onClose={() => setVariantStockModalOpen(false)}
+        product={product}
+        onStockUpdated={onStockUpdated}
+      />
+    </>
   );
 };
 

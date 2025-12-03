@@ -107,3 +107,36 @@ export const reduceStock = async (productId, quantity, orderId = null) => {
     };
   }
 };
+
+/**
+ * Update variant stock quantity
+ * @param {string} variantId - Variant ID
+ * @param {number} variantStock - New stock quantity
+ * @param {boolean} active - Whether variant is active/in stock
+ * @returns {Promise<{success: boolean, variant?: object, error?: string}>}
+ */
+export const updateVariantStock = async (variantId, variantStock, active = null) => {
+  try {
+    const payload = {};
+    if (variantStock !== null && variantStock !== undefined) {
+      payload.variant_stock = variantStock;
+    }
+    if (active !== null && active !== undefined) {
+      payload.active = active;
+    }
+
+    const response = await axios.put(`${API_BASE_URL}/product-variants/variant/${variantId}/stock`, payload);
+
+    return {
+      success: true,
+      variant: response.data.variant,
+      message: response.data.message
+    };
+  } catch (error) {
+    console.error('Error updating variant stock:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to update variant stock'
+    };
+  }
+};
