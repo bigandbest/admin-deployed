@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 
 const STEPS = [
-  { id: "basic", title: "Basic Info", description: "Name & delivery type" },
-  { id: "zonal", title: "Zonal Availability", description: "Assign zonal stock" },
+  { id: "basic", title: "Select Product", description: "Choose product & stock quantity" },
+  { id: "zonal", title: "Zonal Warehouses", description: "Assign to zonal warehouses" },
   {
     id: "division",
-    title: "Division Availability",
-    description: "Fallback coverage",
+    title: "Division Warehouses",
+    description: "Assign to division warehouses",
   },
   {
     id: "pricing",
-    title: "Pricing & Review",
-    description: "Price and final checks",
+    title: "Review",
+    description: "Review assignments",
   },
 ];
 
@@ -139,12 +139,10 @@ const ProductModal = ({
 
     switch (STEPS[stepIndex].id) {
       case "basic":
-        if (!data.name.trim()) {
-          errorMessage = "Product name is required";
+        if (!data.selectedProductId) {
+          errorMessage = "Please select a product";
         } else if (!data.delivery_type) {
           errorMessage = "Select a delivery type";
-        } else if (!data.category_id) {
-          errorMessage = "Category ID is required";
         }
         break;
       case "zonal":
@@ -210,122 +208,75 @@ const ProductModal = ({
       case "basic":
         return (
           <div className="space-y-4">
+            {/* Product Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                value={data.name}
-                onChange={(event) =>
-                  setData({ ...data, name: event.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter product name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Delivery Type *
+                Select Product *
               </label>
               <select
-                value={data.delivery_type}
-                onChange={(event) =>
+                value={data.selectedProductId || ""}
+                onChange={(event) => {
+                  const selectedId = event.target.value;
+                  const selectedProduct = data.availableProducts?.find(p => p.id === selectedId);
                   setData({
                     ...data,
-                    delivery_type: event.target.value,
-                    warehouse_assignments: [],
-                  })
-                }
+                    selectedProductId: selectedId,
+                    name: selectedProduct?.name || "",
+                    price: selectedProduct?.price || "",
+                  });
+                }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="nationwide">
-                  🌍 Nationwide Delivery (zone + divisions)
-                </option>
-                <option value="zonal">
-                  🏙️ Zonal Delivery (division fallback optional)
-                </option>
+                <option value="">Choose a product to add to warehouses...</option>
+                {data.availableProducts?.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} - ₹{product.price}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select an existing product to assign to warehouses
+              </p>
             </div>
 
+            {/* Stock Quantity */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category ID *
+                Initial Stock Quantity *
               </label>
               <input
                 type="number"
-                value={data.category_id}
+                min="0"
+                value={data.initial_stock}
                 onChange={(event) =>
-                  setData({ ...data, category_id: event.target.value })
+                  setData({ ...data, initial_stock: event.target.value })
                 }
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter category ID"
+                placeholder="100"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                How many units to add to each selected warehouse
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Initial Stock
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={data.initial_stock}
-                  onChange={(event) =>
-                    setData({ ...data, initial_stock: event.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="100"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Min Threshold
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={data.minimum_threshold}
-                  onChange={(event) =>
-                    setData({ ...data, minimum_threshold: event.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="10"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cost Per Unit
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={data.cost_per_unit}
-                  onChange={(event) =>
-                    setData({ ...data, cost_per_unit: event.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
+            {/* Optional: Min Threshold */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                Minimum Stock Threshold (Optional)
               </label>
-              <textarea
-                value={data.description}
+              <input
+                type="number"
+                min="0"
+                value={data.minimum_threshold}
                 onChange={(event) =>
-                  setData({ ...data, description: event.target.value })
+                  setData({ ...data, minimum_threshold: event.target.value })
                 }
-                rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter product description"
+                placeholder="10"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Alert when stock falls below this level
+              </p>
             </div>
           </div>
         );
@@ -584,21 +535,19 @@ const ProductModal = ({
           {STEPS.map((step, index) => (
             <div key={step.id} className="flex items-center flex-1">
               <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full border text-sm font-semibold ${
-                  index === currentStep
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : index < currentStep
+                className={`flex items-center justify-center w-8 h-8 rounded-full border text-sm font-semibold ${index === currentStep
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : index < currentStep
                     ? "bg-blue-100 text-blue-700 border-blue-300"
                     : "bg-white text-gray-400 border-gray-200"
-                }`}
+                  }`}
               >
                 {index + 1}
               </div>
               {index < STEPS.length - 1 && (
                 <div
-                  className={`flex-1 h-0.5 ${
-                    index < currentStep ? "bg-blue-500" : "bg-gray-200"
-                  }`}
+                  className={`flex-1 h-0.5 ${index < currentStep ? "bg-blue-500" : "bg-gray-200"
+                    }`}
                 />
               )}
             </div>

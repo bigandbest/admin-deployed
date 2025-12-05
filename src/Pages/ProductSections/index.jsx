@@ -18,6 +18,8 @@ import {
   Card,
   Stack,
   Flex,
+  MultiSelect,
+  ScrollArea,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
@@ -27,6 +29,8 @@ import {
   IconArrowDown,
   IconEye,
   IconEyeOff,
+  IconPackage,
+  IconX,
 } from "@tabler/icons-react";
 import {
   getAllProductSections,
@@ -34,11 +38,14 @@ import {
   toggleProductSectionStatus,
   updateProductSectionOrder,
 } from "../../utils/supabaseApi";
+import axios from "axios";
 
 const ProductSectionsManagement = () => {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] =
+    useDisclosure(false);
+  const [productsModalOpened, { open: openProductsModal, close: closeProductsModal }] =
     useDisclosure(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [formData, setFormData] = useState({
@@ -48,6 +55,14 @@ const ProductSectionsManagement = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Product management state
+  const [sectionProducts, setSectionProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [allProducts, setAllProducts] = useState([]);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [productCounts, setProductCounts] = useState({});
+
   // Fetch all product sections
   const fetchSections = async () => {
     try {
@@ -56,6 +71,8 @@ const ProductSectionsManagement = () => {
 
       if (result.success) {
         setSections(result.sections || result.data || []);
+        // Fetch product counts for all sections
+        fetchProductCounts(result.sections || result.data || []);
       } else {
         throw new Error(result.error || "Failed to fetch sections");
       }
@@ -69,6 +86,148 @@ const ProductSectionsManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch product counts for all sections
+  const fetchProductCounts = async (sectionsList) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const counts = {};
+
+      await Promise.all(
+        sectionsList.map(async (section) => {
+          try {
+            const response = await axios.get(
+              `${apiUrl}/product-sections/${section.id}/products?limit=1`
+            );
+            if (response.data.success && response.data.pagination) {
+              counts[section.id] = response.data.pagination.total;
+            }
+          } catch (error) {
+            console.error(`Error fetching count for section ${section.id}:`, error);
+            counts[section.id] = 0;
+          }
+        })
+      );
+
+      setProductCounts(counts);
+    } catch (error) {
+      console.error("Error fetching product counts:", error);
+    }
+  };
+
+  // Fetch products in a section
+  const fetchSectionProducts = async (sectionId) => {
+    try {
+      setProductsLoading(true);
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const response = await axios.get(
+        `${apiUrl}/product-sections/${sectionId}/products?limit=100`
+      );
+
+      if (response.data.success) {
+        setSectionProducts(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching section products:", error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to fetch products in section",
+        color: "red",
+      });
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  // Fetch all products for selection
+  const fetchAllProducts = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const response = await axios.get(`${apiUrl}/admin/products`);
+
+      if (response.data.success && response.data.products) {
+        setAllProducts(response.data.products);
+      }
+    } catch (error) {
+      console.error("Error fetching all products:", error);
+    }
+  };
+
+  // Open products modal
+  const openManageProducts = (section) => {
+    setSelectedSection(section);
+    fetchSectionProducts(section.id);
+    fetchAllProducts();
+    openProductsModal();
+  };
+
+  // Add products to section
+  const addProductsToSection = async () => {
+    if (selectedProductIds.length === 0) {
+      notifications.show({
+        title: "Warning",
+        message: "Please select at least one product",
+        color: "yellow",
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const response = await axios.post(
+        `${apiUrl}/product-sections/${selectedSection.id}/products`,
+        { product_ids: selectedProductIds }
+      );
+
+      if (response.data.success) {
+        notifications.show({
+          title: "Success",
+          message: response.data.message,
+          color: "green",
+        });
+        setSelectedProductIds([]);
+        fetchSectionProducts(selectedSection.id);
+        fetchProductCounts(sections);
+      }
+    } catch (error) {
+      console.error("Error adding products:", error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to add products to section",
+        color: "red",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Remove product from section
+  const removeProductFromSection = async (productId) => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+      const response = await axios.delete(
+        `${apiUrl}/product-sections/${selectedSection.id}/products/${productId}`
+      );
+
+      if (response.data.success) {
+        notifications.show({
+          title: "Success",
+          message: "Product removed from section",
+          color: "green",
+        });
+        fetchSectionProducts(selectedSection.id);
+        fetchProductCounts(sections);
+      }
+    } catch (error) {
+      console.error("Error removing product:", error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to remove product from section",
+        color: "red",
+      });
     }
   };
 
@@ -201,6 +360,13 @@ const ProductSectionsManagement = () => {
     openEditModal();
   };
 
+  // Filter available products (not already in section)
+  const availableProducts = allProducts.filter(
+    (product) =>
+      !sectionProducts.some((sp) => sp.id === product.id) &&
+      product.name.toLowerCase().includes(productSearchQuery.toLowerCase())
+  );
+
   useEffect(() => {
     fetchSections();
   }, []);
@@ -220,7 +386,7 @@ const ProductSectionsManagement = () => {
         <Alert>
           <Text size="sm">
             Manage the visibility and order of selected homepage product
-            sections. You can enable/disable sections, edit section names, and
+            sections. You can enable/disable sections, edit section names, manage products, and
             reorder them.
           </Text>
         </Alert>
@@ -234,8 +400,9 @@ const ProductSectionsManagement = () => {
                   <Table.Th>Section Name</Table.Th>
                   <Table.Th>Component</Table.Th>
                   <Table.Th>Status</Table.Th>
+                  <Table.Th>Products</Table.Th>
                   <Table.Th>Description</Table.Th>
-                  <Table.Th style={{ width: "120px" }}>Actions</Table.Th>
+                  <Table.Th style={{ width: "180px" }}>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -294,6 +461,11 @@ const ProductSectionsManagement = () => {
                       />
                     </Table.Td>
                     <Table.Td>
+                      <Badge color="blue" variant="light">
+                        {productCounts[section.id] || 0} products
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
                       <Text size="sm" c="dimmed" lineClamp={2}>
                         {section.description || "No description"}
                       </Text>
@@ -307,6 +479,15 @@ const ProductSectionsManagement = () => {
                             onClick={() => openEdit(section)}
                           >
                             <IconEdit size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Manage Products">
+                          <ActionIcon
+                            variant="subtle"
+                            color="green"
+                            onClick={() => openManageProducts(section)}
+                          >
+                            <IconPackage size={16} />
                           </ActionIcon>
                         </Tooltip>
                       </Group>
@@ -364,6 +545,96 @@ const ProductSectionsManagement = () => {
               Save Changes
             </Button>
           </Group>
+        </Stack>
+      </Modal>
+
+      {/* Manage Products Modal */}
+      <Modal
+        opened={productsModalOpened}
+        onClose={closeProductsModal}
+        title={`Manage Products - ${selectedSection?.section_name}`}
+        size="xl"
+      >
+        <Stack spacing="md">
+          {/* Add Products Section */}
+          <Card withBorder>
+            <Stack spacing="sm">
+              <Text fw={500}>Add Products to Section</Text>
+              <TextInput
+                placeholder="Search products..."
+                value={productSearchQuery}
+                onChange={(e) => setProductSearchQuery(e.target.value)}
+              />
+              <MultiSelect
+                placeholder="Select products to add"
+                data={availableProducts.map((p) => ({
+                  value: p.id.toString(),
+                  label: `${p.name} (₹${p.price})`,
+                }))}
+                value={selectedProductIds}
+                onChange={setSelectedProductIds}
+                searchable
+                maxDropdownHeight={200}
+              />
+              <Button
+                onClick={addProductsToSection}
+                loading={submitting}
+                disabled={selectedProductIds.length === 0}
+              >
+                Add Selected Products
+              </Button>
+            </Stack>
+          </Card>
+
+          {/* Current Products Section */}
+          <Card withBorder>
+            <Stack spacing="sm">
+              <Text fw={500}>
+                Current Products ({sectionProducts.length})
+              </Text>
+              <LoadingOverlay visible={productsLoading} />
+              {sectionProducts.length === 0 ? (
+                <Text c="dimmed" ta="center" py="xl">
+                  No products in this section yet
+                </Text>
+              ) : (
+                <ScrollArea h={300}>
+                  <Stack spacing="xs">
+                    {sectionProducts.map((product) => (
+                      <Group
+                        key={product.id}
+                        justify="space-between"
+                        p="sm"
+                        style={{
+                          border: "1px solid #e9ecef",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        <div>
+                          <Text fw={500}>{product.name}</Text>
+                          <Text size="sm" c="dimmed">
+                            ₹{product.price}
+                            {product.old_price && (
+                              <span style={{ textDecoration: "line-through", marginLeft: "8px" }}>
+                                ₹{product.old_price}
+                              </span>
+                            )}
+                          </Text>
+                        </div>
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={() => removeProductFromSection(product.id)}
+                        >
+                          <IconX size={16} />
+                        </ActionIcon>
+                      </Group>
+                    ))}
+                  </Stack>
+                </ScrollArea>
+              )}
+            </Stack>
+          </Card>
         </Stack>
       </Modal>
     </Container>

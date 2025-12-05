@@ -49,11 +49,10 @@ const ProductRow = ({
           {item.delivery_type && (
             <div className="text-xs text-gray-500">
               <span
-                className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                  item.delivery_type === "nationwide"
+                className={`inline-flex px-2 py-1 text-xs rounded-full ${item.delivery_type === "nationwide"
                     ? "bg-blue-100 text-blue-800"
                     : "bg-green-100 text-green-800"
-                }`}
+                  }`}
               >
                 {item.delivery_type}
               </span>
@@ -218,7 +217,7 @@ const WarehouseProducts = () => {
       console.error("❌ Failed to fetch products:", err);
       setError(
         "Failed to fetch products: " +
-          (err.response?.data?.message || err.message)
+        (err.response?.data?.message || err.message)
       );
     }
   };
@@ -228,7 +227,7 @@ const WarehouseProducts = () => {
       setError("Please select a product and enter valid stock quantity");
       return;
     }
-    
+
     try {
       const result = await addProductToWarehouse(
         id,
@@ -339,11 +338,11 @@ const WarehouseProducts = () => {
       {/* Header Section */}
       <div className="mb-6">
         <button
-          onClick={() => navigate("/warehouselist")}
+          onClick={() => navigate("/warehouse-management")}
           className="flex items-center text-blue-600 hover:text-blue-800 hover:underline mb-4 transition-colors"
         >
           <span className="mr-2">←</span>
-          Back to Warehouses
+          Back to Warehouse Management
         </button>
 
         <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -355,11 +354,10 @@ const WarehouseProducts = () => {
               <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                 <span className="flex items-center">
                   <span
-                    className={`inline-block w-3 h-3 rounded-full mr-2 ${
-                      warehouse?.type === "zonal"
+                    className={`inline-block w-3 h-3 rounded-full mr-2 ${warehouse?.type === "zonal"
                         ? "bg-green-500"
                         : "bg-purple-500"
-                    }`}
+                      }`}
                   ></span>
                   {warehouse?.type === "zonal"
                     ? "Zonal Warehouse"

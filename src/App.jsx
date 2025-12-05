@@ -45,7 +45,7 @@ import PromotionalSettings from "./Pages/PromotionalSettings";
 import StorageDetailsPage from "./Pages/Storage";
 import BusinessUsersList from "./Pages/BusinessWork/BusinessData.jsx";
 import EnhancedStoragePage from "./Pages/Storage/enhanced";
-import WarehouseList from "./Pages/WarehousePages/WarehouseList.jsx";
+import WarehouseManagement from "./Pages/WarehousePages/WarehouseManagement.jsx";
 import WarehouseProducts from "./Pages/WarehousePages/WarehouseProducts.jsx";
 import VideoBannerManagement from "./Pages/VideoBanners/VideoBannerManagement.jsx";
 import AdminOrders from "./Pages/Orders/index.jsx";
@@ -270,8 +270,20 @@ function App() {
           element: <BusinessUsersList />,
         },
         {
+          path: "/warehouse-management",
+          element: <WarehouseManagement />,
+        },
+        {
           path: "/warehouselist",
-          element: <WarehouseList />,
+          element: <WarehouseManagement />,
+        },
+        {
+          path: "/stock-management",
+          element: <WarehouseManagement />,
+        },
+        {
+          path: "/warehouseproducts/:id/products",
+          element: <WarehouseProducts />,
         },
         {
           path: "/AdminOrders",
@@ -280,10 +292,6 @@ function App() {
         {
           path: "/return-orders",
           element: <ReturnOrdersAdmin />,
-        },
-        {
-          path: "/warehouseproducts/:id/products",
-          element: <WarehouseProducts />,
         },
         {
           path: "/VideoBannerManagement",

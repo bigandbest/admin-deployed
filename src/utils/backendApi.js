@@ -995,7 +995,7 @@ export async function updateProduct(
       formData.append("video", videoFile);
     }
 
-    const response = await fetch(`${API_BASE_URL}/productsroute/update/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
       method: "PUT",
       body: formData,
     });

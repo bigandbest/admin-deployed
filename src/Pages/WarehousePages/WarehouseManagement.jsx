@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
+import axios from "axios";
 import ProductModal from "../../Components/Warehouse/ProductModal";
 import {
   getAllWarehouses,
@@ -18,6 +19,8 @@ import {
 } from "../../utils/supabaseApi";
 import { getZoneProductVisibility } from "../../utils/zoneApi";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+
 const WarehouseManagement = () => {
   const [activeTab, setActiveTab] = useState("warehouses");
   const [warehouses, setWarehouses] = useState([]);
@@ -29,6 +32,12 @@ const WarehouseManagement = () => {
   const [zoneVisibility, setZoneVisibility] = useState(null);
   const [zoneVisibilityLoading, setZoneVisibilityLoading] = useState(false);
   const [zoneVisibilityError, setZoneVisibilityError] = useState("");
+
+  // Stock Management states
+  const [stockData, setStockData] = useState([]);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [stockMovements, setStockMovements] = useState([]);
+  const [selectedWarehouse, setSelectedWarehouse] = useState("");
 
   // Modal states
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
@@ -44,18 +53,21 @@ const WarehouseManagement = () => {
     address: "",
     zone_ids: [],
     parent_warehouse_id: null,
-    pincode_assignments: [], // For division warehouses: array of {pincode, city, state}
+    pincode_assignments: [], // For division warehouses
   });
 
   const [warehouseHierarchy, setWarehouseHierarchy] = useState([]);
 
   const [productForm, setProductForm] = useState({
+    selectedProductId: "",
+    searchTerm: "",
+    availableProducts: [],
     name: "",
     price: "",
     delivery_type: "zonal",
     warehouse_assignments: [],
     description: "",
-    category_id: "",
+    category_id: "", // Optional field
     initial_stock: 100,
     minimum_threshold: 10,
     cost_per_unit: 0,
@@ -80,7 +92,13 @@ const WarehouseManagement = () => {
     try {
       const result = await getAllProducts();
       if (result.success) {
-        setProducts(result.products || result.data || []);
+        const productsList = result.products || result.data || [];
+        setProducts(productsList);
+        // Update productForm with available products
+        setProductForm(prev => ({
+          ...prev,
+          availableProducts: productsList
+        }));
       } else {
         setError("Failed to fetch products: " + result.error);
       }
@@ -146,7 +164,7 @@ const WarehouseManagement = () => {
         setZoneVisibility(null);
         setZoneVisibilityError(
           visibilityError.message ||
-            "Failed to load zone visibility data"
+          "Failed to load zone visibility data"
         );
       } finally {
         setZoneVisibilityLoading(false);
@@ -239,74 +257,55 @@ const WarehouseManagement = () => {
   // Handle product operations
   const handleProductSubmit = async () => {
     try {
-      // Validate required fields
-      if (!productForm.name || !productForm.price || !productForm.category_id) {
-        setError("Name, price, and category are required");
-        return;
-      }
-
-      const payload = {
-        ...productForm,
-        price: parseFloat(productForm.price),
-        initial_stock: parseInt(productForm.initial_stock) || 100,
-        minimum_threshold: parseInt(productForm.minimum_threshold) || 10,
-        cost_per_unit: parseFloat(productForm.cost_per_unit) || 0,
-      };
-
-      if (editingProduct) {
-        const result = await updateProduct(editingProduct.id, payload);
-        if (!result.success) {
-          setError("Failed to update product: " + result.error);
-          return;
-        }
-      } else {
-        const result = await addProduct(payload);
-        if (!result.success) {
-          setError("Failed to create product: " + result.error);
+      // For new product assignment (not editing)
+      if (!editingProduct && productForm.selectedProductId) {
+        // Validate warehouse assignments
+        if (!productForm.warehouse_assignments || productForm.warehouse_assignments.length === 0) {
+          setError("Please assign stock to at least one warehouse");
           return;
         }
 
-        // If warehouse assignments are specified, add product to those warehouses
-        const productId = result.data?.id || result.id;
-        if (result.success && productId && productForm.warehouse_assignments.length > 0) {
-          for (const assignment of productForm.warehouse_assignments) {
-            try {
-              const warehouseId = typeof assignment === 'object' ? assignment.warehouse_id : assignment;
-              const stockQuantity = typeof assignment === 'object' ? assignment.stock_quantity : payload.initial_stock;
-              
-              if (warehouseId && stockQuantity > 0) {
-                await addProductToWarehouse(
-                  warehouseId,
-                  productId,
-                  stockQuantity,
-                  payload.minimum_threshold,
-                  payload.cost_per_unit
-                );
-              }
-            } catch (warehouseError) {
-              console.error(`Failed to add product to warehouse:`, warehouseError);
+        // Add product to each assigned warehouse
+        for (const assignment of productForm.warehouse_assignments) {
+          try {
+            const warehouseId = typeof assignment === 'object' ? assignment.warehouse_id : assignment;
+            const stockQuantity = typeof assignment === 'object' ? assignment.stock_quantity : productForm.initial_stock;
+
+            if (warehouseId && stockQuantity > 0) {
+              await addProductToWarehouse(
+                warehouseId,
+                productForm.selectedProductId,
+                stockQuantity,
+                productForm.minimum_threshold || 10,
+                productForm.cost_per_unit || 0
+              );
             }
+          } catch (warehouseError) {
+            console.error(`Failed to add product to warehouse:`, warehouseError);
           }
         }
+
+        setShowProductModal(false);
+        setEditingProduct(null);
+        setProductForm({
+          selectedProductId: "",
+          searchTerm: "",
+          availableProducts: products,
+          name: "",
+          price: "",
+          delivery_type: "zonal",
+          warehouse_assignments: [],
+          description: "",
+          category_id: "",
+          initial_stock: 100,
+          minimum_threshold: 10,
+          cost_per_unit: 0,
+        });
+
+        await fetchProducts();
+        refreshZoneVisibility();
+        setError("");
       }
-
-      setShowProductModal(false);
-      setEditingProduct(null);
-      setProductForm({
-        name: "",
-        price: "",
-        delivery_type: "zonal",
-        warehouse_assignments: [],
-        description: "",
-        category_id: "",
-        initial_stock: 100,
-        minimum_threshold: 10,
-        cost_per_unit: 0,
-      });
-
-      await fetchProducts();
-      refreshZoneVisibility();
-      setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save product");
       console.error(err);
@@ -489,21 +488,27 @@ const WarehouseManagement = () => {
                 icon: "📦",
                 count: productStats.total,
               },
+              {
+                id: "stock",
+                name: "Stock Management",
+                icon: "📊",
+              },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.name}</span>
-                <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                  {tab.count}
-                </span>
+                {tab.count !== undefined && (
+                  <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -551,6 +556,9 @@ const WarehouseManagement = () => {
           onEdit={(product) => {
             setEditingProduct(product);
             setProductForm({
+              selectedProductId: product.id || "",
+              searchTerm: "",
+              availableProducts: products, // Pass all products to the modal
               name: product.name || "",
               price: product.price || "",
               delivery_type: product.delivery_type || "zonal",
@@ -567,12 +575,15 @@ const WarehouseManagement = () => {
           onAdd={() => {
             setEditingProduct(null);
             setProductForm({
+              selectedProductId: "",
+              searchTerm: "",
+              availableProducts: products, // Pass all products to the modal
               name: "",
               price: "",
               delivery_type: "zonal",
               warehouse_assignments: [],
               description: "",
-              category_id: "",
+              category_id: "", // Optional field
               initial_stock: 100,
               minimum_threshold: 10,
               cost_per_unit: 0,
@@ -585,6 +596,28 @@ const WarehouseManagement = () => {
           zoneVisibilityLoading={zoneVisibilityLoading}
           zoneVisibilityError={zoneVisibilityError}
         />
+      )}
+
+      {activeTab === "stock" && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Management</h3>
+          <p className="text-gray-600 mb-4">
+            Stock management features are being integrated. This will include:
+          </p>
+          <ul className="list-disc list-inside space-y-2 text-gray-700">
+            <li>Stock overview across all warehouses</li>
+            <li>Low stock alerts and notifications</li>
+            <li>Stock movement tracking and history</li>
+            <li>Stock transfer between warehouses</li>
+            <li>Stock adjustment and reconciliation</li>
+          </ul>
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              💡 <strong>Coming Soon:</strong> Full stock management functionality will be available here.
+              For now, you can manage warehouse assignments in the Products tab.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Warehouse Modal */}
@@ -769,11 +802,10 @@ const WarehousesTab = ({
                     <td className="px-6 py-4">
                       <div className="space-y-2">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            warehouse.type === "zonal"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${warehouse.type === "zonal"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                            }`}
                         >
                           {warehouse.type === "zonal"
                             ? "Zonal Warehouse"
@@ -1142,11 +1174,10 @@ const ProductsTab = ({
                         ₹{product.price}
                       </div>
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          product.delivery_type === "nationwide"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${product.delivery_type === "nationwide"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-green-100 text-green-800"
+                          }`}
                       >
                         {product.delivery_type === "nationwide"
                           ? "🌍 Nationwide"
@@ -1270,15 +1301,16 @@ const WarehouseModal = ({
   if (!isOpen) return null;
 
   const handleZoneToggle = (zoneId) => {
-    if (data.zone_ids.includes(zoneId)) {
+    const currentZoneIds = data.zone_ids || [];
+    if (currentZoneIds.includes(zoneId)) {
       setData({
         ...data,
-        zone_ids: data.zone_ids.filter((id) => id !== zoneId),
+        zone_ids: currentZoneIds.filter((id) => id !== zoneId),
       });
     } else {
       setData({
         ...data,
-        zone_ids: [...data.zone_ids, zoneId],
+        zone_ids: [...currentZoneIds, zoneId],
       });
     }
   };
@@ -1386,7 +1418,7 @@ const WarehouseModal = ({
                     >
                       <input
                         type="checkbox"
-                        checked={data.zone_ids.includes(zone.id)}
+                        checked={(data.zone_ids || []).includes(zone.id)}
                         onChange={() => handleZoneToggle(zone.id)}
                         className="rounded"
                       />
@@ -1397,7 +1429,7 @@ const WarehouseModal = ({
                   ))
                 )}
               </div>
-              {data.type === "zonal" && data.zone_ids.length === 0 && (
+              {data.type === "zonal" && (data.zone_ids || []).length === 0 && (
                 <p className="text-red-500 text-xs mt-1">
                   Please select at least one zone for zonal warehouses
                 </p>

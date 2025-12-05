@@ -99,6 +99,10 @@ const AddProduct = () => {
   const [zonalWarehouses, setZonalWarehouses] = useState([]);
   const [divisionWarehouses, setDivisionWarehouses] = useState([]);
 
+  const [sectionOptions, setSectionOptions] = useState([]);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [selectedSections, setSelectedSections] = useState([]);
+
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -187,12 +191,29 @@ const AddProduct = () => {
             })
           );
         }
+
+        // Fetch and populate section assignments
+        try {
+          const sectionsResponse = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/product-sections/products/${productId}/sections`
+          );
+          if (sectionsResponse.data.success && sectionsResponse.data.data) {
+            const assignedSectionIds = sectionsResponse.data.data.map((section) =>
+              section.id.toString()
+            );
+            setSelectedSections(assignedSectionIds);
+          }
+        } catch (sectionError) {
+          console.error("Failed to fetch product sections:", sectionError);
+          // Don't fail the whole operation if section fetch fails
+        }
       }
     } catch (error) {
       console.error("Failed to fetch product for edit:", error);
       setError("Failed to load product data");
     }
   };
+
 
   React.useEffect(() => {
     async function fetchCategories() {
@@ -301,10 +322,32 @@ const AddProduct = () => {
       }
     }
 
+    async function fetchSections() {
+      setSectionsLoading(true);
+      try {
+        const apiUrl =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+        const response = await axios.get(`${apiUrl}/product-sections/active`);
+        if (response.data.success && response.data.data) {
+          setSectionOptions(
+            response.data.data.map((section) => ({
+              value: section.id.toString(),
+              label: section.section_name,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch sections:", error);
+      } finally {
+        setSectionsLoading(false);
+      }
+    }
+
     fetchCategories();
     fetchBrands();
     fetchStores();
     fetchWarehousesData();
+    fetchSections();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -456,6 +499,33 @@ const AddProduct = () => {
           }
         }
 
+        // Assign product to sections if any were selected
+        if (selectedSections.length > 0 && createdProductId) {
+          try {
+            const sectionPromises = selectedSections.map(async (sectionId) => {
+              const response = await axios.post(
+                `${import.meta.env.VITE_API_BASE_URL}/product-sections/${sectionId}/products`,
+                { product_ids: [createdProductId] },
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                  },
+                }
+              );
+              return response.data;
+            });
+
+            await Promise.all(sectionPromises);
+            console.log("Product assigned to sections successfully");
+          } catch (sectionError) {
+            console.error("Error assigning product to sections:", sectionError);
+            // Don't fail the whole operation if section assignment fails
+            setError(
+              "Product created successfully, but failed to assign to some sections. You can assign them later."
+            );
+          }
+        }
+
         navigate("/products");
       } else {
         setError(
@@ -472,7 +542,7 @@ const AddProduct = () => {
   };
 
   const nextStep = () =>
-    setActiveStep((current) => (current < 6 ? current + 1 : current));
+    setActiveStep((current) => (current < 7 ? current + 1 : current));
   const prevStep = () =>
     setActiveStep((current) => (current > 0 ? current - 1 : current));
 
@@ -581,6 +651,7 @@ const AddProduct = () => {
     { label: "FAQ", description: "Questions & answers" },
     { label: "Variants", description: "Product variants" },
     { label: "Warehouse", description: "Distribution" },
+    { label: "Sections", description: "Display sections" },
   ];
 
   const renderStepContent = () => {
@@ -682,8 +753,8 @@ const AddProduct = () => {
                     <div
                       key={category.id}
                       className={`p-3 rounded cursor-pointer transition-colors ${form.category_id === category.id
-                          ? "bg-blue-500 text-white"
-                          : "hover:bg-gray-100"
+                        ? "bg-blue-500 text-white"
+                        : "hover:bg-gray-100"
                         }`}
                       onClick={() =>
                         setForm({
@@ -710,8 +781,8 @@ const AddProduct = () => {
                       <div
                         key={subcategory.id}
                         className={`p-3 rounded cursor-pointer transition-colors ${form.subcategory_id === subcategory.id
-                            ? "bg-indigo-500 text-white"
-                            : "hover:bg-gray-100"
+                          ? "bg-indigo-500 text-white"
+                          : "hover:bg-gray-100"
                           }`}
                         onClick={() =>
                           setForm({
@@ -735,8 +806,8 @@ const AddProduct = () => {
                     <div
                       key={group.id}
                       className={`p-3 rounded cursor-pointer transition-colors ${form.group_id === group.id
-                          ? "bg-purple-500 text-white"
-                          : "hover:bg-gray-100"
+                        ? "bg-purple-500 text-white"
+                        : "hover:bg-gray-100"
                         }`}
                       onClick={() => setForm({ ...form, group_id: group.id })}
                     >
@@ -1134,6 +1205,47 @@ const AddProduct = () => {
                 }
                 size="md"
               />
+            )}
+          </div>
+        );
+      case 7:
+        return (
+          <div className="space-y-6">
+            <Text size="lg" weight={600}>
+              Display Sections
+            </Text>
+            <Text size="sm" color="dimmed">
+              Select which homepage sections should display this product. You can select multiple sections.
+            </Text>
+            <MultiSelect
+              label="Homepage Sections"
+              placeholder="Select sections to display this product"
+              data={sectionOptions}
+              value={selectedSections}
+              onChange={setSelectedSections}
+              searchable
+              clearable
+              size="md"
+              disabled={sectionsLoading}
+            />
+            {selectedSections.length > 0 && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <Text size="sm" weight={500} className="mb-2">
+                  Selected Sections ({selectedSections.length}):
+                </Text>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSections.map((sectionId) => {
+                    const section = sectionOptions.find(
+                      (s) => s.value === sectionId
+                    );
+                    return (
+                      <Badge key={sectionId} size="lg" color="blue">
+                        {section?.label}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         );
