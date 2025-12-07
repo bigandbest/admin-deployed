@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
+import axios from "axios";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 const STEPS = [
-  { id: "basic", title: "Select Product", description: "Choose product & stock quantity" },
+  { id: "basic", title: "Select Product", description: "Choose product & configure variants" },
   { id: "zonal", title: "Zonal Warehouses", description: "Assign to zonal warehouses" },
   {
     id: "division",
@@ -28,11 +31,59 @@ const ProductModal = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepErrors, setStepErrors] = useState({});
+  const [productVariants, setProductVariants] = useState([]);
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const [variantStockConfig, setVariantStockConfig] = useState({});
+
+  // Fetch variants when product is selected
+  useEffect(() => {
+    const fetchVariants = async () => {
+      if (!data.selectedProductId) {
+        setProductVariants([]);
+        setVariantStockConfig({});
+        return;
+      }
+
+      setLoadingVariants(true);
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/product-variants/product/${data.selectedProductId}/variants`
+        );
+
+        if (response.data.success && response.data.variants) {
+          setProductVariants(response.data.variants);
+
+          // Initialize variant stock config
+          const initialConfig = {};
+          response.data.variants.forEach(variant => {
+            initialConfig[variant.id] = {
+              enabled: true,
+              stock_quantity: variant.variant_stock || 0
+            };
+          });
+          setVariantStockConfig(initialConfig);
+        } else {
+          setProductVariants([]);
+          setVariantStockConfig({});
+        }
+      } catch (error) {
+        console.error("Error fetching variants:", error);
+        setProductVariants([]);
+        setVariantStockConfig({});
+      } finally {
+        setLoadingVariants(false);
+      }
+    };
+
+    fetchVariants();
+  }, [data.selectedProductId]);
 
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(0);
       setStepErrors({});
+      setProductVariants([]);
+      setVariantStockConfig({});
     }
   }, [isOpen, isEditing]);
 
@@ -82,7 +133,7 @@ const ProductModal = ({
     (assignment) => Number.parseInt(assignment.stock_quantity, 10) > 0
   ).length;
 
-  const updateAssignment = (warehouseId, value) => {
+  const updateAssignment = (warehouseId, value, variantId = null) => {
     const numericValue =
       value === "" ? "" : Number.parseInt(value, 10) >= 0
         ? Number.parseInt(value, 10)
@@ -90,13 +141,15 @@ const ProductModal = ({
 
     const currentAssignments = data.warehouse_assignments || [];
     const existingIndex = currentAssignments.findIndex(
-      (assignment) => assignment.warehouse_id === warehouseId
+      (assignment) =>
+        assignment.warehouse_id === warehouseId &&
+        (assignment.variant_id || null) === variantId
     );
 
     if (numericValue === "" || numericValue <= 0) {
       if (existingIndex === -1) return;
       const filtered = currentAssignments.filter(
-        (assignment) => assignment.warehouse_id !== warehouseId
+        (assignment) => !(assignment.warehouse_id === warehouseId && (assignment.variant_id || null) === variantId)
       );
       setData({ ...data, warehouse_assignments: filtered });
       return;
@@ -105,6 +158,7 @@ const ProductModal = ({
     const newAssignment = {
       warehouse_id: warehouseId,
       stock_quantity: numericValue,
+      variant_id: variantId
     };
 
     if (existingIndex === -1) {
@@ -127,11 +181,21 @@ const ProductModal = ({
     setData({ ...data, warehouse_assignments: filtered });
   };
 
-  const getAssignedStock = (warehouseId) => {
+  const getAssignedStock = (warehouseId, variantId = null) => {
     const assignment = assignments.find(
-      (item) => item.warehouse_id === warehouseId
+      (item) => item.warehouse_id === warehouseId && (item.variant_id || null) === variantId
     );
     return assignment ? assignment.stock_quantity.toString() : "";
+  };
+
+  const toggleVariant = (variantId) => {
+    setVariantStockConfig(prev => ({
+      ...prev,
+      [variantId]: {
+        ...prev[variantId],
+        enabled: !prev[variantId]?.enabled
+      }
+    }));
   };
 
   const validateStep = (stepIndex) => {
@@ -203,6 +267,64 @@ const ProductModal = ({
     }
   };
 
+  const renderVariantStockInputs = (warehouseId) => {
+    if (productVariants.length === 0) {
+      // No variants - show single stock input
+      return (
+        <input
+          type="number"
+          min="0"
+          value={getAssignedStock(warehouseId)}
+          onChange={(event) =>
+            updateAssignment(warehouseId, event.target.value)
+          }
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Stock quantity"
+        />
+      );
+    }
+
+    // Has variants - show variant stock inputs
+    return (
+      <div className="space-y-2 mt-2">
+        <p className="text-xs font-medium text-gray-600">Stock per variant:</p>
+        {productVariants.map(variant => {
+          const isEnabled = variantStockConfig[variant.id]?.enabled !== false;
+          return (
+            <div key={variant.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={() => toggleVariant(variant.id)}
+                className="w-4 h-4"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-700">
+                  {variant.variant_name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {variant.variant_weight} {variant.variant_unit} • ₹{variant.variant_price}
+                </p>
+              </div>
+              {isEnabled && (
+                <input
+                  type="number"
+                  min="0"
+                  value={getAssignedStock(warehouseId, variant.id)}
+                  onChange={(event) =>
+                    updateAssignment(warehouseId, event.target.value, variant.id)
+                  }
+                  className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Stock"
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderStepContent = () => {
     switch (STEPS[currentStep].id) {
       case "basic":
@@ -239,25 +361,69 @@ const ProductModal = ({
               </p>
             </div>
 
-            {/* Stock Quantity */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Initial Stock Quantity *
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={data.initial_stock}
-                onChange={(event) =>
-                  setData({ ...data, initial_stock: event.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="100"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                How many units to add to each selected warehouse
-              </p>
-            </div>
+            {/* Show variants if product has them */}
+            {loadingVariants && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">Loading product variants...</p>
+              </div>
+            )}
+
+            {productVariants.length > 0 && !loadingVariants && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Product Variants ({productVariants.length})
+                </h4>
+                <div className="space-y-2">
+                  {productVariants.map(variant => (
+                    <div key={variant.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                      <div>
+                        <p className="font-medium text-gray-900">{variant.variant_name}</p>
+                        <p className="text-sm text-gray-600">
+                          {variant.variant_weight} {variant.variant_unit} • ₹{variant.variant_price}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600">Initial Stock</p>
+                        <p className="font-semibold text-gray-900">{variant.variant_stock || 0}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  💡 You can set different stock quantities for each variant in each warehouse
+                </p>
+              </div>
+            )}
+
+            {!loadingVariants && productVariants.length === 0 && data.selectedProductId && (
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  This product has no variants. You'll set stock quantity per warehouse in the next steps.
+                </p>
+              </div>
+            )}
+
+            {/* Stock Quantity - only show if no variants */}
+            {productVariants.length === 0 && data.selectedProductId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Initial Stock Quantity *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={data.initial_stock}
+                  onChange={(event) =>
+                    setData({ ...data, initial_stock: event.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  How many units to add to each selected warehouse
+                </p>
+              </div>
+            )}
 
             {/* Optional: Min Threshold */}
             <div>
@@ -287,8 +453,7 @@ const ProductModal = ({
               <div>
                 <h4 className="font-semibold text-gray-900">Zonal Warehouses</h4>
                 <p className="text-sm text-gray-600">
-                  Assign stock to zonal warehouses. Divisions can be configured
-                  in the next step for fallback coverage.
+                  Assign stock to zonal warehouses. {productVariants.length > 0 && "Set stock for each variant separately."}
                 </p>
               </div>
               {zonalAssignmentCount > 0 && (
@@ -326,16 +491,7 @@ const ProductModal = ({
                         Zonal
                       </span>
                     </div>
-                    <input
-                      type="number"
-                      min="0"
-                      value={getAssignedStock(warehouse.id)}
-                      onChange={(event) =>
-                        updateAssignment(warehouse.id, event.target.value)
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Stock quantity"
-                    />
+                    {renderVariantStockInputs(warehouse.id)}
                   </div>
                 ))}
               </div>
@@ -351,9 +507,7 @@ const ProductModal = ({
                   Division Fallback
                 </h4>
                 <p className="text-sm text-gray-600">
-                  Assign stock to specific divisions. These act as fallback
-                  locations when the zonal warehouse is empty, keeping products
-                  isolated per zone.
+                  Assign stock to specific divisions. {productVariants.length > 0 && "Configure variant stock for each division."}
                 </p>
               </div>
               {totalAssignedWarehouses > 0 && (
@@ -397,7 +551,7 @@ const ProductModal = ({
                         No division warehouses under this zone yet.
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3">
                         {divisions.map((division) => (
                           <div
                             key={division.id}
@@ -411,16 +565,7 @@ const ProductModal = ({
                                 {division.pincode || "No pincode"}
                               </span>
                             </div>
-                            <input
-                              type="number"
-                              min="0"
-                              value={getAssignedStock(division.id)}
-                              onChange={(event) =>
-                                updateAssignment(division.id, event.target.value)
-                              }
-                              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                              placeholder="Stock quantity"
-                            />
+                            {renderVariantStockInputs(division.id)}
                           </div>
                         ))}
                       </div>
@@ -462,6 +607,12 @@ const ProductModal = ({
                   <span className="font-semibold">Assigned warehouses:</span>{" "}
                   {totalAssignedWarehouses}
                 </p>
+                {productVariants.length > 0 && (
+                  <p className="text-sm text-blue-700 mt-1">
+                    <span className="font-semibold">Variants:</span>{" "}
+                    {productVariants.length}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -474,18 +625,24 @@ const ProductModal = ({
                   No warehouses assigned yet.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {assignments.map((assignment) => {
                     const warehouse = warehouseMap.get(assignment.warehouse_id);
                     if (!warehouse) return null;
+
+                    const variant = assignment.variant_id
+                      ? productVariants.find(v => v.id === assignment.variant_id)
+                      : null;
+
                     return (
                       <div
-                        key={`${assignment.warehouse_id}`}
+                        key={`${assignment.warehouse_id}-${assignment.variant_id || 'base'}`}
                         className="flex items-center justify-between text-sm border-b border-gray-100 pb-2 last:border-0"
                       >
                         <div>
                           <p className="font-medium text-gray-900">
                             {warehouse.name}
+                            {variant && <span className="text-blue-600 ml-2">• {variant.variant_name}</span>}
                           </p>
                           <p className="text-xs text-gray-500">
                             {warehouse.type === "zonal"
@@ -515,7 +672,7 @@ const ProductModal = ({
         <div className="flex items-start justify-between mb-6">
           <div>
             <h3 className="text-2xl font-semibold text-gray-900">
-              {isEditing ? "Edit Product" : "Add New Product"}
+              {isEditing ? "Edit Product" : "Add Product to Warehouses"}
             </h3>
             <p className="text-sm text-gray-600">
               Step {currentStep + 1} of {STEPS.length} •{" "}
@@ -536,10 +693,10 @@ const ProductModal = ({
             <div key={step.id} className="flex items-center flex-1">
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full border text-sm font-semibold ${index === currentStep
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : index < currentStep
-                    ? "bg-blue-100 text-blue-700 border-blue-300"
-                    : "bg-white text-gray-400 border-gray-200"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : index < currentStep
+                      ? "bg-blue-100 text-blue-700 border-blue-300"
+                      : "bg-white text-gray-400 border-gray-200"
                   }`}
               >
                 {index + 1}
@@ -596,7 +753,7 @@ const ProductModal = ({
                 disabled={totalAssignedWarehouses === 0}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {isEditing ? "Update Product" : "Create Product"}
+                {isEditing ? "Update Product" : "Add to Warehouses"}
               </button>
             )}
           </div>
@@ -614,10 +771,15 @@ ProductModal.propTypes = {
     price: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     delivery_type: PropTypes.string,
     description: PropTypes.string,
+    selectedProductId: PropTypes.string,
+    availableProducts: PropTypes.array,
+    initial_stock: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    minimum_threshold: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     warehouse_assignments: PropTypes.arrayOf(
       PropTypes.shape({
         warehouse_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         stock_quantity: PropTypes.number,
+        variant_id: PropTypes.string,
       })
     ),
   }).isRequired,
@@ -645,4 +807,3 @@ ProductModal.propTypes = {
 };
 
 export default ProductModal;
-

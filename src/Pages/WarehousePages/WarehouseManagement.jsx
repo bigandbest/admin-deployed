@@ -266,22 +266,56 @@ const WarehouseManagement = () => {
         }
 
         // Add product to each assigned warehouse
-        for (const assignment of productForm.warehouse_assignments) {
-          try {
-            const warehouseId = typeof assignment === 'object' ? assignment.warehouse_id : assignment;
-            const stockQuantity = typeof assignment === 'object' ? assignment.stock_quantity : productForm.initial_stock;
+        // Group assignments by warehouse to handle both base product and variants
+        const warehouseGroups = new Map();
 
-            if (warehouseId && stockQuantity > 0) {
-              await addProductToWarehouse(
-                warehouseId,
-                productForm.selectedProductId,
-                stockQuantity,
-                productForm.minimum_threshold || 10,
-                productForm.cost_per_unit || 0
-              );
+        productForm.warehouse_assignments.forEach(assignment => {
+          const warehouseId = typeof assignment === 'object' ? assignment.warehouse_id : assignment;
+          if (!warehouseGroups.has(warehouseId)) {
+            warehouseGroups.set(warehouseId, []);
+          }
+          warehouseGroups.get(warehouseId).push(assignment);
+        });
+
+        // Process each warehouse
+        for (const [warehouseId, assignments] of warehouseGroups) {
+          try {
+            // Process each assignment (could be base product or variant)
+            for (const assignment of assignments) {
+              const stockQuantity = typeof assignment === 'object' ? assignment.stock_quantity : productForm.initial_stock;
+              const variantId = typeof assignment === 'object' ? assignment.variant_id : null;
+
+              if (warehouseId && stockQuantity > 0) {
+                if (variantId) {
+                  // Add variant stock to warehouse
+                  await axios.put(
+                    `${API_BASE_URL}/product-variants/variant/${variantId}/warehouse-stock/${warehouseId}`,
+                    {
+                      stock_quantity: stockQuantity,
+                      minimum_threshold: productForm.minimum_threshold || 10,
+                      cost_per_unit: productForm.cost_per_unit || 0
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                      }
+                    }
+                  );
+                } else {
+                  // Add base product stock to warehouse
+                  await addProductToWarehouse(
+                    warehouseId,
+                    productForm.selectedProductId,
+                    stockQuantity,
+                    productForm.minimum_threshold || 10,
+                    productForm.cost_per_unit || 0
+                  );
+                }
+              }
             }
           } catch (warehouseError) {
-            console.error(`Failed to add product to warehouse:`, warehouseError);
+            console.error(`Failed to add product to warehouse ${warehouseId}:`, warehouseError);
+            setError(`Failed to add product to some warehouses: ${warehouseError.response?.data?.error || warehouseError.message}`);
           }
         }
 

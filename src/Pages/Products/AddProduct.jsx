@@ -476,25 +476,41 @@ const AddProduct = () => {
                   active: true,
                 };
 
-                const response = await axios.post(
-                  `${import.meta.env.VITE_API_BASE_URL}/product-variants/product/${createdProductId}/variants`,
-                  variantData,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-                    },
-                  }
-                );
-                return response.data;
+                // Check if this is an existing variant (has ID) or a new one
+                if (variant.id) {
+                  // Update existing variant
+                  const response = await axios.put(
+                    `${import.meta.env.VITE_API_BASE_URL}/product-variants/variant/${variant.id}`,
+                    variantData,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                      },
+                    }
+                  );
+                  return response.data;
+                } else {
+                  // Create new variant
+                  const response = await axios.post(
+                    `${import.meta.env.VITE_API_BASE_URL}/product-variants/product/${createdProductId}/variants`,
+                    variantData,
+                    {
+                      headers: {
+                        Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                      },
+                    }
+                  );
+                  return response.data;
+                }
               });
 
             await Promise.all(variantPromises);
-            console.log("All variants created successfully");
+            console.log("All variants processed successfully");
           } catch (variantError) {
-            console.error("Error creating variants:", variantError);
+            console.error("Error processing variants:", variantError);
             // Don't fail the whole operation if variants fail
             setError(
-              "Product created successfully, but some variants failed to create. You can add them later."
+              "Product saved successfully, but some variants failed to process. You can edit them later."
             );
           }
         }
