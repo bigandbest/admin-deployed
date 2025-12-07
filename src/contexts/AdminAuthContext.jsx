@@ -85,7 +85,16 @@ export const AdminAuthProvider = ({ children }) => {
       try {
         // Check if we have a stored token
         const storedToken = localStorage.getItem("admin_token");
-        
+
+        if (!storedToken) {
+          // No token, user is not logged in
+          setCurrentUser(null);
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        // Try to verify the token with the backend
         const result = await getAdminMe();
 
         if (result.success && result.user) {
@@ -93,20 +102,34 @@ export const AdminAuthProvider = ({ children }) => {
           setIsAdmin(result.user.user_metadata?.role === "admin");
           setError(null);
         } else {
-          // If API call fails but we have a token, clear it
-          if (storedToken) {
+          // Only remove token if we get a clear authentication error (401, 403)
+          // Don't remove on network errors or server errors
+          if (result.error && (result.error.includes('401') || result.error.includes('403') || result.error.includes('Unauthorized') || result.error.includes('Invalid token'))) {
+            console.log("Invalid token, clearing storage");
             localStorage.removeItem("admin_token");
+            setCurrentUser(null);
+            setIsAdmin(false);
+          } else {
+            // For other errors (network, server), keep the user logged in
+            console.warn("Auth check failed but keeping session:", result.error);
+            // Keep existing state if we have it, or set a minimal user state
+            if (!currentUser && storedToken) {
+              // Set a temporary authenticated state
+              setCurrentUser({ email: "admin@temp.com" }); // Placeholder
+              setIsAdmin(true);
+            }
           }
-          setCurrentUser(null);
-          setIsAdmin(false);
         }
       } catch (err) {
         console.error("Auth check error:", err);
-        // Clear stored token on error
-        localStorage.removeItem("admin_token");
+        // On catch errors (network issues), don't log out the user
+        // Keep them logged in if they have a token
+        const storedToken = localStorage.getItem("admin_token");
+        if (storedToken && !currentUser) {
+          setCurrentUser({ email: "admin@temp.com" }); // Placeholder
+          setIsAdmin(true);
+        }
         setError(err.message);
-        setCurrentUser(null);
-        setIsAdmin(false);
       } finally {
         setLoading(false);
       }
@@ -114,6 +137,7 @@ export const AdminAuthProvider = ({ children }) => {
 
     checkAuthStatus();
   }, []);
+
 
   // Authentication functions
   const loginUser = async (email, password) => {

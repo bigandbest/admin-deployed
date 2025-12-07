@@ -257,8 +257,8 @@ const WarehouseManagement = () => {
   // Handle product operations
   const handleProductSubmit = async () => {
     try {
-      // For new product assignment (not editing)
-      if (!editingProduct && productForm.selectedProductId) {
+      // Handle product assignment (both new and editing)
+      if (productForm.selectedProductId) {
         // Validate warehouse assignments
         if (!productForm.warehouse_assignments || productForm.warehouse_assignments.length === 0) {
           setError("Please assign stock to at least one warehouse");
@@ -287,29 +287,67 @@ const WarehouseManagement = () => {
 
               if (warehouseId && stockQuantity > 0) {
                 if (variantId) {
-                  // Add variant stock to warehouse
-                  await axios.put(
-                    `${API_BASE_URL}/product-variants/variant/${variantId}/warehouse-stock/${warehouseId}`,
-                    {
-                      stock_quantity: stockQuantity,
-                      minimum_threshold: productForm.minimum_threshold || 10,
-                      cost_per_unit: productForm.cost_per_unit || 0
-                    },
-                    {
-                      headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                  // Update variant stock in warehouse (not add, just update the quantity)
+                  console.log(`Updating variant ${variantId} stock in warehouse ${warehouseId} to ${stockQuantity}`);
+                  try {
+                    await axios.put(
+                      `${API_BASE_URL}/warehouses/${warehouseId}/products/${productForm.selectedProductId}`,
+                      {
+                        variant_id: variantId,
+                        stock_quantity: stockQuantity,
+                        minimum_threshold: productForm.minimum_threshold || 10,
+                        cost_per_unit: productForm.cost_per_unit || 0
+                      },
+                      {
+                        headers: {
+                          Authorization: `Bearer ${localStorage.getItem('admin_token')}`
+                        }
                       }
-                    }
-                  );
+                    );
+                    console.log(`✅ Successfully updated variant ${variantId} in warehouse ${warehouseId}`);
+                  } catch (variantError) {
+                    console.error(`Variant update error:`, variantError);
+                    // If update fails, try to add it
+                    console.log(`Trying to add variant ${variantId} to warehouse ${warehouseId}`);
+                    await addProductToWarehouse(
+                      warehouseId,
+                      productForm.selectedProductId,
+                      stockQuantity,
+                      productForm.minimum_threshold || 10,
+                      productForm.cost_per_unit || 0,
+                      variantId
+                    );
+                  }
                 } else {
-                  // Add base product stock to warehouse
-                  await addProductToWarehouse(
-                    warehouseId,
-                    productForm.selectedProductId,
-                    stockQuantity,
-                    productForm.minimum_threshold || 10,
-                    productForm.cost_per_unit || 0
-                  );
+                  // Update base product stock in warehouse
+                  console.log(`Updating product stock in warehouse ${warehouseId} to ${stockQuantity}`);
+                  try {
+                    await axios.put(
+                      `${API_BASE_URL}/warehouses/${warehouseId}/products/${productForm.selectedProductId}`,
+                      {
+                        stock_quantity: stockQuantity,
+                        minimum_threshold: productForm.minimum_threshold || 10,
+                        cost_per_unit: productForm.cost_per_unit || 0
+                      },
+                      {
+                        headers: {
+                          Authorization: `Bearer ${localStorage.getItem('admin_token')}`
+                        }
+                      }
+                    );
+                    console.log(`✅ Successfully updated product in warehouse ${warehouseId}`);
+                  } catch (updateError) {
+                    console.error(`Update error:`, updateError);
+                    // If update fails (product doesn't exist), add it
+                    console.log(`Trying to add product to warehouse ${warehouseId}`);
+                    await addProductToWarehouse(
+                      warehouseId,
+                      productForm.selectedProductId,
+                      stockQuantity,
+                      productForm.minimum_threshold || 10,
+                      productForm.cost_per_unit || 0
+                    );
+                  }
                 }
               }
             }

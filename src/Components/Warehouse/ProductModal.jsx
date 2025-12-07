@@ -34,6 +34,77 @@ const ProductModal = ({
   const [productVariants, setProductVariants] = useState([]);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [variantStockConfig, setVariantStockConfig] = useState({});
+  const [existingStock, setExistingStock] = useState({});
+  const [loadingExistingStock, setLoadingExistingStock] = useState(false);
+
+  // Fetch existing stock for all warehouses when editing
+  useEffect(() => {
+    const fetchExistingStock = async () => {
+      if (!isEditing || !data.selectedProductId || !warehouses.length) {
+        setExistingStock({});
+        return;
+      }
+
+      setLoadingExistingStock(true);
+      try {
+        console.log("🔍 Fetching existing stock for product:", data.selectedProductId);
+
+        // Fetch stock from each warehouse
+        const stockPromises = warehouses.map(async (warehouse) => {
+          try {
+            const response = await axios.get(
+              `${API_BASE_URL}/warehouses/${warehouse.id}/products`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('admin_token')}`
+                }
+              }
+            );
+
+            if (response.data.success && response.data.products) {
+              // Find this product in the warehouse
+              const productInWarehouse = response.data.products.find(
+                p => p.product_id === data.selectedProductId || p.id === data.selectedProductId
+              );
+
+              if (productInWarehouse) {
+                return {
+                  warehouseId: warehouse.id,
+                  stock: productInWarehouse.stock_quantity || 0,
+                  variantStock: productInWarehouse.variant_stock || {}
+                };
+              }
+            }
+            return null;
+          } catch (error) {
+            console.error(`Error fetching stock for warehouse ${warehouse.id}:`, error);
+            return null;
+          }
+        });
+
+        const results = await Promise.all(stockPromises);
+        const stockMap = {};
+
+        results.forEach(result => {
+          if (result) {
+            stockMap[result.warehouseId] = {
+              baseStock: result.stock,
+              variantStock: result.variantStock
+            };
+          }
+        });
+
+        console.log("📊 Existing stock loaded:", stockMap);
+        setExistingStock(stockMap);
+      } catch (error) {
+        console.error("Error fetching existing stock:", error);
+      } finally {
+        setLoadingExistingStock(false);
+      }
+    };
+
+    fetchExistingStock();
+  }, [isEditing, data.selectedProductId, warehouses, isOpen]);
 
   // Fetch variants when product is selected
   useEffect(() => {
@@ -262,25 +333,41 @@ const ProductModal = ({
   };
 
   const handleFinalSubmit = () => {
+    console.log("🟢 ProductModal handleFinalSubmit called!");
+    console.log("Current step:", currentStep);
+    console.log("Data:", data);
+
     if (validateStep(currentStep)) {
+      console.log("✅ Validation passed, calling onSubmit");
       onSubmit();
+    } else {
+      console.log("❌ Validation failed");
     }
   };
 
   const renderVariantStockInputs = (warehouseId) => {
+    const currentStock = existingStock[warehouseId];
+
     if (productVariants.length === 0) {
       // No variants - show single stock input
       return (
-        <input
-          type="number"
-          min="0"
-          value={getAssignedStock(warehouseId)}
-          onChange={(event) =>
-            updateAssignment(warehouseId, event.target.value)
-          }
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Stock quantity"
-        />
+        <div>
+          <input
+            type="number"
+            min="0"
+            value={getAssignedStock(warehouseId)}
+            onChange={(event) =>
+              updateAssignment(warehouseId, event.target.value)
+            }
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Stock quantity"
+          />
+          {isEditing && currentStock && (
+            <p className="text-xs text-gray-500 mt-1">
+              Current stock: <span className="font-semibold text-blue-600">{currentStock.baseStock}</span> units
+            </p>
+          )}
+        </div>
       );
     }
 
@@ -290,6 +377,8 @@ const ProductModal = ({
         <p className="text-xs font-medium text-gray-600">Stock per variant:</p>
         {productVariants.map(variant => {
           const isEnabled = variantStockConfig[variant.id]?.enabled !== false;
+          const variantCurrentStock = currentStock?.variantStock?.[variant.id];
+
           return (
             <div key={variant.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
               <input
@@ -304,6 +393,11 @@ const ProductModal = ({
                 </p>
                 <p className="text-xs text-gray-500">
                   {variant.variant_weight} {variant.variant_unit} • ₹{variant.variant_price}
+                  {isEditing && variantCurrentStock !== undefined && (
+                    <span className="ml-2 text-blue-600 font-semibold">
+                      • Current: {variantCurrentStock} units
+                    </span>
+                  )}
                 </p>
               </div>
               {isEnabled && (
@@ -693,10 +787,10 @@ const ProductModal = ({
             <div key={step.id} className="flex items-center flex-1">
               <div
                 className={`flex items-center justify-center w-8 h-8 rounded-full border text-sm font-semibold ${index === currentStep
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : index < currentStep
-                      ? "bg-blue-100 text-blue-700 border-blue-300"
-                      : "bg-white text-gray-400 border-gray-200"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : index < currentStep
+                    ? "bg-blue-100 text-blue-700 border-blue-300"
+                    : "bg-white text-gray-400 border-gray-200"
                   }`}
               >
                 {index + 1}

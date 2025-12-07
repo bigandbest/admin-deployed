@@ -38,9 +38,13 @@ import {
 import { Link } from "react-router-dom";
 
 const AddProduct = () => {
+  console.log("🚀 AddProduct component is loading!");
+
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
+
+  console.log("📝 Component state:", { id, isEditMode });
   const [activeStep, setActiveStep] = useState(0);
 
   const [form, setForm] = useState({
@@ -351,12 +355,26 @@ const AddProduct = () => {
   }, []);
 
   const handleSubmit = async (e) => {
+    console.log("=== HANDLE SUBMIT CALLED ===");
     e.preventDefault();
+    console.log("=== HANDLE SUBMIT CALLED ===");
+    console.log("isEditMode:", isEditMode);
+    console.log("Form name:", form.name);
+    console.log("Form price:", form.price);
+    console.log("Form category_id:", form.category_id);
     setError("");
+
     if (!form.name || !form.price || !form.category_id) {
-      setError("Please fill in all required fields.");
+      const errorMsg = "Please fill in all required fields: " +
+        (!form.name ? "Name " : "") +
+        (!form.price ? "Price " : "") +
+        (!form.category_id ? "Category" : "");
+      console.error("Validation failed:", errorMsg);
+      setError(errorMsg);
+      alert(errorMsg);
       return;
     }
+
     setLoading(true);
 
     try {
@@ -430,24 +448,45 @@ const AddProduct = () => {
       payload.zone_distribution_quantity = 50;
 
       // Step 3: Create or update product
+      console.log("📍 Step 3: About to create or update product");
+      console.log("isEditMode value:", isEditMode);
+      console.log("Product ID (id):", id);
+
       let result;
       if (isEditMode) {
+        console.log("✏️ EDIT MODE - Updating product with ID:", id);
+        console.log("Update payload:", payload);
+
         try {
-          const response = await axios.put(
-            `${import.meta.env.VITE_API_BASE_URL
-            }/admin/products/${id}/warehouse-mapping`,
-            payload
-          );
+          // Use the correct product update endpoint
+          const updateUrl = `${import.meta.env.VITE_API_BASE_URL}/admin/products/${id}`;
+          console.log("API URL:", updateUrl);
+
+          const response = await axios.put(updateUrl, payload, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+            },
+          });
+
           result = response.data;
+          console.log("✅ Update response:", result);
         } catch (error) {
+          console.error("❌ Update error:", error);
+          console.error("Error response:", error.response);
+          console.error("Error data:", error.response?.data);
           result = {
             success: false,
             error: error.response?.data?.error || error.message,
           };
         }
       } else {
+        console.log("➕ CREATE MODE - Creating new product");
         result = await createProductWithWarehouse(payload);
+        console.log("Create result:", result);
       }
+
+      console.log("📊 Final result:", result);
+      console.log("Result success status:", result.success);
 
       if (result.success) {
         console.log("Product saved successfully:", result);
@@ -479,6 +518,7 @@ const AddProduct = () => {
                 // Check if this is an existing variant (has ID) or a new one
                 if (variant.id) {
                   // Update existing variant
+                  console.log("Updating variant:", variant.id);
                   const response = await axios.put(
                     `${import.meta.env.VITE_API_BASE_URL}/product-variants/variant/${variant.id}`,
                     variantData,
@@ -491,6 +531,7 @@ const AddProduct = () => {
                   return response.data;
                 } else {
                   // Create new variant
+                  console.log("Creating new variant");
                   const response = await axios.post(
                     `${import.meta.env.VITE_API_BASE_URL}/product-variants/product/${createdProductId}/variants`,
                     variantData,
@@ -548,10 +589,12 @@ const AddProduct = () => {
           result.error ||
           (isEditMode ? "Failed to update product" : "Failed to add product")
         );
+        setLoading(false); // Reset loading on error
       }
     } catch (error) {
       console.error("Error in handleSubmit:", error);
       setError("An error occurred while saving the product: " + error.message);
+      setLoading(false); // Reset loading on error
     } finally {
       setLoading(false);
     }
@@ -561,6 +604,7 @@ const AddProduct = () => {
     setActiveStep((current) => (current < 7 ? current + 1 : current));
   const prevStep = () =>
     setActiveStep((current) => (current > 0 ? current - 1 : current));
+
 
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -1322,7 +1366,8 @@ const AddProduct = () => {
 
           {/* Content */}
           <div className="p-8">
-            <LoadingOverlay visible={loading} />
+            {/* <LoadingOverlay visible={loading} /> */}
+            {loading && <div className="text-center py-4 text-blue-600">Loading...</div>}
             <div className="max-w-4xl mx-auto">
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
@@ -1347,14 +1392,41 @@ const AddProduct = () => {
               </Button>
 
               {activeStep === steps.length - 1 ? (
-                <Button
-                  onClick={handleSubmit}
-                  loading={loading}
-                  size="md"
-                  className="bg-linear-to-r from-green-500 to-green-600"
-                >
-                  {isEditMode ? "Update Product" : "Create Product"}
-                </Button>
+                <>
+                  <Button
+                    onClick={(e) => {
+                      console.log("🔴 BUTTON CLICKED - Event firing!");
+                      console.log("Event object:", e);
+                      console.log("Current loading state:", loading);
+                      handleSubmit(e);
+                    }}
+                    loading={loading}
+                    disabled={loading}
+                    size="md"
+                    className="bg-linear-to-r from-green-500 to-green-600"
+                  >
+                    {isEditMode ? "Update Product" : "Create Product"}
+                  </Button>
+
+                  {/* Test button */}
+                  <button
+                    onClick={() => {
+                      console.log("🟢 TEST BUTTON CLICKED!");
+                      alert("Test button works!");
+                    }}
+                    style={{
+                      marginLeft: '10px',
+                      padding: '10px 20px',
+                      background: 'orange',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    TEST CLICK
+                  </button>
+                </>
               ) : (
                 <Button
                   rightIcon={<FaChevronRight />}
