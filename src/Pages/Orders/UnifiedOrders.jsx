@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaBox, FaClock, FaCheckCircle, FaTruck, FaEye, FaTrash, FaMoneyBillWave, FaCreditCard } from 'react-icons/fa';
+import { FaBox, FaClock, FaCheckCircle, FaTruck, FaEye, FaTrash, FaMoneyBillWave, FaCreditCard, FaBoxes, FaTag } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -13,6 +13,7 @@ const UnifiedOrders = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [paymentFilter, setPaymentFilter] = useState('all'); // 'all', 'cod', 'prepaid'
     const [statusFilter, setStatusFilter] = useState('all');
+    const [orderTypeFilter, setOrderTypeFilter] = useState('all'); // 'all', 'bulk', 'regular'
 
     const fetchOrders = async () => {
         try {
@@ -35,6 +36,18 @@ const UnifiedOrders = () => {
                 fetchedOrders = fetchedOrders.filter(order =>
                     order.status?.toLowerCase() === statusFilter.toLowerCase()
                 );
+            }
+
+            // Apply order type filter
+            if (orderTypeFilter && orderTypeFilter !== 'all') {
+                fetchedOrders = fetchedOrders.filter(order => {
+                    if (orderTypeFilter === 'bulk') {
+                        return order.is_bulk_order === true;
+                    } else if (orderTypeFilter === 'regular') {
+                        return !order.is_bulk_order;
+                    }
+                    return true;
+                });
             }
 
             setOrders(fetchedOrders);
@@ -71,7 +84,7 @@ const UnifiedOrders = () => {
 
     useEffect(() => {
         fetchOrders();
-    }, [currentPage, paymentFilter]);
+    }, [currentPage, paymentFilter, statusFilter, orderTypeFilter]);
 
     const getStatusIcon = (status) => {
         switch (status?.toLowerCase()) {
@@ -114,6 +127,17 @@ const UnifiedOrders = () => {
                 <FaCreditCard /> Prepaid
             </span>
         );
+    };
+
+    const getBulkOrderBadge = (order) => {
+        if (order.is_bulk_order) {
+            return (
+                <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">
+                    <FaBoxes /> Bulk Order
+                </span>
+            );
+        }
+        return null;
     };
 
     if (loading) {
@@ -181,6 +205,21 @@ const UnifiedOrders = () => {
                             <option value="shipped">Shipped</option>
                             <option value="delivered">Delivered</option>
                             <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Order Type</label>
+                        <select
+                            value={orderTypeFilter}
+                            onChange={(e) => {
+                                setOrderTypeFilter(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                            className="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="all">All Orders</option>
+                            <option value="regular">Regular Orders</option>
+                            <option value="bulk">Bulk Orders</option>
                         </select>
                     </div>
                 </div>
@@ -251,6 +290,7 @@ const UnifiedOrders = () => {
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                                                             {order.status || 'Pending'}
                                                         </span>
+                                                        {getBulkOrderBadge(order)}
                                                     </div>
                                                 </div>
                                             </div>
@@ -308,8 +348,8 @@ const UnifiedOrders = () => {
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`px-4 py-2 rounded-lg font-medium ${currentPage === page
-                                                ? 'bg-blue-500 text-white'
-                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                             }`}
                                     >
                                         {page}
@@ -410,9 +450,19 @@ const OrderDetails = ({ orderId, onUpdate, status, adminnotes, paymentMethod }) 
                                     <p className="font-medium">{item.products?.name || "Unknown Product"}</p>
                                     <p className="text-sm text-gray-600">Quantity: {item.quantity} × ₹{item.price}</p>
                                     {item.is_bulk_order && (
-                                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                            Bulk Order: {item.bulk_range}
-                                        </span>
+                                        <div className="mt-2 space-y-1">
+                                            <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                                <FaBoxes /> Bulk Order: {item.bulk_range}
+                                            </span>
+                                            {item.original_price && item.original_price > item.price && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500 line-through">₹{item.original_price}</span>
+                                                    <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                        <FaTag /> Saved ₹{(item.original_price - item.price).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                                 <div className="text-right">

@@ -211,22 +211,7 @@ const Sidebar = ({ isOpen = true }) => {
       title: "Orders",
       icon: <FaList />,
       path: "/AdminOrders",
-    },
-    {
-      title: "Return Orders",
-      icon: <FaList />,
-      path: "/return-orders",
-    },
-    {
-      title: "Bulk Orders",
-      icon: <FaList />,
-      path: "/bulk-orders",
-    },
-    {
-      title: "COD Orders",
-      icon: <FaList />,
-      path: "/cod-orders",
-      description: "Manage Cash on Delivery orders",
+      description: "Manage all orders (COD, Prepaid, Bulk, Returns)",
     },
 
     {

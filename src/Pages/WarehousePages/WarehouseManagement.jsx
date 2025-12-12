@@ -1558,7 +1558,7 @@ const WarehouseModal = ({
                         {/* Pincode dropdown */}
                         <select
                           multiple
-                          value={data.pincode_assignments.map((p) => p.pincode)}
+                          value={(data.pincode_assignments || []).map((p) => p.pincode)}
                           onChange={(e) => {
                             const selectedOptions = Array.from(
                               e.target.selectedOptions
@@ -1609,16 +1609,16 @@ const WarehouseModal = ({
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-medium text-gray-900">
                               Selected Pincodes (
-                              {data.pincode_assignments.length})
+                              {(data.pincode_assignments || []).length})
                             </h4>
-                            {data.pincode_assignments.length > 0 && (
+                            {(data.pincode_assignments || []).length > 0 && (
                               <span className="text-xs text-gray-500">
                                 Click any pincode to deselect
                               </span>
                             )}
                           </div>
 
-                          {data.pincode_assignments.length > 0 ? (
+                          {(data.pincode_assignments || []).length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {data.pincode_assignments.map(
                                 (assignment, index) => (
@@ -1749,7 +1749,7 @@ const WarehouseModal = ({
                 )}
 
                 {data.type === "division" &&
-                  data.pincode_assignments.length === 0 && (
+                  (data.pincode_assignments || []).length === 0 && (
                     <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
                       <div className="flex">
                         <div className="shrink-0">
@@ -1818,7 +1818,7 @@ const WarehouseModal = ({
               !data.name.trim() ||
               (data.type === "zonal" && data.zone_ids.length === 0) ||
               (data.type === "division" &&
-                data.pincode_assignments.length === 0) ||
+                (data.pincode_assignments || []).length === 0) ||
               !["zonal", "division"].includes(data.type)
             }
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"

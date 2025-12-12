@@ -83,6 +83,10 @@ const AddProduct = () => {
     enable_fallback: true,
     warehouse_notes: "",
     video: "",
+    // Bulk pricing settings
+    enable_bulk_pricing: false,
+    bulk_min_quantity: 50,
+    bulk_discount_percentage: 0,
   });
 
   const [variants, setVariants] = useState([]);
@@ -583,6 +587,41 @@ const AddProduct = () => {
           }
         }
 
+        // Save bulk pricing settings if enabled
+        if (form.enable_bulk_pricing && createdProductId && form.bulk_min_quantity > 0) {
+          try {
+            const bulkPrice = form.price * (1 - form.bulk_discount_percentage / 100);
+            const bulkSettingsPayload = {
+              product_id: createdProductId,
+              variant_id: null,
+              min_quantity: parseInt(form.bulk_min_quantity),
+              max_quantity: null,
+              bulk_price: parseFloat(bulkPrice.toFixed(2)),
+              discount_percentage: parseFloat(form.bulk_discount_percentage),
+              is_bulk_enabled: true,
+              is_variant_bulk: false
+            };
+
+            const bulkResponse = await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL}/bulk-products/settings/${createdProductId}`,
+              bulkSettingsPayload,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                },
+              }
+            );
+
+            console.log("Bulk pricing settings saved successfully:", bulkResponse.data);
+          } catch (bulkError) {
+            console.error("Error saving bulk pricing settings:", bulkError);
+            // Don't fail the whole operation if bulk settings fail
+            setError(
+              "Product saved successfully, but failed to save bulk pricing settings. You can configure them later."
+            );
+          }
+        }
+
         navigate("/products");
       } else {
         setError(
@@ -963,6 +1002,79 @@ const AddProduct = () => {
                 }
                 size="md"
               />
+            </div>
+
+            {/* Bulk Pricing Configuration */}
+            <Divider label="Bulk Order Pricing" labelPosition="center" my="xl" />
+
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 space-y-4">
+              <Switch
+                label="Enable Bulk Pricing"
+                description="Automatically apply discounts when customers order above minimum quantity"
+                checked={form.enable_bulk_pricing}
+                onChange={(e) =>
+                  setForm({ ...form, enable_bulk_pricing: e.currentTarget.checked })
+                }
+                size="md"
+              />
+
+              {form.enable_bulk_pricing && (
+                <>
+                  <div className="grid grid-cols-2 gap-6">
+                    <NumberInput
+                      label="Minimum Bulk Quantity"
+                      description="Orders with this quantity or more will get bulk pricing"
+                      placeholder="e.g., 50"
+                      required
+                      value={form.bulk_min_quantity}
+                      onChange={(value) => setForm({ ...form, bulk_min_quantity: value })}
+                      min={1}
+                      size="md"
+                    />
+                    <NumberInput
+                      label="Bulk Discount (%)"
+                      description="Percentage discount for bulk orders"
+                      placeholder="e.g., 10"
+                      required
+                      value={form.bulk_discount_percentage}
+                      onChange={(value) => setForm({ ...form, bulk_discount_percentage: value })}
+                      min={0}
+                      max={100}
+                      size="md"
+                    />
+                  </div>
+
+                  {/* Pricing Preview */}
+                  {form.price > 0 && form.bulk_discount_percentage > 0 && (
+                    <div className="bg-white border border-purple-300 rounded-lg p-4">
+                      <Text weight={600} className="mb-3">💰 Bulk Pricing Preview</Text>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <Text size="xs" color="dimmed">Regular Price</Text>
+                          <Text size="lg" weight={600}>₹{form.price}</Text>
+                        </div>
+                        <div>
+                          <Text size="xs" color="dimmed">Bulk Price</Text>
+                          <Text size="lg" weight={600} color="green">
+                            ₹{(form.price * (1 - form.bulk_discount_percentage / 100)).toFixed(2)}
+                          </Text>
+                        </div>
+                        <div>
+                          <Text size="xs" color="dimmed">Customer Saves</Text>
+                          <Text size="lg" weight={600} color="teal">
+                            ₹{(form.price * form.bulk_discount_percentage / 100).toFixed(2)}
+                          </Text>
+                        </div>
+                      </div>
+                      <Text size="xs" color="dimmed" className="mt-3">
+                        For orders of {form.bulk_min_quantity}+ units, customers pay ₹
+                        {(form.price * (1 - form.bulk_discount_percentage / 100)).toFixed(2)} per unit
+                        instead of ₹{form.price}
+                      </Text>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         );
