@@ -48,15 +48,15 @@ const Sidebar = ({ isOpen = true }) => {
         const usersRes = await getAllUsers();
         setUserCount(usersRes.users?.length || 0);
 
-        // Fetch enquiries count from backend API
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/enquiries/count?status=pending`
-        );
-        const result = await response.json();
-
-        if (result.success) {
-          setEnquiryCount(result.count || 0);
-        }
+        //         // Fetch enquiries count from backend API
+        //         const response = await fetch(
+        //           `${import.meta.env.VITE_API_BASE_URL}/enquiries/count?status=pending`
+        //         );
+        //         const result = await response.json();
+        // 
+        //         if (result.success) {
+        //           setEnquiryCount(result.count || 0);
+        //         }
       } catch (error) {
         console.error("Error fetching counts:", error);
         setEnquiryCount(0);
@@ -201,6 +201,12 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaList />,
       path: "/wallet-transactions",
       description: "View wallet transactions and audit logs",
+    },
+    {
+      title: "Product Enquiries",
+      icon: <RiQuestionnaireFill />,
+      path: "/product-enquiries",
+      description: "Manage product enquiries and create bid offers",
     },
     {
       title: "Business Partners",

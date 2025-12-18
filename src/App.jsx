@@ -87,6 +87,7 @@ import UnifiedOrders from "./Pages/Orders/UnifiedOrders.jsx";
 import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
 import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
+import ProductEnquiries from "./Pages/ProductEnquiries/index.jsx";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -433,6 +434,14 @@ function App() {
         {
           path: "/wallet-transactions",
           element: <WalletTransactions />,
+        },
+        {
+          path: "/enquiries/:id",
+          element: <Navigate to="/product-enquiries" replace />,
+        },
+        {
+          path: "/product-enquiries",
+          element: <ProductEnquiries />,
         },
       ],
     },

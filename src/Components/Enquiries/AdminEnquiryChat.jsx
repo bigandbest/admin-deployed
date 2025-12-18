@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { sendAdminMessage } from '../../api/adminEnquiryApi';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export default function AdminEnquiryChat({ enquiryId, adminId, adminName }) {
     const [messages, setMessages] = useState([]);
@@ -27,7 +27,7 @@ export default function AdminEnquiryChat({ enquiryId, adminId, adminName }) {
     const fetchMessages = async () => {
         try {
             const response = await fetch(
-                `${API_BASE_URL}/api/enquiry-messages/${enquiryId}`,
+                `${API_BASE_URL}/enquiry-messages/${enquiryId}`,
                 {
                     method: 'GET',
                     headers: {
@@ -50,7 +50,7 @@ export default function AdminEnquiryChat({ enquiryId, adminId, adminName }) {
     const markMessagesAsRead = async () => {
         try {
             await fetch(
-                `${API_BASE_URL}/api/enquiry-messages/${enquiryId}/read`,
+                `${API_BASE_URL}/enquiry-messages/${enquiryId}/read`,
                 {
                     method: 'PUT',
                     headers: {
@@ -73,12 +73,18 @@ export default function AdminEnquiryChat({ enquiryId, adminId, adminName }) {
 
         if (!newMessage.trim()) return;
 
+        // Validate admin ID exists
+        if (!adminId) {
+            toast.error('Admin authentication required. Please log in again.');
+            return;
+        }
+
         setSending(true);
 
         try {
             const messageData = {
                 enquiry_id: enquiryId,
-                sender_id: adminId || 'admin',
+                sender_id: adminId,
                 sender_name: adminName || 'Admin',
                 message: newMessage.trim(),
             };
@@ -179,8 +185,8 @@ export default function AdminEnquiryChat({ enquiryId, adminId, adminName }) {
                                         {/* Message Bubble */}
                                         <div
                                             className={`rounded-lg px-4 py-3 ${isAdmin
-                                                    ? 'bg-gray-800 text-white rounded-br-none'
-                                                    : 'bg-white text-gray-900 rounded-bl-none shadow'
+                                                ? 'bg-gray-800 text-white rounded-br-none'
+                                                : 'bg-white text-gray-900 rounded-bl-none shadow'
                                                 }`}
                                         >
                                             <p className="text-sm whitespace-pre-wrap break-words">

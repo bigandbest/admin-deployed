@@ -1,5 +1,5 @@
 // admin-deployed/src/api/adminEnquiryApi.js
-const API_BASE_URL = import.meta.env.VITE_BACKEND || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
  * Get all enquiries (Admin view)
@@ -9,7 +9,7 @@ export const getAllEnquiries = async (filters = {}) => {
         const queryParams = new URLSearchParams(filters);
 
         const response = await fetch(
-            `${API_BASE_URL}/api/enquiries/all?${queryParams}`,
+            `${API_BASE_URL}/enquiries/admin/all?${queryParams}`,
             {
                 method: 'GET',
                 headers: {
@@ -37,7 +37,7 @@ export const getAllEnquiries = async (filters = {}) => {
 export const updateEnquiryStatus = async (enquiryId, status, notes = '') => {
     try {
         const response = await fetch(
-            `${API_BASE_URL}/api/enquiries/${enquiryId}/status`,
+            `${API_BASE_URL}/enquiries/${enquiryId}/status`,
             {
                 method: 'PUT',
                 headers: {
@@ -65,7 +65,7 @@ export const updateEnquiryStatus = async (enquiryId, status, notes = '') => {
  */
 export const createBid = async (bidData) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/bids`, {
+        const response = await fetch(`${API_BASE_URL}/bids`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -91,7 +91,7 @@ export const createBid = async (bidData) => {
  */
 export const updateBid = async (bidId, bidData) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/bids/${bidId}`, {
+        const response = await fetch(`${API_BASE_URL}/bids/${bidId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ export const updateBid = async (bidId, bidData) => {
  */
 export const lockBid = async (bidId, lockData) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/bids/${bidId}/lock`, {
+        const response = await fetch(`${API_BASE_URL}/bids/${bidId}/lock`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export const lockBid = async (bidId, lockData) => {
  */
 export const rejectBid = async (bidId, reason) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/bids/${bidId}/reject`, {
+        const response = await fetch(`${API_BASE_URL}/bids/${bidId}/reject`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ export const rejectBid = async (bidId, reason) => {
  */
 export const sendAdminMessage = async (messageData) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/enquiry-messages`, {
+        const response = await fetch(`${API_BASE_URL}/enquiry-messages`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { getAllEnquiries } from '../../api/adminEnquiryApi';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
     OPEN: 'bg-blue-100 text-blue-800',
@@ -13,8 +12,8 @@ const STATUS_COLORS = {
     CLOSED: 'bg-red-100 text-red-800',
 };
 
-export default function EnquiryDashboard() {
-    const navigate = useNavigate();
+export default function EnquiryDashboard({ onViewEnquiry, onCreateBid }) {
+    // Removed navigate - using callbacks instead
     const [enquiries, setEnquiries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
@@ -83,7 +82,10 @@ export default function EnquiryDashboard() {
     };
 
     const handleEnquiryClick = (enquiryId) => {
-        navigate(`/enquiries/${enquiryId}`);
+        const enquiry = enquiries.find(e => e.id === enquiryId);
+        if (enquiry && onViewEnquiry) {
+            onViewEnquiry(enquiry);
+        }
     };
 
     return (
@@ -128,8 +130,8 @@ export default function EnquiryDashboard() {
                             setPagination(prev => ({ ...prev, page: 1 }));
                         }}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === status
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                     >
                         {status === 'all' ? 'All' : status}
@@ -197,9 +199,9 @@ export default function EnquiryDashboard() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center">
-                                            {enquiry.products?.image_url && (
+                                            {enquiry.products?.image && (
                                                 <img
-                                                    src={enquiry.products.image_url}
+                                                    src={enquiry.products.image}
                                                     alt={enquiry.products.name}
                                                     className="w-10 h-10 rounded object-cover mr-3"
                                                 />
