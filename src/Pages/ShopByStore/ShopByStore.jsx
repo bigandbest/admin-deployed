@@ -14,13 +14,74 @@ const ShopByStore = () => {
   const [submitting, setSubmitting] = useState(false);
   const [recommendedStores, setRecommendedStores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const fetchRecommendedStores = async () => {
+  // Fetch with retry logic and exponential backoff
+  const fetchRecommendedStores = async (attempt = 0) => {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+
     try {
-      const res = await api.get("/recommended-stores/list");
+      setLoading(true);
+      setError(null);
+
+      console.log(`Fetching recommended stores (attempt ${attempt + 1}/${maxRetries + 1})...`);
+
+      const res = await api.get("/recommended-stores/list", {
+        timeout: 30000, // 30 second timeout
+      });
+
+      // Validate response data
+      if (!res.data || !res.data.recommendedStores) {
+        throw new Error("Invalid response format from server");
+      }
+
+      // Validate that recommendedStores is an array
+      if (!Array.isArray(res.data.recommendedStores)) {
+        throw new Error("Expected recommendedStores to be an array");
+      }
+
+      console.log(`Successfully fetched ${res.data.recommendedStores.length} stores`);
       setRecommendedStores(res.data.recommendedStores);
+      setError(null);
+      setRetryCount(0);
+
     } catch (err) {
-      console.error("Failed to fetch Recommended Stores:", err);
+      console.error(`Failed to fetch Recommended Stores (attempt ${attempt + 1}):`, err);
+
+      // Determine error message
+      let errorMessage = "Failed to load stores. ";
+
+      if (err.code === "ECONNABORTED" || err.message?.includes("timeout")) {
+        errorMessage += "Request timed out. The server is taking too long to respond.";
+      } else if (err.code === "ERR_NETWORK" || err.message?.includes("Network Error")) {
+        errorMessage += "Network error. Please check your internet connection.";
+      } else if (err.response?.status === 404) {
+        errorMessage += "API endpoint not found. Please contact support.";
+      } else if (err.response?.status === 500) {
+        errorMessage += "Server error. Please try again later.";
+      } else if (err.response?.data?.error) {
+        errorMessage += err.response.data.error;
+      } else {
+        errorMessage += err.message || "Unknown error occurred.";
+      }
+
+      // Retry logic with exponential backoff
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        console.log(`Retrying in ${delay}ms...`);
+        setError(`${errorMessage} Retrying in ${delay / 1000} seconds...`);
+
+        setTimeout(() => {
+          setRetryCount(attempt + 1);
+          fetchRecommendedStores(attempt + 1);
+        }, delay);
+      } else {
+        // Max retries reached
+        setError(errorMessage);
+        setRecommendedStores([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -213,8 +274,8 @@ const ShopByStore = () => {
                 {submitting
                   ? "Saving..."
                   : editingRecommendedStore
-                  ? "Save Changes"
-                  : "Add"}
+                    ? "Save Changes"
+                    : "Add"}
               </button>
             </div>
           </form>
@@ -222,9 +283,49 @@ const ShopByStore = () => {
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading...</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-500">Loading stores...</p>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-400 mt-2">Retry attempt {retryCount}/3</p>
+          )}
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 my-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-red-800">Error Loading Stores</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    setRetryCount(0);
+                    fetchRecommendedStores(0);
+                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+                >
+                  🔄 Retry Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : recommendedStores && recommendedStores.length === 0 ? (
-        <p className="text-gray-500">No Recommended Stores found.</p>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 my-4">
+          <div className="flex items-center">
+            <svg className="h-6 w-6 text-yellow-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-yellow-800">No Recommended Stores found. Click "Add Store" to create one.</p>
+          </div>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white rounded shadow text-sm md:text-base">
@@ -268,11 +369,10 @@ const ShopByStore = () => {
                   </td>
                   <td className="py-2 px-4">
                     <button
-                      className={`px-3 py-1 rounded ${
-                        store.is_active
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-300 text-black"
-                      }`}
+                      className={`px-3 py-1 rounded ${store.is_active
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-300 text-black"
+                        }`}
                       onClick={() => toggleActive(store)}
                     >
                       {store.is_active ? "Active" : "Inactive"}
