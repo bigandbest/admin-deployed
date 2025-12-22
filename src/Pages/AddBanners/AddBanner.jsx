@@ -24,6 +24,7 @@ const BANNER_TYPES = [
   "Summer Big Sale",
   "Opening Soon",
   "Section 1",
+  "daily_deals",
 ];
 
 // lightweight placeholder SVG for missing images (module scope)
@@ -627,22 +628,20 @@ const AddBanner = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              banner.active
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${banner.active
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800"
-                            }`}
+                              }`}
                           >
                             {banner.active ? "Active" : "Inactive"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              banner.is_mobile
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${banner.is_mobile
                                 ? "bg-purple-100 text-purple-800"
                                 : "bg-gray-100 text-gray-800"
-                            }`}
+                              }`}
                           >
                             {banner.is_mobile ? "Mobile" : "All"}
                           </span>
