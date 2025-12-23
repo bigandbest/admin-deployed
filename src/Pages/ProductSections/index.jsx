@@ -70,9 +70,10 @@ const ProductSectionsManagement = () => {
       const result = await getAllProductSections();
 
       if (result.success) {
-        setSections(result.sections || result.data || []);
+        const sanitizedSections = (result.sections || result.data || []).filter(Boolean);
+        setSections(sanitizedSections);
         // Fetch product counts for all sections
-        fetchProductCounts(result.sections || result.data || []);
+        fetchProductCounts(sanitizedSections);
       } else {
         throw new Error(result.error || "Failed to fetch sections");
       }
@@ -406,12 +407,12 @@ const ProductSectionsManagement = () => {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {Array.isArray(sections) && sections.map((section, index) => (
-                  <Table.Tr key={section.id}>
+                {Array.isArray(sections) && sections.filter(Boolean).map((section, index) => (
+                  <Table.Tr key={section?.id ?? index}>
                     <Table.Td>
                       <Flex align="center" gap="xs">
                         <Badge variant="outline" size="sm">
-                          {section.display_order}
+                          {section?.display_order ?? index + 1}
                         </Badge>
                         <Group gap="2">
                           <Tooltip label="Move Up">
