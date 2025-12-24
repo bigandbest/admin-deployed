@@ -26,6 +26,7 @@ const BANNER_TYPES = [
   "Opening Soon",
   "Section 1",
   "daily_deals",
+  "shop_by_store",
 ];
 
 // lightweight placeholder SVG for missing images (module scope)
@@ -326,6 +327,10 @@ const AddBanner = () => {
   const [allDeals, setAllDeals] = useState([]);
   const [dealsWithBanner, setDealsWithBanner] = useState([]);
   const [isLoadingDeals, setIsLoadingDeals] = useState(false);
+  const [isStoreModalVisible, setIsStoreModalVisible] = useState(false);
+  const [allStores, setAllStores] = useState([]);
+  const [storesWithBanner, setStoresWithBanner] = useState([]);
+  const [isLoadingStores, setIsLoadingStores] = useState(false);
   const navigate = useNavigate();
 
   const fetchBanners = async () => {
@@ -463,6 +468,49 @@ const AddBanner = () => {
     } catch (error) {
       console.error("Error toggling deal:", error);
       notifications.show({ color: "red", message: "Failed to update deal" });
+    }
+  };
+
+  const handleManageStores = async (banner) => {
+    setSelectedBanner(banner);
+    setIsLoadingStores(true);
+    setIsStoreModalVisible(true);
+
+    try {
+      // Fetch all stores
+      const storesResponse = await api.get("/recommended-stores/list");
+      const stores = storesResponse.data.recommendedStores || [];
+      setAllStores(stores);
+
+      // Filter stores that have this banner assigned
+      const storesWithThisBanner = stores.filter(store => store.banner_id === banner.id);
+      setStoresWithBanner(storesWithThisBanner.map(s => s.id));
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+      notifications.show({ color: "red", message: "Failed to load stores" });
+    } finally {
+      setIsLoadingStores(false);
+    }
+  };
+
+  const handleToggleStore = async (storeId) => {
+    try {
+      const isCurrentlyAssigned = storesWithBanner.includes(storeId);
+
+      if (isCurrentlyAssigned) {
+        // Remove banner from store
+        await api.put(`/recommended-stores/update/${storeId}`, { banner_id: null });
+        setStoresWithBanner(prev => prev.filter(id => id !== storeId));
+        notifications.show({ color: "green", message: "Banner removed from store" });
+      } else {
+        // Assign banner to store
+        await api.put(`/recommended-stores/update/${storeId}`, { banner_id: selectedBanner.id });
+        setStoresWithBanner(prev => [...prev, storeId]);
+        notifications.show({ color: "green", message: "Banner assigned to store" });
+      }
+    } catch (error) {
+      console.error("Error toggling store:", error);
+      notifications.show({ color: "red", message: "Failed to update store" });
     }
   };
 
@@ -731,6 +779,15 @@ const AddBanner = () => {
                                 <span className="text-sm">🏷️</span>
                               </button>
                             )}
+                            {banner.banner_type === "shop_by_store" && (
+                              <button
+                                className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50 transition-colors"
+                                onClick={() => handleManageStores(banner)}
+                                title="Manage Stores"
+                              >
+                                <span className="text-sm">🏪</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -889,6 +946,141 @@ const AddBanner = () => {
                   Done
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Store Management Modal */}
+      {isStoreModalVisible && selectedBanner && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-linear-to-r from-purple-600 to-purple-700 text-white p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Manage Stores</h2>
+                  <p className="text-purple-100 mt-1">
+                    Banner: {selectedBanner.name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsStoreModalVisible(false)}
+                  className="text-white hover:bg-purple-800 rounded-full p-2 transition-colors"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {isLoadingStores ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="ml-4 text-gray-600">Loading stores...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">
+                      Select which stores should use this banner. Click on a store to assign/remove the banner.
+                    </p>
+                  </div>
+
+                  {allStores.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No stores available.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {allStores.map((store) => {
+                        const isAssigned = storesWithBanner.includes(store.id);
+                        return (
+                          <div
+                            key={store.id}
+                            onClick={() => handleToggleStore(store.id)}
+                            className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${isAssigned
+                                ? "border-purple-500 bg-purple-50"
+                                : "border-gray-200 hover:border-purple-300"
+                              }`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 mt-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isAssigned}
+                                  onChange={() => { }}
+                                  className="w-5 h-5 text-purple-600 rounded"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-gray-900 mb-1">
+                                      {store.name}
+                                    </h4>
+                                    {store.description && (
+                                      <p className="text-sm text-gray-600 mb-1">
+                                        {store.description}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${store.is_active
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-gray-100 text-gray-800"
+                                        }`}>
+                                        {store.is_active ? "Active" : "Inactive"}
+                                      </span>
+                                      {store.product_count !== undefined && (
+                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                          {store.product_count} products
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {store.image_url && (
+                                    <img
+                                      src={store.image_url}
+                                      alt={store.name}
+                                      className="w-16 h-16 rounded-lg object-cover ml-3"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
+              <p className="text-sm text-gray-600">
+                {storesWithBanner.length} of {allStores.length} stores using this banner
+              </p>
+              <button
+                onClick={() => setIsStoreModalVisible(false)}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
