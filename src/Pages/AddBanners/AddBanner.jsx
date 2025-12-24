@@ -9,6 +9,7 @@ import {
   updateBanner,
   deleteBanner,
 } from "../../utils/supabaseApi";
+import api from "../../utils/api";
 
 // Define banner types for the dropdown
 const BANNER_TYPES = [
@@ -320,6 +321,11 @@ const AddBanner = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [isDealModalVisible, setIsDealModalVisible] = useState(false);
+  const [selectedBanner, setSelectedBanner] = useState(null);
+  const [allDeals, setAllDeals] = useState([]);
+  const [dealsWithBanner, setDealsWithBanner] = useState([]);
+  const [isLoadingDeals, setIsLoadingDeals] = useState(false);
   const navigate = useNavigate();
 
   const fetchBanners = async () => {
@@ -415,6 +421,49 @@ const AddBanner = () => {
   const handleEditClick = (banner) => {
     setEditingBanner(banner);
     setIsFormVisible(true);
+  };
+
+  const handleManageDeals = async (banner) => {
+    setSelectedBanner(banner);
+    setIsLoadingDeals(true);
+    setIsDealModalVisible(true);
+
+    try {
+      // Fetch all deals
+      const dealsResponse = await api.get("/daily-deals/list");
+      const deals = dealsResponse.data.deals || [];
+      setAllDeals(deals);
+
+      // Filter deals that have this banner assigned
+      const dealsWithThisBanner = deals.filter(deal => deal.banner_id === banner.id);
+      setDealsWithBanner(dealsWithThisBanner.map(d => d.id));
+    } catch (error) {
+      console.error("Error fetching deals:", error);
+      notifications.show({ color: "red", message: "Failed to load deals" });
+    } finally {
+      setIsLoadingDeals(false);
+    }
+  };
+
+  const handleToggleDeal = async (dealId) => {
+    try {
+      const isCurrentlyAssigned = dealsWithBanner.includes(dealId);
+
+      if (isCurrentlyAssigned) {
+        // Remove banner from deal
+        await api.put(`/daily-deals/update/${dealId}`, { banner_id: null });
+        setDealsWithBanner(prev => prev.filter(id => id !== dealId));
+        notifications.show({ color: "green", message: "Banner removed from deal" });
+      } else {
+        // Assign banner to deal
+        await api.put(`/daily-deals/update/${dealId}`, { banner_id: selectedBanner.id });
+        setDealsWithBanner(prev => [...prev, dealId]);
+        notifications.show({ color: "green", message: "Banner assigned to deal" });
+      }
+    } catch (error) {
+      console.error("Error toggling deal:", error);
+      notifications.show({ color: "red", message: "Failed to update deal" });
+    }
   };
 
   const handleAddClick = () => {
@@ -629,8 +678,8 @@ const AddBanner = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${banner.active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
                               }`}
                           >
                             {banner.active ? "Active" : "Inactive"}
@@ -639,8 +688,8 @@ const AddBanner = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${banner.is_mobile
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-gray-100 text-gray-800"
+                              ? "bg-purple-100 text-purple-800"
+                              : "bg-gray-100 text-gray-800"
                               }`}
                           >
                             {banner.is_mobile ? "Mobile" : "All"}
@@ -673,6 +722,15 @@ const AddBanner = () => {
                             >
                               <span className="text-sm">👥</span>
                             </button>
+                            {banner.banner_type === "daily_deals" && (
+                              <button
+                                className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                                onClick={() => handleManageDeals(banner)}
+                                title="Manage Deals"
+                              >
+                                <span className="text-sm">🏷️</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -702,6 +760,139 @@ const AddBanner = () => {
           )}
         </div>
       </div>
+
+      {/* Deal Management Modal */}
+      {isDealModalVisible && selectedBanner && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-linear-to-r from-blue-600 to-blue-700 text-white p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Manage Deals</h2>
+                  <p className="text-blue-100 mt-1">
+                    Banner: {selectedBanner.name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsDealModalVisible(false)}
+                  className="text-white hover:bg-blue-800 rounded-full p-2 transition-colors"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {isLoadingDeals ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  <p className="ml-4 text-gray-600">Loading deals...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">
+                      Select which Daily Deals should use this banner. Click on a deal to assign/remove the banner.
+                    </p>
+                  </div>
+
+                  {allDeals.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No daily deals available.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {allDeals.map((deal) => {
+                        const isAssigned = dealsWithBanner.includes(deal.id);
+                        return (
+                          <div
+                            key={deal.id}
+                            onClick={() => handleToggleDeal(deal.id)}
+                            className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${isAssigned
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:border-blue-300"
+                              }`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 mt-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isAssigned}
+                                  onChange={() => { }}
+                                  className="w-5 h-5 text-blue-600 rounded"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-gray-900 mb-1">
+                                      {deal.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mb-1">
+                                      {deal.discount}
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                        {deal.badge}
+                                      </span>
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${deal.active
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                        }`}>
+                                        {deal.active ? "Active" : "Inactive"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {deal.image_url && (
+                                    <img
+                                      src={deal.image_url}
+                                      alt={deal.title}
+                                      className="w-16 h-16 object-cover rounded ml-3"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 border-t">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  {dealsWithBanner.length} of {allDeals.length} deals using this banner
+                </p>
+                <button
+                  onClick={() => setIsDealModalVisible(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isFormVisible && (
         <BannerForm

@@ -172,48 +172,6 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
               </p>
             )}
           </div>
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-gray-700 text-sm font-bold">
-                Select Banner (Optional)
-              </label>
-              <a
-                href="/add-banner"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline"
-              >
-                Manage Banners →
-              </a>
-            </div>
-            <select
-              value={bannerId || ""}
-              onChange={handleBannerChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            >
-              <option value="">No Banner</option>
-              {availableBanners.map((banner) => (
-                <option key={banner.id} value={banner.id}>
-                  {banner.name}
-                </option>
-              ))}
-            </select>
-            {selectedBanner && selectedBanner.image_url && (
-              <div className="mt-2">
-                <p className="text-xs text-gray-500 mb-1">Banner Preview:</p>
-                <img
-                  src={selectedBanner.image_url}
-                  alt={selectedBanner.name}
-                  className="w-full h-20 object-cover rounded border"
-                />
-              </div>
-            )}
-            {availableBanners.length === 0 && (
-              <p className="text-xs text-gray-500 mt-2">
-                No banners available. Create banners with type "daily_deals" first.
-              </p>
-            )}
-          </div>
           <div className="flex items-center justify-between">
             <button
               type="button"
