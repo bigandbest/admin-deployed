@@ -768,6 +768,49 @@ export async function updateProductSectionOrder(sectionsOrder) {
   }
 }
 
+// CATEGORY-SECTION MAPPING
+export async function addCategoriesToSection(sectionId, categoryIds) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_ids: categoryIds }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getCategoriesInSection(sectionId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function removeCategoryFromSection(sectionId, categoryId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories/${categoryId}`, {
+      method: "DELETE",
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getSectionsForCategory(categoryId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/categories/${categoryId}/sections`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // PROMO BANNERS
 export async function getAllPromoBanners() {
   try {

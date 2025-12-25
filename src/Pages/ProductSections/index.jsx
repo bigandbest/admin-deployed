@@ -37,6 +37,10 @@ import {
   updateProductSection,
   toggleProductSectionStatus,
   updateProductSectionOrder,
+  addCategoriesToSection,
+  getCategoriesInSection,
+  removeCategoryFromSection,
+  getAllCategories,
 } from "../../utils/supabaseApi";
 import axios from "axios";
 
@@ -46,6 +50,8 @@ const ProductSectionsManagement = () => {
   const [editModalOpened, { open: openEditModal, close: closeEditModal }] =
     useDisclosure(false);
   const [productsModalOpened, { open: openProductsModal, close: closeProductsModal }] =
+    useDisclosure(false);
+  const [categoriesModalOpened, { open: openCategoriesModal, close: closeCategoriesModal }] =
     useDisclosure(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [formData, setFormData] = useState({
@@ -62,6 +68,13 @@ const ProductSectionsManagement = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [productCounts, setProductCounts] = useState({});
+
+  // Category management state
+  const [sectionCategories, setSectionCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [allCategories, setAllCategories] = useState([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+  const [categoryCounts, setCategoryCounts] = useState({});
 
   // Fetch all product sections
   const fetchSections = async () => {
@@ -156,12 +169,75 @@ const ProductSectionsManagement = () => {
     }
   };
 
+  // Fetch all categories for selection
+  const fetchAllCategories = async () => {
+    try {
+      const result = await getAllCategories();
+      if (result.success && result.categories) {
+        setAllCategories(result.categories);
+      }
+    } catch (error) {
+      console.error("Error fetching all categories:", error);
+    }
+  };
+
+  // Fetch categories mapped to a section
+  const fetchSectionCategories = async (sectionId) => {
+    try {
+      setCategoriesLoading(true);
+      const result = await getCategoriesInSection(sectionId);
+      if (result.success) {
+        setSectionCategories(result.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching section categories:", error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to fetch categories in section",
+        color: "red",
+      });
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  // Fetch category counts for all sections
+  const fetchCategoryCounts = async (sectionsList) => {
+    try {
+      const counts = {};
+      await Promise.all(
+        sectionsList.map(async (section) => {
+          try {
+            const result = await getCategoriesInSection(section.id);
+            if (result.success) {
+              counts[section.id] = result.total || 0;
+            }
+          } catch (error) {
+            console.error(`Error fetching category count for section ${section.id}:`, error);
+            counts[section.id] = 0;
+          }
+        })
+      );
+      setCategoryCounts(counts);
+    } catch (error) {
+      console.error("Error fetching category counts:", error);
+    }
+  };
+
   // Open products modal
   const openManageProducts = (section) => {
     setSelectedSection(section);
     fetchSectionProducts(section.id);
     fetchAllProducts();
     openProductsModal();
+  };
+
+  // Open categories modal
+  const openManageCategories = (section) => {
+    setSelectedSection(section);
+    fetchSectionCategories(section.id);
+    fetchAllCategories();
+    openCategoriesModal();
   };
 
   // Add products to section
@@ -227,6 +303,67 @@ const ProductSectionsManagement = () => {
       notifications.show({
         title: "Error",
         message: "Failed to remove product from section",
+        color: "red",
+      });
+    }
+  };
+
+  // Add categories to section
+  const addCategoriesToSectionHandler = async () => {
+    if (selectedCategoryIds.length === 0) {
+      notifications.show({
+        title: "Warning",
+        message: "Please select at least one category",
+        color: "yellow",
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const result = await addCategoriesToSection(selectedSection.id, selectedCategoryIds);
+
+      if (result.success) {
+        notifications.show({
+          title: "Success",
+          message: result.message,
+          color: "green",
+        });
+        setSelectedCategoryIds([]);
+        fetchSectionCategories(selectedSection.id);
+        fetchCategoryCounts(sections);
+      }
+    } catch (error) {
+      console.error("Error adding categories:", error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to add categories to section",
+        color: "red",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Remove category from section
+  const removeCategoryFromSectionHandler = async (categoryId) => {
+    try {
+      const result = await removeCategoryFromSection(selectedSection.id, categoryId);
+
+      if (result.success) {
+        notifications.show({
+          title: "Success",
+          message: "Category removed from section",
+          color: "green",
+        });
+        fetchSectionCategories(selectedSection.id);
+        fetchCategoryCounts(sections);
+      }
+    } catch (error) {
+      console.error("Error removing category:", error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to remove category from section",
         color: "red",
       });
     }
@@ -372,6 +509,12 @@ const ProductSectionsManagement = () => {
     fetchSections();
   }, []);
 
+  useEffect(() => {
+    if (sections.length > 0) {
+      fetchCategoryCounts(sections);
+    }
+  }, [sections]);
+
   return (
     <Container size="xl" py="xl">
       <LoadingOverlay visible={loading} />
@@ -402,8 +545,9 @@ const ProductSectionsManagement = () => {
                   <Table.Th>Component</Table.Th>
                   <Table.Th>Status</Table.Th>
                   <Table.Th>Products</Table.Th>
+                  <Table.Th>Categories</Table.Th>
                   <Table.Th>Description</Table.Th>
-                  <Table.Th style={{ width: "180px" }}>Actions</Table.Th>
+                  <Table.Th style={{ width: "200px" }}>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -467,6 +611,11 @@ const ProductSectionsManagement = () => {
                       </Badge>
                     </Table.Td>
                     <Table.Td>
+                      <Badge color="violet" variant="light">
+                        {categoryCounts[section.id] || 0} categories
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
                       <Text size="sm" c="dimmed" lineClamp={2}>
                         {section.description || "No description"}
                       </Text>
@@ -480,6 +629,15 @@ const ProductSectionsManagement = () => {
                             onClick={() => openEdit(section)}
                           >
                             <IconEdit size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Manage Categories">
+                          <ActionIcon
+                            variant="subtle"
+                            color="violet"
+                            onClick={() => openManageCategories(section)}
+                          >
+                            <IconPackage size={16} />
                           </ActionIcon>
                         </Tooltip>
                         <Tooltip label="Manage Products">
@@ -631,6 +789,92 @@ const ProductSectionsManagement = () => {
                         </ActionIcon>
                       </Group>
                     ))}
+                  </Stack>
+                </ScrollArea>
+              )}
+            </Stack>
+          </Card>
+        </Stack>
+      </Modal>
+
+      {/* Manage Categories Modal */}
+      <Modal
+        opened={categoriesModalOpened}
+        onClose={closeCategoriesModal}
+        title={`Manage Categories - ${selectedSection?.section_name}`}
+        size="xl"
+      >
+        <Stack spacing="md">
+          {/* Add Categories Section */}
+          <Card withBorder>
+            <Stack spacing="sm">
+              <Text fw={500}>Map Categories to Section</Text>
+              <Text size="sm" c="dimmed">
+                Only products from mapped categories will be displayed in this section.
+              </Text>
+              <MultiSelect
+                placeholder="Select categories to map"
+                data={allCategories.map((cat) => ({
+                  value: cat.id.toString(),
+                  label: cat.name,
+                }))}
+                value={selectedCategoryIds}
+                onChange={setSelectedCategoryIds}
+                searchable
+                maxDropdownHeight={200}
+              />
+              <Button
+                onClick={addCategoriesToSectionHandler}
+                loading={submitting}
+                disabled={selectedCategoryIds.length === 0}
+              >
+                Add Selected Categories
+              </Button>
+            </Stack>
+          </Card>
+
+          {/* Current Categories Section */}
+          <Card withBorder>
+            <Stack spacing="sm">
+              <Text fw={500}>
+                Mapped Categories ({sectionCategories.length})
+              </Text>
+              <LoadingOverlay visible={categoriesLoading} />
+              {sectionCategories.length === 0 ? (
+                <Text c="dimmed" ta="center" py="xl">
+                  No categories mapped yet. Products from all categories will be shown.
+                </Text>
+              ) : (
+                <ScrollArea h={300}>
+                  <Stack spacing="xs">
+                    {sectionCategories.map((mapping) => {
+                      const category = allCategories.find(c => c.id === mapping.category_id);
+                      return (
+                        <Group
+                          key={mapping.category_id}
+                          justify="space-between"
+                          p="sm"
+                          style={{
+                            border: "1px solid #e9ecef",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          <div>
+                            <Text fw={500}>{category?.name || `Category ID: ${mapping.category_id}`}</Text>
+                            <Text size="sm" c="dimmed">
+                              Mapped on {new Date(mapping.created_at).toLocaleDateString()}
+                            </Text>
+                          </div>
+                          <ActionIcon
+                            color="red"
+                            variant="subtle"
+                            onClick={() => removeCategoryFromSectionHandler(mapping.category_id)}
+                          >
+                            <IconX size={16} />
+                          </ActionIcon>
+                        </Group>
+                      );
+                    })}
                   </Stack>
                 </ScrollArea>
               )}

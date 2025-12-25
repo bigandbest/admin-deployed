@@ -41,8 +41,8 @@ const StoreSectionMapping = () => {
   const [selectedSections, setSelectedSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [selectedGroups, setSelectedGroups] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState("store-mapping");
 
   // Fetch data on component mount
@@ -53,20 +53,20 @@ const StoreSectionMapping = () => {
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [storesRes, sectionsRes, productsRes, mappingsRes, categoriesRes] =
+      const [storesRes, sectionsRes, productsRes, mappingsRes, groupsRes] =
         await Promise.all([
           api.get("/recommended-stores/list"),
           api.get("/store-section-mappings/product-sections/list"),
           api.get("/productsroute/allproducts"),
           api.get("/store-section-mappings/list"),
-          api.get("/categories/hierarchy"),
+          api.get("/categories/groups"),
         ]);
 
       setStores(storesRes.data.recommendedStores || []);
       setSections(sectionsRes.data.sections || []);
       setProducts(productsRes.data.products || []);
       setMappings(mappingsRes.data.mappings || []);
-      setCategories(categoriesRes.data.categories || []);
+      setGroups(groupsRes.data.groups || []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -112,22 +112,22 @@ const StoreSectionMapping = () => {
     }
   };
 
-  // Category-Section Mapping Functions
-  const handleCategoryMapping = async () => {
-    if (!selectedSection || selectedCategories.length === 0) return;
+  // Group-Section Mapping Functions
+  const handleGroupMapping = async () => {
+    if (!selectedSection || selectedGroups.length === 0) return;
 
     try {
-      await api.post("/store-section-mappings/section-category", {
+      await api.post("/store-section-mappings/section-group", {
         section_id: selectedSection,
-        category_ids: selectedCategories,
+        group_ids: selectedGroups,
       });
 
       setCategoryMappingModal(false);
       setSelectedSection("");
-      setSelectedCategories([]);
+      setSelectedGroups([]);
       fetchInitialData();
     } catch (error) {
-      console.error("Failed to create category-section mapping:", error);
+      console.error("Failed to create group-section mapping:", error);
     }
   };
 
@@ -171,9 +171,9 @@ const StoreSectionMapping = () => {
     label: `${product.name} - ₹${product.price}`,
   }));
 
-  const categoryOptions = categories.map((category) => ({
-    value: category.id.toString(),
-    label: category.name,
+  const groupOptions = groups.map((group) => ({
+    value: group.id.toString(),
+    label: group.name,
   }));
 
   // Table columns for store-section mappings
@@ -269,20 +269,20 @@ const StoreSectionMapping = () => {
     },
   ];
 
-  // Table columns for section-category mappings
-  const sectionCategoryColumns = [
+  // Table columns for section-group mappings
+  const sectionGroupColumns = [
     {
       accessor: "section_name",
       title: "Section Name",
     },
     {
-      accessor: "categories",
-      title: "Mapped Categories",
+      accessor: "groups",
+      title: "Mapped Groups",
       render: (mapping) => (
         <div className="flex flex-wrap gap-1">
-          {mapping.categories?.map((category) => (
-            <Badge key={category.id} size="sm" variant="filled" color="blue">
-              {category.name}
+          {mapping.groups?.map((group) => (
+            <Badge key={group.id} size="sm" variant="filled" color="blue">
+              {group.name}
             </Badge>
           ))}
         </div>
@@ -335,7 +335,7 @@ const StoreSectionMapping = () => {
             Product-Section Mapping
           </Tabs.Tab>
           <Tabs.Tab value="category-mapping" icon={<IconPlus size={16} />}>
-            Category-Section Mapping
+            Group-Section Mapping
           </Tabs.Tab>
         </Tabs.List>
 
@@ -420,29 +420,29 @@ const StoreSectionMapping = () => {
         <Tabs.Panel value="category-mapping" pt="lg">
           <Card shadow="sm" p="lg" radius="md" className="mb-6">
             <Group position="apart" className="mb-4">
-              <Text weight={500}>Category-Section Mappings</Text>
+              <Text weight={500}>Group-Section Mappings</Text>
               <Button
                 leftIcon={<IconPlus size={16} />}
                 onClick={() => setCategoryMappingModal(true)}
               >
-                Map Category to Section
+                Map Group to Section
               </Button>
             </Group>
 
             <Table>
               <thead>
                 <tr>
-                  {sectionCategoryColumns.map((col) => (
+                  {sectionGroupColumns.map((col) => (
                     <th key={col.accessor}>{col.title}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {mappings
-                  .filter((m) => m.type === "section-category")
+                  .filter((m) => m.type === "section-group")
                   .map((mapping) => (
                     <tr key={mapping.id}>
-                      {sectionCategoryColumns.map((col) => (
+                      {sectionGroupColumns.map((col) => (
                         <td key={col.accessor}>
                           {col.render
                             ? col.render(mapping)
@@ -534,11 +534,11 @@ const StoreSectionMapping = () => {
         </div>
       </Modal>
 
-      {/* Category-Section Mapping Modal */}
+      {/* Group-Section Mapping Modal */}
       <Modal
         opened={categoryMappingModal}
         onClose={() => setCategoryMappingModal(false)}
-        title="Map Category to Section"
+        title="Map Group to Section"
         size="md"
       >
         <div className="space-y-4">
@@ -552,11 +552,11 @@ const StoreSectionMapping = () => {
           />
 
           <MultiSelect
-            label="Select Categories"
-            placeholder="Choose categories to map"
-            data={categoryOptions}
-            value={selectedCategories}
-            onChange={setSelectedCategories}
+            label="Select Groups"
+            placeholder="Choose groups to map"
+            data={groupOptions}
+            value={selectedGroups}
+            onChange={setSelectedGroups}
             searchable
             required
           />
@@ -568,7 +568,7 @@ const StoreSectionMapping = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleCategoryMapping}>Map Categories</Button>
+            <Button onClick={handleGroupMapping}>Map Groups</Button>
           </Group>
         </div>
       </Modal>
