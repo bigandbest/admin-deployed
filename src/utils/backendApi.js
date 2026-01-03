@@ -1450,3 +1450,64 @@ export const getZoneDetails = () => ({
   success: false,
   error: "Not implemented",
 });
+
+// SECTION MAPPINGS - Subcategory Mappings
+export async function getSectionByKey(sectionKey) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections`);
+    const data = await handleResponse(response);
+    if (data.success) {
+      const section = data.data.find(s => s.section_key === sectionKey);
+      return { success: true, section };
+    }
+    return { success: false, error: 'Section not found' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getSectionSubcategoryMappings(sectionId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateSectionSubcategoryMappings(sectionId, mappings) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function addSubcategoriesToSection(sectionId, subcategoryIds, displayOrders = []) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subcategory_ids: subcategoryIds, display_orders: displayOrders }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function removeSubcategoryFromSection(sectionId, subcategoryId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories/${subcategoryId}`, {
+      method: 'DELETE',
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}

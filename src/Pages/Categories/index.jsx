@@ -21,7 +21,8 @@ import {
   Tooltip,
   Loader,
   Center,
-  
+  Divider,
+
 } from "@mantine/core";
 import {
   FaEdit,
@@ -32,7 +33,7 @@ import {
   FaLayerGroup,
   FaChevronDown,
   FaChevronRight,
-  
+
 } from "react-icons/fa";
 import { showNotification } from "@mantine/notifications";
 
@@ -57,6 +58,7 @@ import {
   getProductCountByCategory,
   checkCategoryHasProducts,
 } from "../../utils/supabaseApi";
+import SectionMappingManager from "../../components/SectionMappingManager";
 
 const styles = `
   .categories-table {
@@ -1011,6 +1013,9 @@ const CategoriesPage = () => {
             <Tabs.Tab value="hierarchy" leftSection={<FaLayerGroup />}>
               Category Hierarchy
             </Tabs.Tab>
+            <Tabs.Tab value="section-mappings" leftSection={<FaLayerGroup />}>
+              Section Mappings
+            </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="categories" pt="xs">
@@ -1951,6 +1956,39 @@ const CategoriesPage = () => {
               </div>
             </ScrollArea>
           </Tabs.Panel>
+
+          {/* Section Mappings Tab */}
+          <Tabs.Panel value="section-mappings" pt="xs">
+            <div className="space-y-6">
+              <Card>
+                <Title order={2}>Manage Section Mappings</Title>
+                <Text size="sm" color="dimmed" mb="md">
+                  Control which categories and subcategories appear in PriceZone and ShopByCategory sections
+                </Text>
+                
+                {/* PriceZone Section */}
+                <SectionMappingManager
+                  sectionKey="price_zone"
+                  sectionName="Price Zone"
+                  mappingType="subcategory"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
+                
+                <Divider my="xl" />
+                
+                {/* ShopByCategory Section */}
+                <SectionMappingManager
+                  sectionKey="shop_by_category"
+                  sectionName="Shop By Category"
+                  mappingType="both"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
+              </Card>
+            </div>
+          </Tabs.Panel>
+
         </Tabs>
       </Card>
 
@@ -2437,8 +2475,8 @@ const CategoriesPage = () => {
               {deleteOptions.action === "forceDelete"
                 ? "Delete Category & Products"
                 : deleteOptions.action === "reassign"
-                ? "Delete Category & Move Products"
-                : "Check & Delete"}
+                  ? "Delete Category & Move Products"
+                  : "Check & Delete"}
             </Button>
           </Group>
         </div>
