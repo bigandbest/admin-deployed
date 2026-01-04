@@ -180,12 +180,14 @@ const SectionMappingManager = ({
                 const subcategoryMappings = [];
                 Object.keys(selectedMappings).forEach((key) => {
                     if (key.startsWith("sub_") && selectedMappings[key]) {
-                        const subcategoryId = parseInt(key.replace("sub_", ""));
-                        subcategoryMappings.push({
-                            subcategory_id: subcategoryId,
-                            display_order: displayOrders[key] || 0,
-                            is_active: true,
-                        });
+                        const subcategoryId = key.replace("sub_", "");
+                        if (subcategoryId && subcategoryId !== "undefined") {
+                            subcategoryMappings.push({
+                                subcategory_id: subcategoryId,
+                                display_order: displayOrders[key] || 0,
+                                is_active: true,
+                            });
+                        }
                     }
                 });
 
