@@ -910,19 +910,46 @@ export const toggleAdsBannerStatus = () => ({
   success: false,
   error: "Not implemented",
 });
-export const addCategory = () => ({ success: false, error: "Not implemented" });
-export const updateCategory = () => ({
-  success: false,
-  error: "Not implemented",
-});
+export async function addCategory(category, imageFile) {
+  try {
+    const formData = createFormData(category, 'image_url', imageFile);
+    const response = await fetch(`${API_BASE_URL}/categories`, {
+      method: 'POST',
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function updateCategory(id, category, imageFile) {
+  try {
+    const formData = createFormData(category, 'image_url', imageFile);
+    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export const deleteCategory = () => ({
   success: false,
   error: "Not implemented",
 });
-export const toggleCategoryStatus = () => ({
-  success: false,
-  error: "Not implemented",
-});
+export async function toggleCategoryStatus(id, active) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function getAllSubcategories() {
   try {
     const response = await fetch(`${API_BASE_URL}/categories/subcategories`);
