@@ -51,9 +51,7 @@ import VideoBannerManagement from "./Pages/VideoBanners/VideoBannerManagement.js
 import AdminOrders from "./Pages/Orders/index.jsx";
 import ShippingBanner from "./Pages/ShippingBanner/ShippingBanner.jsx";
 import Notification from "./Pages/Notifications/Notification.jsx";
-import Bnb from "./Pages/B&b/B&b.jsx";
-import BnbGroup from "./Pages/B&b/B&bGroup.jsx";
-import BnbGroupProducts from "./Pages/B&b/B&bGroupProducts.jsx";
+import DailyDeals from "./Pages/B&b/DailyDeals.jsx";
 import Brand from "./Pages/Brand/Brand.jsx";
 import BrandProducts from "./Pages/Brand/BrandProducts.jsx";
 import QuickPicksPage from "./Pages/QuickPicks/QuickPicks.jsx";
@@ -62,9 +60,6 @@ import QuickPickGroupProducts from "./Pages/QuickPicks/QuickPickGroupProducts.js
 import RecommendedStore from "./Pages/RecommendedStore/RecommendedStore.jsx";
 import RecommendedStoreProducts from "./Pages/RecommendedStore/RecommendedStoreProducts.jsx";
 import ShopByStore from "./Pages/ShopByStore/ShopByStore.jsx";
-import SavingZone from "./Pages/SavingZone/SavingZone.jsx";
-import SavingZoneGroupPage from "./Pages/SavingZone/SavingZoneGroup.jsx";
-import SavingZoneGroupProducts from "./Pages/SavingZone/SavingZoneGroupProducts.jsx";
 import YouMayLikeProducts from "./Pages/YouMayLike/YouMayLikeProducts.jsx";
 import Store from "./Components/Store/Store.jsx";
 import SubStore from "./Pages/SubStore/SubStore.jsx";
@@ -307,16 +302,8 @@ function App() {
           element: <Notification />,
         },
         {
-          path: "/b&b",
-          element: <Bnb />,
-        },
-        {
-          path: "/bnb-groups",
-          element: <BnbGroup />,
-        },
-        {
-          path: "/b&b-groups-products/:id",
-          element: <BnbGroupProducts />,
+          path: "/daily-deals",
+          element: <DailyDeals />,
         },
         {
           path: "/add-banner",
@@ -366,18 +353,6 @@ function App() {
         {
           path: "/store-section-mapping",
           element: <StoreSectionMapping />,
-        },
-        {
-          path: "/saving-zone",
-          element: <SavingZone />,
-        },
-        {
-          path: "/saving-zone-groups",
-          element: <SavingZoneGroupPage />,
-        },
-        {
-          path: "/saving-zone-group/products/:id",
-          element: <SavingZoneGroupProducts />,
         },
         {
           path: "/youMayLikeProducts/:id",

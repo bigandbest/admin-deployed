@@ -20,6 +20,9 @@ import {
   FaTrademark,
   FaDatabase,
   FaVideo,
+  FaWallet,
+  FaBell,
+  FaHandshake,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -90,6 +93,12 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <RiDashboardFill />,
       path: "/",
     },
+    {
+      title: "Delivery Zones",
+      icon: <FaList />,
+      path: "/delivery-zones",
+      description: "Manage delivery zones and pincodes for product delivery",
+    },
     // {
     //   title: "Print Requests",
     //   icon: <RiPrinterFill />,
@@ -102,21 +111,53 @@ const Sidebar = ({ isOpen = true }) => {
     //   badge: enquiryCount,
     // },
     {
-      title: "Products",
+      title: "Product Manager",
       icon: <HiArchive />,
-
-      path: "/products",
+      submenu: [
+        {
+          title: "Products",
+          icon: <HiArchive />,
+          path: "/products",
+        },
+        {
+          title: "Categories",
+          icon: <MdCategory />,
+          path: "/categories",
+        },
+        {
+          title: "Brands",
+          icon: <FaTrademark />,
+          path: "/brands",
+        },
+        {
+          title: "Daily Deals",
+          icon: <FaList />,
+          path: "/daily-deals",
+        },
+        {
+          title: "Shop By Stores",
+          icon: <FaList />,
+          path: "/shop-by-stores",
+        },
+      ],
     },
     {
-      title: "Categories",
-      icon: <MdCategory />,
-      path: "/categories",
-    },
-    {
-      title: "Product Sections",
-      icon: <FaList />,
-      path: "/product-sections",
-      description: "Manage homepage product sections",
+      title: "Section Manager",
+      icon: <RiSettings4Fill />,
+      submenu: [
+        {
+          title: "Product Sections",
+          icon: <FaList />,
+          path: "/product-sections",
+          description: "Manage homepage product sections",
+        },
+        {
+          title: "Store-Section Mapping",
+          icon: <RiSettings4Fill />,
+          path: "/store-section-mapping",
+          description: "Map stores to sections and manage product assignments",
+        },
+      ],
     },
     // {
     //   title: "Banners",
@@ -124,9 +165,20 @@ const Sidebar = ({ isOpen = true }) => {
     //   path: "/banners",
     // },
     {
-      title: "Video Cards",
-      icon: <FaVideo />,
-      path: "/video-cards",
+      title: "Marketing Manager",
+      icon: <FaTag />,
+      submenu: [
+        {
+          title: "Video Cards",
+          icon: <FaVideo />,
+          path: "/video-cards",
+        },
+        {
+          title: "Add Banners",
+          icon: <FaPlus />,
+          path: "/add-banner",
+        },
+      ],
     },
     // {
     //   title: "Promotions",
@@ -134,42 +186,30 @@ const Sidebar = ({ isOpen = true }) => {
     //   path: "/promotional-settings",
     //   description: "Manage promotional banners, offers, and marketing content",
     // },
-    {
-      title: "Storage",
-      icon: <FaDatabase />,
-      path: "/storage/enhanced",
-      description: "Manage storage usage and files",
-    },
-    {
-      title: "Delivery Zones",
-      icon: <FaList />,
-      path: "/delivery-zones",
-      description: "Manage delivery zones and pincodes for product delivery",
-    },
-    {
-      title: "Daily Deals",
-      icon: <FaList />,
-      path: "/b&b",
-    },
-    {
-      title: "AddBanners",
-      icon: <FaPlus />,
-      path: "/add-banner",
-    },
+
+
+
     // {
     //   title: "UniqueSections",
     //   icon: <FaPlus />,
     //   path: "/unique-sections",
     // },
+
     {
-      title: "Brands",
-      icon: <FaTrademark />,
-      path: "/brands",
-    },
-    {
-      title: "BBM Dost",
-      icon: <FaList />,
-      path: "/bbm-dost",
+      title: "Partner Manager",
+      icon: <FaHandshake />,
+      submenu: [
+        {
+          title: "BBM Dost",
+          icon: <FaList />,
+          path: "/bbm-dost",
+        },
+        {
+          title: "Business Partners",
+          icon: <FaHandshake />,
+          path: "/business-data",
+        },
+      ],
     },
     // {
     //   title: "Quick Picks",
@@ -184,23 +224,35 @@ const Sidebar = ({ isOpen = true }) => {
     // },
     // Users: Manage users, roles, add/delete/change role
     {
-      title: "Users",
+      title: "User & Payments ",
       icon: <FaUsers />,
-      path: "/users",
       badge: userCount,
-      description: "Manage users, roles, add, delete, change role",
-    },
-    {
-      title: "Wallet Management",
-      icon: <FaList />,
-      path: "/wallet-management",
-      description: "Manage user wallets, balances, and operations",
-    },
-    {
-      title: "Wallet Transactions",
-      icon: <FaList />,
-      path: "/wallet-transactions",
-      description: "View wallet transactions and audit logs",
+      submenu: [
+        {
+          title: "Users",
+          icon: <FaUsers />,
+          path: "/users",
+          description: "Manage users, roles, add, delete, change role",
+        },
+        {
+          title: "Wallet Management",
+          icon: <FaWallet />,
+          path: "/wallet-management",
+          description: "Manage user wallets, balances, and operations",
+        },
+        {
+          title: "Wallet Transactions",
+          icon: <FaList />,
+          path: "/wallet-transactions",
+          description: "View wallet transactions and audit logs",
+        },
+        {
+          title: "Notifications",
+          icon: <FaBell />,
+          path: "/notifications",
+          description: "Manage user notifications",
+        },
+      ],
     },
     {
       title: "Product Enquiries",
@@ -208,11 +260,7 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/product-enquiries",
       description: "Manage product enquiries and create bid offers",
     },
-    {
-      title: "Business Partners",
-      icon: <FaList />,
-      path: "/business-data",
-    },
+
     {
       title: "Orders",
       icon: <FaList />,
@@ -225,23 +273,13 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaDatabase />,
       path: "/warehouse-management",
       description: "Manage warehouses, products, and stock inventory",
+    }, {
+      title: "Storage",
+      icon: <FaDatabase />,
+      path: "/storage/enhanced",
+      description: "Manage storage usage and files",
     },
-    {
-      title: "Shop By Stores",
-      icon: <FaList />,
-      path: "/shop-by-stores",
-    },
-    {
-      title: "Store-Section Mapping",
-      icon: <RiSettings4Fill />,
-      path: "/store-section-mapping",
-      description: "Map stores to sections and manage product assignments",
-    },
-    {
-      title: "Corporate Celebration",
-      icon: <FaList />,
-      path: "/saving-zone",
-    },
+
     // {
     //   title: "Section",
     //   icon: <FaList />,
@@ -257,11 +295,7 @@ const Sidebar = ({ isOpen = true }) => {
     //   icon: <FaTrademark />,
     //   path: "/youMayLikeProducts/:id",
     // },
-    {
-      title: "Notifications",
-      icon: <RiSettings4Fill />,
-      path: "/notifications",
-    },
+
     {
       title: "Settings",
       icon: <RiSettings4Fill />,
