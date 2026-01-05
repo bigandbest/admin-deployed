@@ -1965,7 +1965,7 @@ const CategoriesPage = () => {
                 <Text size="sm" color="dimmed" mb="md">
                   Control which categories and subcategories appear in PriceZone and ShopByCategory sections
                 </Text>
-                
+
                 {/* PriceZone Section */}
                 <SectionMappingManager
                   sectionKey="price_zone"
@@ -1974,14 +1974,58 @@ const CategoriesPage = () => {
                   categories={categories}
                   subcategories={subcategories}
                 />
-                
+
                 <Divider my="xl" />
-                
+
                 {/* ShopByCategory Section */}
                 <SectionMappingManager
                   sectionKey="shop_by_category"
                   sectionName="Shop By Category"
                   mappingType="both"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
+
+                <Divider my="xl" />
+
+                {/* Dual Deals - Left Section */}
+                <SectionMappingManager
+                  sectionKey="dual_deals_left"
+                  sectionName="Dual Deals - Best Selling (Left)"
+                  mappingType="category"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
+
+                <Divider my="xl" />
+
+                {/* Dual Deals - Right Section */}
+                <SectionMappingManager
+                  sectionKey="dual_deals_right"
+                  sectionName="Dual Deals - Trending (Right)"
+                  mappingType="category"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
+
+                <Divider my="xl" />
+
+                {/* Discount Corner - Left Section */}
+                <SectionMappingManager
+                  sectionKey="discount_corner_left"
+                  sectionName="Discount Corner - Left Panel"
+                  mappingType="category"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
+
+                <Divider my="xl" />
+
+                {/* Discount Corner - Right Section */}
+                <SectionMappingManager
+                  sectionKey="discount_corner_right"
+                  sectionName="Discount Corner - Right Panel"
+                  mappingType="category"
                   categories={categories}
                   subcategories={subcategories}
                 />
