@@ -142,16 +142,28 @@ const ZoneUploadModal = ({ opened, onClose, onSuccess }) => {
           </Text>
           <List size="sm">
             <List.Item>
-              <strong>zone_name</strong>: Name of the delivery zone
+              <strong>zone_name</strong>: Name of the delivery zone (required)
             </List.Item>
             <List.Item>
-              <strong>pincode</strong>: 6-digit pincode
+              <strong>pincode</strong>: 6-digit pincode (required)
+            </List.Item>
+            <List.Item>
+              <strong>district</strong>: District name (optional)
+            </List.Item>
+            <List.Item>
+              <strong>location_name</strong>: Specific location name (optional)
+            </List.Item>
+            <List.Item>
+              <strong>village</strong>: Village name (optional)
             </List.Item>
             <List.Item>
               <strong>city</strong>: City name (optional)
             </List.Item>
             <List.Item>
               <strong>state</strong>: State name (optional)
+            </List.Item>
+            <List.Item>
+              <strong>others</strong>: Additional location details (optional)
             </List.Item>
           </List>
         </Alert>

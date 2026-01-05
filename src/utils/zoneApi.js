@@ -5,9 +5,9 @@ import axios from "axios";
 const API_BASE_URL = import.meta.env.DEV
   ? "/api"
   : import.meta.env.VITE_API_BASE_URL ||
-    (window.location.origin.includes("localhost")
-      ? "http://localhost:8080"
-      : "/api");
+  (window.location.origin.includes("localhost")
+    ? "http://localhost:8080"
+    : "/api");
 
 // Configure axios defaults
 const api = axios.create({
@@ -21,7 +21,7 @@ const api = axios.create({
 export const fetchZones = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     if (params.is_active !== undefined) {
       queryParams.append('is_active', params.is_active);
     }
@@ -38,17 +38,17 @@ export const fetchZones = async (params = {}) => {
     const response = await fetch(
       `${import.meta.env.VITE_API_BASE_URL}/zones?${queryParams.toString()}`
     );
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const result = await response.json();
-    
+
     if (!result.success) {
       throw new Error(result.error || 'Failed to fetch zones');
     }
-    
+
     return result;
   } catch (error) {
     console.error("Fetch zones error:", error);
@@ -114,6 +114,19 @@ export const deleteZone = async (zoneId) => {
   } catch (error) {
     console.error("Delete zone error:", error);
     throw new Error(error.response?.data?.error || "Failed to delete zone");
+  }
+};
+
+/**
+ * Toggle zone active status
+ */
+export const toggleZoneActive = async (zoneId) => {
+  try {
+    const response = await api.patch(`/zones/${zoneId}/toggle-active`);
+    return response.data;
+  } catch (error) {
+    console.error("Toggle zone active error:", error);
+    throw new Error(error.response?.data?.error || "Failed to toggle zone status");
   }
 };
 
@@ -198,7 +211,7 @@ export const updateProductDelivery = async (productId, deliveryData) => {
     console.error("Update product delivery error:", error);
     throw new Error(
       error.response?.data?.error ||
-        "Failed to update product delivery settings"
+      "Failed to update product delivery settings"
     );
   }
 };
@@ -249,8 +262,8 @@ export const getZoneProductVisibility = async (zoneId) => {
     console.error("Get zone product visibility error:", error);
     throw new Error(
       error.response?.data?.error ||
-        error.message ||
-        "Failed to load zone product visibility"
+      error.message ||
+      "Failed to load zone product visibility"
     );
   }
 };
@@ -260,6 +273,7 @@ export default {
   fetchZoneById,
   createZone,
   updateZone,
+  toggleZoneActive,
   deleteZone,
   uploadZoneExcel,
   validatePincode,

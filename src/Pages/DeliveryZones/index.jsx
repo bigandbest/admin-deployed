@@ -37,7 +37,7 @@ import { motion } from "framer-motion";
 import ZoneUploadModal from "../../Components/ZoneManagement/ZoneUploadModal";
 import ZoneForm from "../../Components/ZoneManagement/ZoneForm";
 import ZoneDetailsModal from "../../Components/ZoneManagement/ZoneDetailsModal";
-import { deleteZone, getZoneStatistics, fetchZoneById } from "../../utils/zoneApi";
+import { deleteZone, getZoneStatistics, fetchZoneById, toggleZoneActive } from "../../utils/zoneApi";
 import { getAllZones } from "../../utils/supabaseApi";
 
 const DeliveryZones = () => {
@@ -217,6 +217,52 @@ const DeliveryZones = () => {
     setSelectedZone(null);
   };
 
+  // Handle toggle zone active status
+  const [togglingZoneId, setTogglingZoneId] = useState(null);
+
+  const handleToggleActive = async (zone) => {
+    // Prevent toggling nationwide zone
+    if (zone.name === "nationwide") {
+      notifications.show({
+        title: "Not Allowed",
+        message: "Cannot deactivate nationwide zone",
+        color: "orange",
+        icon: <IconX />,
+      });
+      return;
+    }
+
+    setTogglingZoneId(zone.id);
+    try {
+      const response = await toggleZoneActive(zone.id);
+      if (response.success) {
+        notifications.show({
+          title: "Success",
+          message: response.message,
+          color: "green",
+          icon: <IconCheck />,
+        });
+
+        // Update local state optimistically
+        setZones((prevZones) =>
+          prevZones.map((z) =>
+            z.id === zone.id ? { ...z, is_active: response.zone.is_active } : z
+          )
+        );
+        loadStatistics();
+      }
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: error.message || "Failed to toggle zone status",
+        color: "red",
+        icon: <IconX />,
+      });
+    } finally {
+      setTogglingZoneId(null);
+    }
+  };
+
   // Statistics cards - Add PropTypes validation
   const StatCard = ({ title, value, icon, color = "blue" }) => (
     <Card shadow="sm" padding="md" radius="md" withBorder>
@@ -394,12 +440,19 @@ const DeliveryZones = () => {
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Badge
-                          color={zone.is_active ? "green" : "red"}
-                          variant="light"
-                        >
-                          {zone.is_active ? "Active" : "Inactive"}
-                        </Badge>
+                        <Switch
+                          checked={zone.is_active}
+                          onChange={() => handleToggleActive(zone)}
+                          disabled={togglingZoneId === zone.id || zone.name === "nationwide"}
+                          color="green"
+                          size="md"
+                          label={zone.is_active ? "Active" : "Inactive"}
+                          styles={{
+                            track: {
+                              cursor: zone.name === "nationwide" ? "not-allowed" : "pointer",
+                            },
+                          }}
+                        />
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" color="dimmed">

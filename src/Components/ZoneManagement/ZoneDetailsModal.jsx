@@ -75,7 +75,10 @@ const ZoneDetailsModal = ({ opened, onClose, zone }) => {
     (pincode) =>
       pincode.pincode.includes(pincodeSearch) ||
       pincode.city?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
-      pincode.state?.toLowerCase().includes(pincodeSearch.toLowerCase())
+      pincode.state?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      pincode.district?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      pincode.location_name?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      pincode.village?.toLowerCase().includes(pincodeSearch.toLowerCase())
   );
 
   // Paginate pincodes
@@ -203,8 +206,12 @@ const ZoneDetailsModal = ({ opened, onClose, zone }) => {
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th>Pincode</Table.Th>
+                          <Table.Th>District</Table.Th>
+                          <Table.Th>Location</Table.Th>
+                          <Table.Th>Village</Table.Th>
                           <Table.Th>City</Table.Th>
                           <Table.Th>State</Table.Th>
+                          <Table.Th>Others</Table.Th>
                           <Table.Th>Status</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
@@ -215,10 +222,22 @@ const ZoneDetailsModal = ({ opened, onClose, zone }) => {
                               <Text weight={500}>{pincode.pincode}</Text>
                             </Table.Td>
                             <Table.Td>
-                              <Text>{pincode.city || "N/A"}</Text>
+                              <Text size="sm">{pincode.district || "—"}</Text>
                             </Table.Td>
                             <Table.Td>
-                              <Text>{pincode.state || "N/A"}</Text>
+                              <Text size="sm">{pincode.location_name || "—"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{pincode.village || "—"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{pincode.city || "—"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{pincode.state || "—"}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{pincode.others || "—"}</Text>
                             </Table.Td>
                             <Table.Td>
                               <Badge
@@ -289,6 +308,10 @@ ZoneDetailsModal.propTypes = {
         pincode: PropTypes.string,
         city: PropTypes.string,
         state: PropTypes.string,
+        district: PropTypes.string,
+        location_name: PropTypes.string,
+        village: PropTypes.string,
+        others: PropTypes.string,
         is_active: PropTypes.bool,
       })
     ),
