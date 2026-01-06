@@ -215,6 +215,26 @@ const AddProduct = () => {
           console.error("Failed to fetch product sections:", sectionError);
           // Don't fail the whole operation if section fetch fails
         }
+
+        // Fetch and populate store mapping
+        try {
+          const storeResponse = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL}/product-recommended-stores/product/${productId}`
+          );
+          if (storeResponse.data && Array.isArray(storeResponse.data) && storeResponse.data.length > 0) {
+            // Get the first store mapping (assuming one product maps to one primary store)
+            const storeMapping = storeResponse.data[0];
+            if (storeMapping.recommended_store_id) {
+              setForm(prev => ({
+                ...prev,
+                store_id: storeMapping.recommended_store_id.toString()
+              }));
+            }
+          }
+        } catch (storeError) {
+          console.error("Failed to fetch product store mapping:", storeError);
+          // Don't fail the whole operation if store fetch fails
+        }
       }
     } catch (error) {
       console.error("Failed to fetch product for edit:", error);
@@ -584,6 +604,36 @@ const AddProduct = () => {
             setError(
               "Product created successfully, but failed to assign to some sections. You can assign them later."
             );
+          }
+        }
+
+        // Map product to recommended store if store_id is selected
+        if (form.store_id && createdProductId) {
+          try {
+            const storeMapping = {
+              product_id: createdProductId,
+              recommended_store_id: form.store_id // Keep as UUID string, don't parse to int
+            };
+
+            const storeResponse = await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL}/product-recommended-stores/map`,
+              storeMapping,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                },
+              }
+            );
+
+            console.log("Product mapped to store successfully:", storeResponse.data);
+          } catch (storeError) {
+            console.error("Error mapping product to store:", storeError);
+            // Don't fail the whole operation if store mapping fails
+            if (storeError.response?.status !== 409) { // Ignore duplicate mapping errors
+              setError(
+                "Product saved successfully, but failed to map to the selected store. You can map it later."
+              );
+            }
           }
         }
 
@@ -1519,25 +1569,6 @@ const AddProduct = () => {
                   >
                     {isEditMode ? "Update Product" : "Create Product"}
                   </Button>
-
-                  {/* Test button */}
-                  <button
-                    onClick={() => {
-                      console.log("🟢 TEST BUTTON CLICKED!");
-                      alert("Test button works!");
-                    }}
-                    style={{
-                      marginLeft: '10px',
-                      padding: '10px 20px',
-                      background: 'orange',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '5px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    TEST CLICK
-                  </button>
                 </>
               ) : (
                 <Button
