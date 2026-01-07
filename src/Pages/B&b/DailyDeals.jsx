@@ -329,7 +329,25 @@ const DailyDealsPage = () => {
         api.get(`/daily-deals-product/daily-deal/${deal.id}`),
         api.get("/productsroute/allproducts"),
       ]);
-      setDealProducts(productsResponse.data || []);
+
+      // Handle new response format with success wrapper
+      const dealProducts = productsResponse.data.success
+        ? productsResponse.data.products || []
+        : productsResponse.data || [];
+
+      // Transform to match expected format for admin panel
+      const transformedDealProducts = dealProducts.map(product => ({
+        product_id: product.id,
+        products: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          image: product.image,
+        }
+      }));
+
+      setDealProducts(transformedDealProducts);
       setAllProducts(allProductsResponse.data.products || []);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -350,7 +368,24 @@ const DailyDealsPage = () => {
       const response = await api.get(
         `/daily-deals-product/daily-deal/${selectedDeal.id}`
       );
-      setDealProducts(response.data || []);
+
+      // Handle new response format
+      const dealProducts = response.data.success
+        ? response.data.products || []
+        : response.data || [];
+
+      const transformedDealProducts = dealProducts.map(product => ({
+        product_id: product.id,
+        products: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          image: product.image,
+        }
+      }));
+
+      setDealProducts(transformedDealProducts);
     } catch (error) {
       console.error("Error mapping product:", error);
     } finally {
@@ -368,7 +403,24 @@ const DailyDealsPage = () => {
       const response = await api.get(
         `/daily-deals-product/daily-deal/${selectedDeal.id}`
       );
-      setDealProducts(response.data || []);
+
+      // Handle new response format
+      const dealProducts = response.data.success
+        ? response.data.products || []
+        : response.data || [];
+
+      const transformedDealProducts = dealProducts.map(product => ({
+        product_id: product.id,
+        products: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          image: product.image,
+        }
+      }));
+
+      setDealProducts(transformedDealProducts);
     } catch (error) {
       console.error("Error unmapping product:", error);
     } finally {
@@ -709,8 +761,8 @@ const DailyDealsPage = () => {
                   <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${deal.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
                         }`}
                     >
                       {deal.active ? "Active" : "Inactive"}

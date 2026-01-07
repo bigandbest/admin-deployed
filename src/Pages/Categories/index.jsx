@@ -2029,6 +2029,17 @@ const CategoriesPage = () => {
                   categories={categories}
                   subcategories={subcategories}
                 />
+
+                <Divider my="xl" />
+
+                {/* Mega Monsoon Section */}
+                <SectionMappingManager
+                  sectionKey="mega_monsoon"
+                  sectionName="Mega Monsoon Sale"
+                  mappingType="both"
+                  categories={categories}
+                  subcategories={subcategories}
+                />
               </Card>
             </div>
           </Tabs.Panel>
