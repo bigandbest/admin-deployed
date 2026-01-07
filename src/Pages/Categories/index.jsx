@@ -58,7 +58,7 @@ import {
   getProductCountByCategory,
   checkCategoryHasProducts,
 } from "../../utils/supabaseApi";
-import SectionMappingManager from "../../components/SectionMappingManager";
+import SectionMappingManager from "../../Components/SectionMappingManager";
 
 const styles = `
   .categories-table {
