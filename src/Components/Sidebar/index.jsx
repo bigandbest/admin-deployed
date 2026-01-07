@@ -23,6 +23,7 @@ import {
   FaWallet,
   FaBell,
   FaHandshake,
+  FaStar,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -177,6 +178,11 @@ const Sidebar = ({ isOpen = true }) => {
           title: "Add Banners",
           icon: <FaPlus />,
           path: "/add-banner",
+        },
+        {
+          title: "Customer Reviews",
+          icon: <FaStar />,
+          path: "/customer-reviews",
         },
       ],
     },

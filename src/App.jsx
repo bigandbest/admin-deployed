@@ -83,6 +83,7 @@ import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
 import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
 import ProductEnquiries from "./Pages/ProductEnquiries/index.jsx";
+import CustomerReviewManager from "./Pages/ReviewManager/index.jsx";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -417,6 +418,10 @@ function App() {
         {
           path: "/product-enquiries",
           element: <ProductEnquiries />,
+        },
+        {
+          path: "/customer-reviews",
+          element: <CustomerReviewManager />,
         },
       ],
     },
