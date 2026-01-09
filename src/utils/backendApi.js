@@ -934,10 +934,18 @@ export async function updateCategory(id, category, imageFile) {
     return { success: false, error: error.message };
   }
 }
-export const deleteCategory = () => ({
-  success: false,
-  error: "Not implemented",
-});
+export async function deleteCategory(id, options = {}) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function toggleCategoryStatus(id, active) {
   try {
     const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
@@ -962,18 +970,40 @@ export const getSubcategoriesByCategory = () => ({
   success: false,
   error: "Not implemented",
 });
-export const addSubcategory = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const updateSubcategory = () => ({
-  success: false,
-  error: "Not implemented",
-});
-export const deleteSubcategory = () => ({
-  success: false,
-  error: "Not implemented",
-});
+export async function addSubcategory(subcategory, imageFile) {
+  try {
+    const formData = createFormData(subcategory, 'image_url', imageFile);
+    const response = await fetch(`${API_BASE_URL}/categories/subcategories`, {
+      method: 'POST',
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function updateSubcategory(id, subcategory, imageFile) {
+  try {
+    const formData = createFormData(subcategory, 'image_url', imageFile);
+    const response = await fetch(`${API_BASE_URL}/categories/subcategories/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function deleteSubcategory(id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories/subcategories/${id}`, {
+      method: 'DELETE',
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function getAllGroups() {
   try {
     const response = await fetch(`${API_BASE_URL}/categories/groups`);
@@ -986,9 +1016,40 @@ export const getGroupsBySubcategory = () => ({
   success: false,
   error: "Not implemented",
 });
-export const addGroup = () => ({ success: false, error: "Not implemented" });
-export const updateGroup = () => ({ success: false, error: "Not implemented" });
-export const deleteGroup = () => ({ success: false, error: "Not implemented" });
+export async function addGroup(group, imageFile) {
+  try {
+    const formData = createFormData(group, 'image_url', imageFile);
+    const response = await fetch(`${API_BASE_URL}/categories/groups`, {
+      method: 'POST',
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function updateGroup(id, group, imageFile) {
+  try {
+    const formData = createFormData(group, 'image_url', imageFile);
+    const response = await fetch(`${API_BASE_URL}/categories/groups/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+export async function deleteGroup(id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories/groups/${id}`, {
+      method: 'DELETE',
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
 export async function addProduct(
   productData,
   displayImageFile,

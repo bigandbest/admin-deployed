@@ -76,6 +76,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
       location_name: "",
       village: "",
       others: "",
+      is_active: true,
     },
     validate: {
       pincode: (value) => {
@@ -112,6 +113,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
           location_name: p.location_name || "",
           village: p.village || "",
           others: p.others || "",
+          is_active: p.is_active !== undefined ? p.is_active : true,
         })));
       }
     } else {
@@ -164,6 +166,15 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
 
   const handleDeletePincode = (index) => {
     setPincodes(pincodes.filter((_, idx) => idx !== index));
+  };
+
+  const handleTogglePincodeActive = (index) => {
+    const updatedPincodes = [...pincodes];
+    updatedPincodes[index] = {
+      ...updatedPincodes[index],
+      is_active: !updatedPincodes[index].is_active,
+    };
+    setPincodes(updatedPincodes);
   };
 
   const handleCancelPincode = () => {
@@ -377,6 +388,13 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
                       {...pincodeForm.getInputProps("others")}
                     />
 
+                    <Switch
+                      label="Active Pincode"
+                      description="Enable or disable this pincode for delivery"
+                      {...pincodeForm.getInputProps("is_active", { type: "checkbox" })}
+                      color="green"
+                    />
+
                     <Group justify="flex-end" spacing="sm">
                       <Button
                         variant="subtle"
@@ -400,11 +418,13 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
                     <Table.Thead>
                       <Table.Tr>
                         <Table.Th>Pincode</Table.Th>
-                        <Table.Th>District</Table.Th>
                         <Table.Th>Location</Table.Th>
                         <Table.Th>Village</Table.Th>
+                        <Table.Th>District</Table.Th>
                         <Table.Th>City</Table.Th>
                         <Table.Th>State</Table.Th>
+                        <Table.Th>Others</Table.Th>
+                        <Table.Th>Status</Table.Th>
                         <Table.Th>Actions</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
@@ -415,19 +435,31 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
                             <Text weight={500}>{pincode.pincode}</Text>
                           </Table.Td>
                           <Table.Td>
-                            <Text size="sm">{pincode.district || "—"}</Text>
-                          </Table.Td>
-                          <Table.Td>
                             <Text size="sm">{pincode.location_name || "—"}</Text>
                           </Table.Td>
                           <Table.Td>
                             <Text size="sm">{pincode.village || "—"}</Text>
                           </Table.Td>
                           <Table.Td>
+                            <Text size="sm">{pincode.district || "—"}</Text>
+                          </Table.Td>
+                          <Table.Td>
                             <Text size="sm">{pincode.city || "—"}</Text>
                           </Table.Td>
                           <Table.Td>
                             <Text size="sm">{pincode.state || "—"}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{pincode.others || "—"}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Switch
+                              checked={pincode.is_active !== false}
+                              onChange={() => handleTogglePincodeActive(index)}
+                              color="green"
+                              size="sm"
+                              label={pincode.is_active !== false ? "Active" : "Inactive"}
+                            />
                           </Table.Td>
                           <Table.Td>
                             <Group gap="xs">
