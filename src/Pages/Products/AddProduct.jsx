@@ -1514,7 +1514,7 @@ const AddProduct = () => {
 
           {/* Stepper */}
           <div className="p-6 border-b">
-            <Stepper active={activeStep} breakpoint="sm" size="sm">
+            <Stepper active={activeStep} onStepClick={setActiveStep} breakpoint="sm" size="sm">
               {steps.map((step, index) => (
                 <Stepper.Step
                   key={index}
