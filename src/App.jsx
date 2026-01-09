@@ -84,6 +84,7 @@ import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
 import ProductEnquiries from "./Pages/ProductEnquiries/index.jsx";
 import CustomerReviewManager from "./Pages/ReviewManager/index.jsx";
+import SmallPromoCardManagement from "./Pages/SmallPromoCards/SmallPromoCardManagement.jsx";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -422,6 +423,10 @@ function App() {
         {
           path: "/customer-reviews",
           element: <CustomerReviewManager />,
+        },
+        {
+          path: "/small-promo-cards",
+          element: <SmallPromoCardManagement />,
         },
       ],
     },

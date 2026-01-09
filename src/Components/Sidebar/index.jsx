@@ -184,6 +184,11 @@ const Sidebar = ({ isOpen = true }) => {
           icon: <FaStar />,
           path: "/customer-reviews",
         },
+        {
+          title: "Small Promo Cards",
+          icon: <GiTargetPoster />,
+          path: "/small-promo-cards",
+        },
       ],
     },
     // {
