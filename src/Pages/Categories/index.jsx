@@ -565,7 +565,9 @@ const CategoriesPage = () => {
 
   const openEditModal = (category) => {
     setCurrentCategory(category);
-    setNewCategory({ ...category });
+    // Filter out computed fields like 'subcategories' that don't exist in the database
+    const { subcategories, ...categoryData } = category;
+    setNewCategory(categoryData);
     setCategoryImageFile(null);
     setModalOpen(true);
   };
@@ -587,7 +589,9 @@ const CategoriesPage = () => {
 
   const openEditSubcategoryModal = (subcategory) => {
     setCurrentSubcategory(subcategory);
-    setNewSubcategory({ ...subcategory });
+    // Filter out computed fields like 'groups' and 'categories' that don't exist in the database
+    const { groups, categories, ...subcategoryData } = subcategory;
+    setNewSubcategory(subcategoryData);
     setSubcategoryModalOpen(true);
   };
 
@@ -608,7 +612,9 @@ const CategoriesPage = () => {
 
   const openEditGroupModal = (group) => {
     setCurrentGroup(group);
-    setNewGroup({ ...group });
+    // Filter out computed fields like 'subcategories' that don't exist in the database
+    const { subcategories, ...groupData } = group;
+    setNewGroup(groupData);
     setGroupModalOpen(true);
   };
 
