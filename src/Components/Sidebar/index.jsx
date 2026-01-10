@@ -25,6 +25,8 @@ import {
   FaHandshake,
   FaStar,
   FaEnvelope,
+  FaRupeeSign,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -100,6 +102,18 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaList />,
       path: "/delivery-zones",
       description: "Manage delivery zones and pincodes for product delivery",
+    },
+    {
+      title: "Delivery Charges",
+      icon: <FaRupeeSign />,
+      path: "/delivery-charges",
+      description: "Manage delivery charge milestones based on order value",
+    },
+    {
+      title: "Charge Settings",
+      icon: <FaMoneyBillWave />,
+      path: "/charge-settings",
+      description: "Configure handling, surge, and platform charges",
     },
     {
       title: "About Page Setup",

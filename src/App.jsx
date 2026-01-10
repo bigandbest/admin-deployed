@@ -80,6 +80,8 @@ import StoreSectionMapping from "./Pages/StoreSectionMapping/StoreSectionMapping
 import CodOrders from "./Pages/CodOrders/CodOrders.jsx";
 import UnifiedOrders from "./Pages/Orders/UnifiedOrders.jsx";
 import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
+import DeliveryCharges from "./Pages/DeliveryCharges/index.jsx";
+import ChargeSettings from "./Pages/ChargeSettings/index.jsx";
 import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
 import ProductEnquiries from "./Pages/ProductEnquiries/index.jsx";
@@ -409,6 +411,14 @@ function App() {
         {
           path: "/delivery-zones",
           element: <DeliveryZones />,
+        },
+        {
+          path: "/delivery-charges",
+          element: <DeliveryCharges />,
+        },
+        {
+          path: "/charge-settings",
+          element: <ChargeSettings />,
         },
         {
           path: "/wallet-management",
