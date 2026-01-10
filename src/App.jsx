@@ -88,6 +88,7 @@ import SmallPromoCardManagement from "./Pages/SmallPromoCards/SmallPromoCardMana
 import PartnerManager from "./Pages/Partners/PartnerManager.jsx";
 import CertificationManager from "./Pages/Certifications/CertificationManager.jsx";
 import AboutContentManager from "./Pages/AboutManager/AboutContentManager.jsx";
+import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
 
 
 const MainLayout = () => {
@@ -443,6 +444,10 @@ function App() {
         {
           path: "/about-content-setup",
           element: <AboutContentManager />,
+        },
+        {
+          path: "/contact-queries",
+          element: <ContactQueries />,
         },
 
 

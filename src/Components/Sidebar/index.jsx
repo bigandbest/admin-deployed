@@ -24,6 +24,7 @@ import {
   FaBell,
   FaHandshake,
   FaStar,
+  FaEnvelope,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -105,6 +106,12 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <RiQuestionnaireFill />,
       path: "/about-content-setup",
       description: "Manage About Us page banner and text",
+    },
+    {
+      title: "Contact Queries",
+      icon: <FaEnvelope />,
+      path: "/contact-queries",
+      description: "View and manage contact form submissions",
     },
 
     // {
