@@ -100,6 +100,13 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/delivery-zones",
       description: "Manage delivery zones and pincodes for product delivery",
     },
+    {
+      title: "About Page Setup",
+      icon: <RiQuestionnaireFill />,
+      path: "/about-content-setup",
+      description: "Manage About Us page banner and text",
+    },
+
     // {
     //   title: "Print Requests",
     //   icon: <RiPrinterFill />,
@@ -219,6 +226,16 @@ const Sidebar = ({ isOpen = true }) => {
           title: "Business Partners",
           icon: <FaHandshake />,
           path: "/business-data",
+        },
+        {
+          title: "Brand Partners",
+          icon: <FaHandshake />,
+          path: "/brand-partners",
+        },
+        {
+          title: "Certifications",
+          icon: <FaList />,
+          path: "/certifications",
         },
       ],
     },
