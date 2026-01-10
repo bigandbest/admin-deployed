@@ -108,6 +108,12 @@ const Sidebar = ({ isOpen = true }) => {
       description: "Manage About Us page banner and text",
     },
     {
+      title: "Team Members",
+      icon: <FaUsers />,
+      path: "/team-members",
+      description: "Manage team members",
+    },
+    {
       title: "Contact Queries",
       icon: <FaEnvelope />,
       path: "/contact-queries",
