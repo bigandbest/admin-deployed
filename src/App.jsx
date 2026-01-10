@@ -70,7 +70,7 @@ import UniqueSection from "./Pages/UniqueSection/UniqueSection.jsx";
 import UniqueSectionProducts from "./Pages/UniqueSection/UniqueSectionProduct.jsx";
 import VideoCards from "./Pages/VideoCards/VideoCards.jsx";
 import BbmDost from "./Pages/BbmDost/BbmDost.jsx";
-import ReturnOrdersAdmin from "./Pages/ReturnOrders/index.jsx";
+import ReturnOrdersPage from "./Pages/ReturnOrdersPage.jsx";
 import BulkOrderEnquiries from "./Components/BulkOrders/BulkOrderEnquiries.jsx";
 import WholesaleBulkOrders from "./Components/BulkOrders/WholesaleBulkOrders.jsx";
 import BulkProductSettings from "./Components/BulkProducts/BulkProductSettings.jsx";
@@ -93,7 +93,6 @@ import AboutContentManager from "./Pages/AboutManager/AboutContentManager.jsx";
 import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
 import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
 
-
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -105,8 +104,9 @@ const MainLayout = () => {
     <div className="flex h-screen mantine-bg">
       <Sidebar isOpen={sidebarOpen} />
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "ml-60" : "ml-[70px]"
-          }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${
+          sidebarOpen ? "ml-60" : "ml-[70px]"
+        }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
@@ -297,7 +297,7 @@ function App() {
         },
         {
           path: "/return-orders",
-          element: <ReturnOrdersAdmin />,
+          element: <ReturnOrdersPage />,
         },
         {
           path: "/VideoBannerManagement",
@@ -464,8 +464,6 @@ function App() {
           path: "/team-members",
           element: <TeamManager />,
         },
-
-
       ],
     },
   ]);

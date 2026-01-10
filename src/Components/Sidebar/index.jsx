@@ -60,7 +60,7 @@ const Sidebar = ({ isOpen = true }) => {
         //           `${import.meta.env.VITE_API_BASE_URL}/enquiries/count?status=pending`
         //         );
         //         const result = await response.json();
-        // 
+        //
         //         if (result.success) {
         //           setEnquiryCount(result.count || 0);
         //         }
@@ -232,8 +232,6 @@ const Sidebar = ({ isOpen = true }) => {
     //   description: "Manage promotional banners, offers, and marketing content",
     // },
 
-
-
     // {
     //   title: "UniqueSections",
     //   icon: <FaPlus />,
@@ -322,13 +320,20 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/AdminOrders",
       description: "Manage all orders (COD, Prepaid, Bulk, Returns)",
     },
+    {
+      title: "Returns & Refunds",
+      icon: <FaHandshake />,
+      path: "/return-orders",
+      description: "Manage return and cancellation requests",
+    },
 
     {
       title: "Warehouse Management",
       icon: <FaDatabase />,
       path: "/warehouse-management",
       description: "Manage warehouses, products, and stock inventory",
-    }, {
+    },
+    {
       title: "Storage",
       icon: <FaDatabase />,
       path: "/storage/enhanced",
@@ -403,10 +408,11 @@ const Sidebar = ({ isOpen = true }) => {
                 {item.submenu ? (
                   <div className="mb-1">
                     <div
-                      className={`flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-all duration-200 ${submenuIndex === index
-                        ? "bg-slate-700"
-                        : "hover:bg-slate-700/50"
-                        }`}
+                      className={`flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-all duration-200 ${
+                        submenuIndex === index
+                          ? "bg-slate-700"
+                          : "hover:bg-slate-700/50"
+                      }`}
                       onClick={() => isOpenSubMenu(index)}
                     >
                       <Tooltip
@@ -466,10 +472,11 @@ const Sidebar = ({ isOpen = true }) => {
                               >
                                 <Link
                                   to={submenuItem.path}
-                                  className={`flex items-center p-2 text-sm rounded-md transition-colors ${isActive(submenuItem.path)
-                                    ? "bg-slate-700 text-white"
-                                    : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
-                                    }`}
+                                  className={`flex items-center p-2 text-sm rounded-md transition-colors ${
+                                    isActive(submenuItem.path)
+                                      ? "bg-slate-700 text-white"
+                                      : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
+                                  }`}
                                 >
                                   <span className="text-base mr-3">
                                     {submenuItem.icon}
@@ -502,10 +509,11 @@ const Sidebar = ({ isOpen = true }) => {
                   >
                     <Link
                       to={item.path}
-                      className={`flex items-center p-2.5 text-sm rounded-md transition-colors ${isActive(item.path)
-                        ? "bg-linear-to-r from-red-500 to-pink-500 text-white"
-                        : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
-                        }`}
+                      className={`flex items-center p-2.5 text-sm rounded-md transition-colors ${
+                        isActive(item.path)
+                          ? "bg-linear-to-r from-red-500 to-pink-500 text-white"
+                          : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
+                      }`}
                     >
                       <span className="text-xl mr-3">{item.icon}</span>
                       <AnimatePresence>
