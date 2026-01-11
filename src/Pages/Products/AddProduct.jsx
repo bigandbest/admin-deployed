@@ -71,7 +71,7 @@ const AddProduct = () => {
     weight_display: "",
     brand_name: "",
     store_id: "",
-    portion: "",
+    netQuantity: "",
     quantity: "",
     uom: "",
     uom_value: "",
@@ -884,7 +884,7 @@ const AddProduct = () => {
             />
             <div className="grid grid-cols-2 gap-4">
               <TextInput
-                label="Portion"
+                label="Net Quantity"
                 placeholder="e.g., 500g, 1kg, 250ml"
                 value={form.portion}
                 onChange={(e) => setForm({ ...form, portion: e.target.value })}
