@@ -141,7 +141,7 @@ const ContactQueries = () => {
 
     const openViewModal = (query) => {
         modals.open({
-            title: "Query Details",
+            title: "Product Request Details",
             size: "lg",
             children: (
                 <div className="flex flex-col gap-4">
@@ -158,7 +158,11 @@ const ContactQueries = () => {
                         <Text>{query.subject}</Text>
                     </div>
                     <div>
-                        <Text fw={500} size="sm" c="dimmed">Message</Text>
+                        <Text fw={500} size="sm" c="dimmed">Quantity Requested</Text>
+                        <Text>{query.quantity || 'Not specified'}</Text>
+                    </div>
+                    <div>
+                        <Text fw={500} size="sm" c="dimmed">Product Details</Text>
                         <Paper p="md" withBorder bg="gray.1">
                             <Text style={{ whiteSpace: 'pre-wrap' }}>{query.message}</Text>
                         </Paper>
@@ -190,6 +194,7 @@ const ContactQueries = () => {
             <Table.Td>{query.name}</Table.Td>
             <Table.Td>{query.email}</Table.Td>
             <Table.Td>{query.subject}</Table.Td>
+            <Table.Td>{query.quantity || 'N/A'}</Table.Td>
             <Table.Td>
                 <Badge color={query.status === 'Resolved' ? 'green' : query.status === 'Contacted' ? 'blue' : 'yellow'}>
                     {query.status}
@@ -212,7 +217,7 @@ const ContactQueries = () => {
     return (
         <div className="p-6">
             <Group justify="space-between" mb="lg">
-                <Title order={2}>Contact Queries</Title>
+                <Title order={2}>Product Requests</Title>
                 <Select
                     placeholder="Filter by Status"
                     data={['Pending', 'Contacted', 'Resolved']}
@@ -231,6 +236,7 @@ const ContactQueries = () => {
                                 <Table.Th>Name</Table.Th>
                                 <Table.Th>Email</Table.Th>
                                 <Table.Th>Subject</Table.Th>
+                                <Table.Th>Quantity</Table.Th>
                                 <Table.Th>Status</Table.Th>
                                 <Table.Th>Date</Table.Th>
                                 <Table.Th>Actions</Table.Th>
@@ -239,7 +245,7 @@ const ContactQueries = () => {
                         <Table.Tbody>
                             {loading ? (
                                 <Table.Tr>
-                                    <Table.Td colSpan={7} align="center">
+                                    <Table.Td colSpan={8} align="center">
                                         <Loader size="sm" />
                                     </Table.Td>
                                 </Table.Tr>
@@ -247,8 +253,8 @@ const ContactQueries = () => {
                                 rows
                             ) : (
                                 <Table.Tr>
-                                    <Table.Td colSpan={7} align="center">
-                                        <Text c="dimmed">No queries found</Text>
+                                    <Table.Td colSpan={8} align="center">
+                                        <Text c="dimmed">No product requests found</Text>
                                     </Table.Td>
                                 </Table.Tr>
                             )}
