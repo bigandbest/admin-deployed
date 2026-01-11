@@ -73,6 +73,9 @@ const AddProduct = () => {
     store_id: "",
     portion: "",
     quantity: "",
+    uom: "",
+    uom_value: "",
+    uom_unit: "",
     faq: [],
     images: [],
     product_type: "nationwide",
@@ -167,6 +170,11 @@ const AddProduct = () => {
           enable_fallback: product.enable_fallback !== false,
           warehouse_notes: product.warehouse_notes || "",
         });
+
+        // Load existing images as previews
+        if (product.images && Array.isArray(product.images)) {
+          setImagePreviews(product.images);
+        }
 
         // Populate variants if they exist
         if (
@@ -413,13 +421,43 @@ const AddProduct = () => {
       // Step 2: Prepare payload with uploaded image URLs
       const payload = {
         ...form,
-        images: uploadedImageUrls,
-        image: uploadedImageUrls[0] || null, // Set first image as main image
         // Ensure stock is properly set
         stock: parseInt(form.stock) || 0,
         initial_stock: parseInt(form.stock) || 100,
         stock_quantity: parseInt(form.stock) || 0,
       };
+
+      // Handle images based on mode and whether new images were uploaded
+      if (imageFiles.length > 0) {
+        // New images uploaded - combine with existing images if in edit mode
+        if (isEditMode && form.images && Array.isArray(form.images)) {
+          payload.images = [...form.images, ...uploadedImageUrls];
+        } else {
+          payload.images = uploadedImageUrls;
+        }
+        payload.image = payload.images[0] || null;
+      } else if (isEditMode) {
+        // In edit mode with no new images - check if existing images were modified
+        if (imagePreviews.length === 0) {
+          // All images were removed
+          payload.images = [];
+          payload.image = null;
+        } else if (form.images && imagePreviews.length !== form.images.length) {
+          // Some images were removed - update with current previews
+          payload.images = imagePreviews.filter(preview => 
+            typeof preview === 'string' && preview.startsWith('http')
+          );
+          payload.image = payload.images[0] || null;
+        } else {
+          // No changes to images - don't include in payload
+          delete payload.images;
+          delete payload.image;
+        }
+      } else {
+        // In create mode with no images
+        payload.images = [];
+        payload.image = null;
+      }
 
       // Convert warehouse arrays to integers
       if (
@@ -767,6 +805,14 @@ const AddProduct = () => {
   const removeImage = (index) => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    
+    // Also update form.images if it contains existing URLs
+    if (isEditMode && form.images && Array.isArray(form.images)) {
+      setForm((prev) => ({
+        ...prev,
+        images: prev.images.filter((_, i) => i !== index),
+      }));
+    }
   };
 
   const addFAQ = () => {
@@ -850,6 +896,33 @@ const AddProduct = () => {
                 value={form.quantity}
                 onChange={(e) => setForm({ ...form, quantity: e.target.value })}
                 size="md"
+              />
+            </div>
+            <Divider label="Unit of Measurement (UOM)" labelPosition="center" my="md" />
+            <div className="grid grid-cols-3 gap-4">
+              <TextInput
+                label="UOM"
+                placeholder="e.g., kg, litre, piece"
+                value={form.uom}
+                onChange={(e) => setForm({ ...form, uom: e.target.value })}
+                size="md"
+                description="Unit type"
+              />
+              <TextInput
+                label="UOM Value"
+                placeholder="e.g., 1, 5, 10"
+                value={form.uom_value}
+                onChange={(e) => setForm({ ...form, uom_value: e.target.value })}
+                size="md"
+                description="Numeric value"
+              />
+              <TextInput
+                label="UOM Unit"
+                placeholder="e.g., kg, L, pcs"
+                value={form.uom_unit}
+                onChange={(e) => setForm({ ...form, uom_unit: e.target.value })}
+                size="md"
+                description="Unit abbreviation"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
