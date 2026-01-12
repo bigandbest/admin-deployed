@@ -90,6 +90,10 @@ const AddProduct = () => {
     enable_bulk_pricing: false,
     bulk_min_quantity: 50,
     bulk_discount_percentage: 0,
+    // Return policy and delivery settings
+    return_applicable: true,
+    return_days: 7,
+    quick_delivery: false,
   });
 
   const [variants, setVariants] = useState([]);
@@ -444,7 +448,7 @@ const AddProduct = () => {
           payload.image = null;
         } else if (form.images && imagePreviews.length !== form.images.length) {
           // Some images were removed - update with current previews
-          payload.images = imagePreviews.filter(preview => 
+          payload.images = imagePreviews.filter(preview =>
             typeof preview === 'string' && preview.startsWith('http')
           );
           payload.image = payload.images[0] || null;
@@ -805,7 +809,7 @@ const AddProduct = () => {
   const removeImage = (index) => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-    
+
     // Also update form.images if it contains existing URLs
     if (isEditMode && form.images && Array.isArray(form.images)) {
       setForm((prev) => ({
@@ -1198,6 +1202,45 @@ const AddProduct = () => {
                   )}
                 </>
               )}
+            </div>
+
+            {/* Return Policy & Delivery Settings */}
+            <Divider label="Return Policy & Delivery Settings" labelPosition="center" my="xl" />
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
+              <Switch
+                label="Return Applicable"
+                description="Allow customers to return/exchange this product"
+                checked={form.return_applicable}
+                onChange={(e) =>
+                  setForm({ ...form, return_applicable: e.currentTarget.checked })
+                }
+                size="md"
+              />
+
+              {form.return_applicable && (
+                <NumberInput
+                  label="Return Days"
+                  description="Number of days within which return is allowed"
+                  placeholder="e.g., 7, 14, 30"
+                  required
+                  value={form.return_days}
+                  onChange={(value) => setForm({ ...form, return_days: value })}
+                  min={1}
+                  max={90}
+                  size="md"
+                />
+              )}
+
+              <Switch
+                label="Quick Delivery"
+                description="Mark this product for fast/quick delivery"
+                checked={form.quick_delivery}
+                onChange={(e) =>
+                  setForm({ ...form, quick_delivery: e.currentTarget.checked })
+                }
+                size="md"
+              />
             </div>
           </div>
         );
