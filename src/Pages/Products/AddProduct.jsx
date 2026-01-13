@@ -36,6 +36,7 @@ import {
   createProductWithWarehouse,
 } from "../../utils/warehouseApi";
 import { Link } from "react-router-dom";
+import QuillEditor from "../../Components/QuillEditor";
 
 const AddProduct = () => {
   console.log("🚀 AddProduct component is loading!");
@@ -215,11 +216,13 @@ const AddProduct = () => {
         // Fetch and populate section assignments
         try {
           const sectionsResponse = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL}/product-sections/products/${productId}/sections`
+            `${
+              import.meta.env.VITE_API_BASE_URL
+            }/product-sections/products/${productId}/sections`
           );
           if (sectionsResponse.data.success && sectionsResponse.data.data) {
-            const assignedSectionIds = sectionsResponse.data.data.map((section) =>
-              section.id.toString()
+            const assignedSectionIds = sectionsResponse.data.data.map(
+              (section) => section.id.toString()
             );
             setSelectedSections(assignedSectionIds);
           }
@@ -231,15 +234,21 @@ const AddProduct = () => {
         // Fetch and populate store mapping
         try {
           const storeResponse = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL}/product-recommended-stores/product/${productId}`
+            `${
+              import.meta.env.VITE_API_BASE_URL
+            }/product-recommended-stores/product/${productId}`
           );
-          if (storeResponse.data && Array.isArray(storeResponse.data) && storeResponse.data.length > 0) {
+          if (
+            storeResponse.data &&
+            Array.isArray(storeResponse.data) &&
+            storeResponse.data.length > 0
+          ) {
             // Get the first store mapping (assuming one product maps to one primary store)
             const storeMapping = storeResponse.data[0];
             if (storeMapping.recommended_store_id) {
-              setForm(prev => ({
+              setForm((prev) => ({
                 ...prev,
-                store_id: storeMapping.recommended_store_id.toString()
+                store_id: storeMapping.recommended_store_id.toString(),
               }));
             }
           }
@@ -253,7 +262,6 @@ const AddProduct = () => {
       setError("Failed to load product data");
     }
   };
-
 
   React.useEffect(() => {
     async function fetchCategories() {
@@ -338,8 +346,9 @@ const AddProduct = () => {
           const allWarehouses = allWarehousesResult.warehouses;
           const warehouseSelectOptions = allWarehouses.map((warehouse) => ({
             value: warehouse.id.toString(),
-            label: `${warehouse.parent_warehouse_id ? "└─ " : ""}${warehouse.name
-              } (${warehouse.type})`,
+            label: `${warehouse.parent_warehouse_id ? "└─ " : ""}${
+              warehouse.name
+            } (${warehouse.type})`,
             type: warehouse.type,
             parent_warehouse_id: warehouse.parent_warehouse_id,
           }));
@@ -401,7 +410,8 @@ const AddProduct = () => {
     setError("");
 
     if (!form.name || !form.price || !form.category_id) {
-      const errorMsg = "Please fill in all required fields: " +
+      const errorMsg =
+        "Please fill in all required fields: " +
         (!form.name ? "Name " : "") +
         (!form.price ? "Price " : "") +
         (!form.category_id ? "Category" : "");
@@ -448,8 +458,9 @@ const AddProduct = () => {
           payload.image = null;
         } else if (form.images && imagePreviews.length !== form.images.length) {
           // Some images were removed - update with current previews
-          payload.images = imagePreviews.filter(preview =>
-            typeof preview === 'string' && preview.startsWith('http')
+          payload.images = imagePreviews.filter(
+            (preview) =>
+              typeof preview === "string" && preview.startsWith("http")
           );
           payload.image = payload.images[0] || null;
         } else {
@@ -525,7 +536,9 @@ const AddProduct = () => {
 
         try {
           // Use the correct product update endpoint
-          const updateUrl = `${import.meta.env.VITE_API_BASE_URL}/admin/products/${id}`;
+          const updateUrl = `${
+            import.meta.env.VITE_API_BASE_URL
+          }/admin/products/${id}`;
           console.log("API URL:", updateUrl);
 
           const response = await axios.put(updateUrl, payload, {
@@ -574,7 +587,9 @@ const AddProduct = () => {
                     : null,
                   variant_discount: 0,
                   variant_stock: parseInt(variant.variant_stock) || 0,
-                  variant_weight: `${variant.variant_weight || ""} ${variant.variant_unit || "kg"}`.trim(),
+                  variant_weight: `${variant.variant_weight || ""} ${
+                    variant.variant_unit || "kg"
+                  }`.trim(),
                   variant_unit: variant.variant_unit || "kg",
                   shipping_amount: parseFloat(variant.shipping_amount) || 0,
                   is_default: Boolean(variant.is_default),
@@ -586,11 +601,15 @@ const AddProduct = () => {
                   // Update existing variant
                   console.log("Updating variant:", variant.id);
                   const response = await axios.put(
-                    `${import.meta.env.VITE_API_BASE_URL}/product-variants/variant/${variant.id}`,
+                    `${
+                      import.meta.env.VITE_API_BASE_URL
+                    }/product-variants/variant/${variant.id}`,
                     variantData,
                     {
                       headers: {
-                        Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                        Authorization: `Bearer ${localStorage.getItem(
+                          "admin_token"
+                        )}`,
                       },
                     }
                   );
@@ -599,11 +618,15 @@ const AddProduct = () => {
                   // Create new variant
                   console.log("Creating new variant");
                   const response = await axios.post(
-                    `${import.meta.env.VITE_API_BASE_URL}/product-variants/product/${createdProductId}/variants`,
+                    `${
+                      import.meta.env.VITE_API_BASE_URL
+                    }/product-variants/product/${createdProductId}/variants`,
                     variantData,
                     {
                       headers: {
-                        Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                        Authorization: `Bearer ${localStorage.getItem(
+                          "admin_token"
+                        )}`,
                       },
                     }
                   );
@@ -627,11 +650,15 @@ const AddProduct = () => {
           try {
             const sectionPromises = selectedSections.map(async (sectionId) => {
               const response = await axios.post(
-                `${import.meta.env.VITE_API_BASE_URL}/product-sections/${sectionId}/products`,
+                `${
+                  import.meta.env.VITE_API_BASE_URL
+                }/product-sections/${sectionId}/products`,
                 { product_ids: [createdProductId] },
                 {
                   headers: {
-                    Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                    Authorization: `Bearer ${localStorage.getItem(
+                      "admin_token"
+                    )}`,
                   },
                 }
               );
@@ -654,24 +681,32 @@ const AddProduct = () => {
           try {
             const storeMapping = {
               product_id: createdProductId,
-              recommended_store_id: form.store_id // Keep as UUID string, don't parse to int
+              recommended_store_id: form.store_id, // Keep as UUID string, don't parse to int
             };
 
             const storeResponse = await axios.post(
-              `${import.meta.env.VITE_API_BASE_URL}/product-recommended-stores/map`,
+              `${
+                import.meta.env.VITE_API_BASE_URL
+              }/product-recommended-stores/map`,
               storeMapping,
               {
                 headers: {
-                  Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                  Authorization: `Bearer ${localStorage.getItem(
+                    "admin_token"
+                  )}`,
                 },
               }
             );
 
-            console.log("Product mapped to store successfully:", storeResponse.data);
+            console.log(
+              "Product mapped to store successfully:",
+              storeResponse.data
+            );
           } catch (storeError) {
             console.error("Error mapping product to store:", storeError);
             // Don't fail the whole operation if store mapping fails
-            if (storeError.response?.status !== 409) { // Ignore duplicate mapping errors
+            if (storeError.response?.status !== 409) {
+              // Ignore duplicate mapping errors
               setError(
                 "Product saved successfully, but failed to map to the selected store. You can map it later."
               );
@@ -680,9 +715,14 @@ const AddProduct = () => {
         }
 
         // Save bulk pricing settings if enabled
-        if (form.enable_bulk_pricing && createdProductId && form.bulk_min_quantity > 0) {
+        if (
+          form.enable_bulk_pricing &&
+          createdProductId &&
+          form.bulk_min_quantity > 0
+        ) {
           try {
-            const bulkPrice = form.price * (1 - form.bulk_discount_percentage / 100);
+            const bulkPrice =
+              form.price * (1 - form.bulk_discount_percentage / 100);
             const bulkSettingsPayload = {
               product_id: createdProductId,
               variant_id: null,
@@ -691,20 +731,27 @@ const AddProduct = () => {
               bulk_price: parseFloat(bulkPrice.toFixed(2)),
               discount_percentage: parseFloat(form.bulk_discount_percentage),
               is_bulk_enabled: true,
-              is_variant_bulk: false
+              is_variant_bulk: false,
             };
 
             const bulkResponse = await axios.post(
-              `${import.meta.env.VITE_API_BASE_URL}/bulk-products/settings/${createdProductId}`,
+              `${
+                import.meta.env.VITE_API_BASE_URL
+              }/bulk-products/settings/${createdProductId}`,
               bulkSettingsPayload,
               {
                 headers: {
-                  Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+                  Authorization: `Bearer ${localStorage.getItem(
+                    "admin_token"
+                  )}`,
                 },
               }
             );
 
-            console.log("Bulk pricing settings saved successfully:", bulkResponse.data);
+            console.log(
+              "Bulk pricing settings saved successfully:",
+              bulkResponse.data
+            );
           } catch (bulkError) {
             console.error("Error saving bulk pricing settings:", bulkError);
             // Don't fail the whole operation if bulk settings fail
@@ -718,7 +765,7 @@ const AddProduct = () => {
       } else {
         setError(
           result.error ||
-          (isEditMode ? "Failed to update product" : "Failed to add product")
+            (isEditMode ? "Failed to update product" : "Failed to add product")
         );
         setLoading(false); // Reset loading on error
       }
@@ -735,7 +782,6 @@ const AddProduct = () => {
     setActiveStep((current) => (current < 7 ? current + 1 : current));
   const prevStep = () =>
     setActiveStep((current) => (current > 0 ? current - 1 : current));
-
 
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -866,25 +912,19 @@ const AddProduct = () => {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               size="md"
             />
-            <Textarea
+            <QuillEditor
               label="Description"
               placeholder="Enter product description"
               value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              minRows={4}
-              size="md"
+              onChange={(value) => setForm({ ...form, description: value })}
+              style={{ marginBottom: "1rem" }}
             />
-            <Textarea
+            <QuillEditor
               label="Specifications"
               placeholder="Enter product specifications"
               value={form.specifications}
-              onChange={(e) =>
-                setForm({ ...form, specifications: e.target.value })
-              }
-              minRows={3}
-              size="md"
+              onChange={(value) => setForm({ ...form, specifications: value })}
+              style={{ marginBottom: "1rem" }}
             />
             <div className="grid grid-cols-2 gap-4">
               <TextInput
@@ -902,7 +942,11 @@ const AddProduct = () => {
                 size="md"
               />
             </div>
-            <Divider label="Unit of Measurement (UOM)" labelPosition="center" my="md" />
+            <Divider
+              label="Unit of Measurement (UOM)"
+              labelPosition="center"
+              my="md"
+            />
             <div className="grid grid-cols-3 gap-4">
               <TextInput
                 label="UOM"
@@ -916,7 +960,9 @@ const AddProduct = () => {
                 label="UOM Value"
                 placeholder="e.g., 1, 5, 10"
                 value={form.uom_value}
-                onChange={(e) => setForm({ ...form, uom_value: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, uom_value: e.target.value })
+                }
                 size="md"
                 description="Numeric value"
               />
@@ -978,10 +1024,11 @@ const AddProduct = () => {
                   {categories.map((category) => (
                     <div
                       key={category.id}
-                      className={`p-3 rounded cursor-pointer transition-colors ${form.category_id === category.id
-                        ? "bg-blue-500 text-white"
-                        : "hover:bg-gray-100"
-                        }`}
+                      className={`p-3 rounded cursor-pointer transition-colors ${
+                        form.category_id === category.id
+                          ? "bg-blue-500 text-white"
+                          : "hover:bg-gray-100"
+                      }`}
                       onClick={() =>
                         setForm({
                           ...form,
@@ -1006,10 +1053,11 @@ const AddProduct = () => {
                     .map((subcategory) => (
                       <div
                         key={subcategory.id}
-                        className={`p-3 rounded cursor-pointer transition-colors ${form.subcategory_id === subcategory.id
-                          ? "bg-indigo-500 text-white"
-                          : "hover:bg-gray-100"
-                          }`}
+                        className={`p-3 rounded cursor-pointer transition-colors ${
+                          form.subcategory_id === subcategory.id
+                            ? "bg-indigo-500 text-white"
+                            : "hover:bg-gray-100"
+                        }`}
                         onClick={() =>
                           setForm({
                             ...form,
@@ -1031,10 +1079,11 @@ const AddProduct = () => {
                   {filteredGroups.map((group) => (
                     <div
                       key={group.id}
-                      className={`p-3 rounded cursor-pointer transition-colors ${form.group_id === group.id
-                        ? "bg-purple-500 text-white"
-                        : "hover:bg-gray-100"
-                        }`}
+                      className={`p-3 rounded cursor-pointer transition-colors ${
+                        form.group_id === group.id
+                          ? "bg-purple-500 text-white"
+                          : "hover:bg-gray-100"
+                      }`}
                       onClick={() => setForm({ ...form, group_id: group.id })}
                     >
                       {group.name}
@@ -1132,7 +1181,11 @@ const AddProduct = () => {
             </div>
 
             {/* Bulk Pricing Configuration */}
-            <Divider label="Bulk Order Pricing" labelPosition="center" my="xl" />
+            <Divider
+              label="Bulk Order Pricing"
+              labelPosition="center"
+              my="xl"
+            />
 
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 space-y-4">
               <Switch
@@ -1140,7 +1193,10 @@ const AddProduct = () => {
                 description="Automatically apply discounts when customers order above minimum quantity"
                 checked={form.enable_bulk_pricing}
                 onChange={(e) =>
-                  setForm({ ...form, enable_bulk_pricing: e.currentTarget.checked })
+                  setForm({
+                    ...form,
+                    enable_bulk_pricing: e.currentTarget.checked,
+                  })
                 }
                 size="md"
               />
@@ -1154,7 +1210,9 @@ const AddProduct = () => {
                       placeholder="e.g., 50"
                       required
                       value={form.bulk_min_quantity}
-                      onChange={(value) => setForm({ ...form, bulk_min_quantity: value })}
+                      onChange={(value) =>
+                        setForm({ ...form, bulk_min_quantity: value })
+                      }
                       min={1}
                       size="md"
                     />
@@ -1164,7 +1222,9 @@ const AddProduct = () => {
                       placeholder="e.g., 10"
                       required
                       value={form.bulk_discount_percentage}
-                      onChange={(value) => setForm({ ...form, bulk_discount_percentage: value })}
+                      onChange={(value) =>
+                        setForm({ ...form, bulk_discount_percentage: value })
+                      }
                       min={0}
                       max={100}
                       size="md"
@@ -1174,29 +1234,51 @@ const AddProduct = () => {
                   {/* Pricing Preview */}
                   {form.price > 0 && form.bulk_discount_percentage > 0 && (
                     <div className="bg-white border border-purple-300 rounded-lg p-4">
-                      <Text weight={600} className="mb-3">💰 Bulk Pricing Preview</Text>
+                      <Text weight={600} className="mb-3">
+                        💰 Bulk Pricing Preview
+                      </Text>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
-                          <Text size="xs" color="dimmed">Regular Price</Text>
-                          <Text size="lg" weight={600}>₹{form.price}</Text>
-                        </div>
-                        <div>
-                          <Text size="xs" color="dimmed">Bulk Price</Text>
-                          <Text size="lg" weight={600} color="green">
-                            ₹{(form.price * (1 - form.bulk_discount_percentage / 100)).toFixed(2)}
+                          <Text size="xs" color="dimmed">
+                            Regular Price
+                          </Text>
+                          <Text size="lg" weight={600}>
+                            ₹{form.price}
                           </Text>
                         </div>
                         <div>
-                          <Text size="xs" color="dimmed">Customer Saves</Text>
+                          <Text size="xs" color="dimmed">
+                            Bulk Price
+                          </Text>
+                          <Text size="lg" weight={600} color="green">
+                            ₹
+                            {(
+                              form.price *
+                              (1 - form.bulk_discount_percentage / 100)
+                            ).toFixed(2)}
+                          </Text>
+                        </div>
+                        <div>
+                          <Text size="xs" color="dimmed">
+                            Customer Saves
+                          </Text>
                           <Text size="lg" weight={600} color="teal">
-                            ₹{(form.price * form.bulk_discount_percentage / 100).toFixed(2)}
+                            ₹
+                            {(
+                              (form.price * form.bulk_discount_percentage) /
+                              100
+                            ).toFixed(2)}
                           </Text>
                         </div>
                       </div>
                       <Text size="xs" color="dimmed" className="mt-3">
-                        For orders of {form.bulk_min_quantity}+ units, customers pay ₹
-                        {(form.price * (1 - form.bulk_discount_percentage / 100)).toFixed(2)} per unit
-                        instead of ₹{form.price}
+                        For orders of {form.bulk_min_quantity}+ units, customers
+                        pay ₹
+                        {(
+                          form.price *
+                          (1 - form.bulk_discount_percentage / 100)
+                        ).toFixed(2)}{" "}
+                        per unit instead of ₹{form.price}
                       </Text>
                     </div>
                   )}
@@ -1205,7 +1287,11 @@ const AddProduct = () => {
             </div>
 
             {/* Return Policy & Delivery Settings */}
-            <Divider label="Return Policy & Delivery Settings" labelPosition="center" my="xl" />
+            <Divider
+              label="Return Policy & Delivery Settings"
+              labelPosition="center"
+              my="xl"
+            />
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
               <Switch
@@ -1213,7 +1299,10 @@ const AddProduct = () => {
                 description="Allow customers to return/exchange this product"
                 checked={form.return_applicable}
                 onChange={(e) =>
-                  setForm({ ...form, return_applicable: e.currentTarget.checked })
+                  setForm({
+                    ...form,
+                    return_applicable: e.currentTarget.checked,
+                  })
                 }
                 size="md"
               />
@@ -1371,7 +1460,8 @@ const AddProduct = () => {
               </Button>
             </div>
             <Text size="sm" color="dimmed" className="mb-4">
-              Add different size/weight variants for this product (e.g., 1kg, 2kg, 5kg). This is optional.
+              Add different size/weight variants for this product (e.g., 1kg,
+              2kg, 5kg). This is optional.
             </Text>
             {variants.length === 0 ? (
               <div className="text-center py-8 text-gray-500 border-2 border-dashed rounded-lg">
@@ -1553,7 +1643,8 @@ const AddProduct = () => {
               Display Sections
             </Text>
             <Text size="sm" color="dimmed">
-              Select which homepage sections should display this product. You can select multiple sections.
+              Select which homepage sections should display this product. You
+              can select multiple sections.
             </Text>
             <MultiSelect
               label="Homepage Sections"
@@ -1630,7 +1721,12 @@ const AddProduct = () => {
 
           {/* Stepper */}
           <div className="p-6 border-b">
-            <Stepper active={activeStep} onStepClick={setActiveStep} breakpoint="sm" size="sm">
+            <Stepper
+              active={activeStep}
+              onStepClick={setActiveStep}
+              breakpoint="sm"
+              size="sm"
+            >
               {steps.map((step, index) => (
                 <Stepper.Step
                   key={index}
@@ -1645,7 +1741,9 @@ const AddProduct = () => {
           {/* Content */}
           <div className="p-8">
             {/* <LoadingOverlay visible={loading} /> */}
-            {loading && <div className="text-center py-4 text-blue-600">Loading...</div>}
+            {loading && (
+              <div className="text-center py-4 text-blue-600">Loading...</div>
+            )}
             <div className="max-w-4xl mx-auto">
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
