@@ -93,6 +93,7 @@ import AboutContentManager from "./Pages/AboutManager/AboutContentManager.jsx";
 import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
 import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
 import Coupons from "./pages/Coupons/index.jsx";
+import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -467,6 +468,10 @@ function App() {
         {
           path: "/coupons",
           element: <Coupons />,
+        },
+        {
+          path: "/scheduling-management",
+          element: <SchedulingManagement />,
         },
       ],
     },
