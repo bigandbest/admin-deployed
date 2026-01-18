@@ -719,6 +719,15 @@ export async function getAllProductSections() {
   }
 }
 
+export async function getSectionCounts() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/counts`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getActiveProductSections() {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/active`);

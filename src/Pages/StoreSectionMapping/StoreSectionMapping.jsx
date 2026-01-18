@@ -28,19 +28,16 @@ const StoreSectionMapping = () => {
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState([]);
   const [sections, setSections] = useState([]);
-  const [products, setProducts] = useState([]);
   const [mappings, setMappings] = useState([]);
 
   // Modal states
   const [storeMappingModal, setStoreMappingModal] = useState(false);
-  const [productMappingModal, setProductMappingModal] = useState(false);
   const [categoryMappingModal, setCategoryMappingModal] = useState(false);
 
   // Form states
   const [selectedStore, setSelectedStore] = useState("");
   const [selectedSections, setSelectedSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState("store-mapping");
@@ -50,27 +47,41 @@ const StoreSectionMapping = () => {
     fetchInitialData();
   }, []);
 
+
+  // Fetch groups only when modal opens
+  useEffect(() => {
+    if (categoryMappingModal && groups.length === 0) {
+      fetchGroups();
+    }
+  }, [categoryMappingModal]);
+
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [storesRes, sectionsRes, productsRes, mappingsRes, groupsRes] =
+      const [storesRes, sectionsRes, mappingsRes] =
         await Promise.all([
           api.get("/recommended-stores/list"),
           api.get("/store-section-mappings/product-sections/list"),
-          api.get("/productsroute/allproducts"),
           api.get("/store-section-mappings/list"),
-          api.get("/categories/groups"),
         ]);
 
       setStores(storesRes.data.recommendedStores || []);
       setSections(sectionsRes.data.sections || []);
-      setProducts(productsRes.data.products || []);
       setMappings(mappingsRes.data.mappings || []);
-      setGroups(groupsRes.data.groups || []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const fetchGroups = async () => {
+    try {
+      const res = await api.get("/categories/groups");
+      setGroups(res.data.groups || []);
+    } catch (error) {
+      console.error("Failed to fetch groups:", error);
     }
   };
 
@@ -87,30 +98,12 @@ const StoreSectionMapping = () => {
       setStoreMappingModal(false);
       setSelectedStore("");
       setSelectedSections([]);
-      fetchInitialData();
+      fetchInitialData(); // Just refresh mappings
     } catch (error) {
       console.error("Failed to create store-section mapping:", error);
     }
   };
 
-  // Product-Section Mapping Functions
-  const handleProductMapping = async () => {
-    if (!selectedSection || selectedProducts.length === 0) return;
-
-    try {
-      await api.post("/store-section-mappings/section-products", {
-        section_id: selectedSection,
-        product_ids: selectedProducts,
-      });
-
-      setProductMappingModal(false);
-      setSelectedSection("");
-      setSelectedProducts([]);
-      fetchInitialData();
-    } catch (error) {
-      console.error("Failed to create product-section mapping:", error);
-    }
-  };
 
   // Group-Section Mapping Functions
   const handleGroupMapping = async () => {
@@ -125,7 +118,7 @@ const StoreSectionMapping = () => {
       setCategoryMappingModal(false);
       setSelectedSection("");
       setSelectedGroups([]);
-      fetchInitialData();
+      fetchInitialData(); // Just refresh mappings
     } catch (error) {
       console.error("Failed to create group-section mapping:", error);
     }
@@ -166,10 +159,6 @@ const StoreSectionMapping = () => {
     label: `${section.section_name} (${section.section_key})`,
   }));
 
-  const productOptions = products.map((product) => ({
-    value: product.id.toString(),
-    label: `${product.name} - ₹${product.price}`,
-  }));
 
   const groupOptions = groups.map((group) => ({
     value: group.id.toString(),
@@ -220,54 +209,6 @@ const StoreSectionMapping = () => {
     },
   ];
 
-  // Table columns for section-product mappings
-  const sectionProductColumns = [
-    {
-      accessor: "section_name",
-      title: "Section Name",
-    },
-    {
-      accessor: "products",
-      title: "Mapped Products",
-      render: (mapping) => (
-        <div className="flex flex-wrap gap-1">
-          {mapping.products?.slice(0, 3).map((product) => (
-            <Badge key={product.id} size="sm" variant="outline">
-              {product.name}
-            </Badge>
-          ))}
-          {mapping.products?.length > 3 && (
-            <Badge size="sm" variant="light">
-              +{mapping.products.length - 3} more
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessor: "is_active",
-      title: "Status",
-      render: (mapping) => (
-        <Switch
-          checked={mapping.is_active}
-          onChange={() => toggleMappingStatus(mapping.id, mapping.is_active)}
-        />
-      ),
-    },
-    {
-      accessor: "actions",
-      title: "Actions",
-      render: (mapping) => (
-        <Group spacing="xs">
-          <Tooltip label="Delete mapping">
-            <ActionIcon color="red" onClick={() => deleteMapping(mapping.id)}>
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-      ),
-    },
-  ];
 
   // Table columns for section-group mappings
   const sectionGroupColumns = [
@@ -331,9 +272,6 @@ const StoreSectionMapping = () => {
           <Tabs.Tab value="store-mapping" icon={<IconSettings size={16} />}>
             Store-Section Mapping
           </Tabs.Tab>
-          <Tabs.Tab value="product-mapping" icon={<IconPlus size={16} />}>
-            Product-Section Mapping
-          </Tabs.Tab>
           <Tabs.Tab value="category-mapping" icon={<IconPlus size={16} />}>
             Group-Section Mapping
           </Tabs.Tab>
@@ -378,44 +316,6 @@ const StoreSectionMapping = () => {
           </Card>
         </Tabs.Panel>
 
-        <Tabs.Panel value="product-mapping" pt="lg">
-          <Card shadow="sm" p="lg" radius="md" className="mb-6">
-            <Group position="apart" className="mb-4">
-              <Text weight={500}>Product-Section Mappings</Text>
-              <Button
-                leftIcon={<IconPlus size={16} />}
-                onClick={() => setProductMappingModal(true)}
-              >
-                Add Products to Section
-              </Button>
-            </Group>
-
-            <Table>
-              <thead>
-                <tr>
-                  {sectionProductColumns.map((col) => (
-                    <th key={col.accessor}>{col.title}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {mappings
-                  .filter((m) => m.type === "section-product")
-                  .map((mapping) => (
-                    <tr key={mapping.id}>
-                      {sectionProductColumns.map((col) => (
-                        <td key={col.accessor}>
-                          {col.render
-                            ? col.render(mapping)
-                            : mapping[col.accessor]}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-              </tbody>
-            </Table>
-          </Card>
-        </Tabs.Panel>
 
         <Tabs.Panel value="category-mapping" pt="lg">
           <Card shadow="sm" p="lg" radius="md" className="mb-6">
@@ -495,44 +395,6 @@ const StoreSectionMapping = () => {
         </div>
       </Modal>
 
-      {/* Product-Section Mapping Modal */}
-      <Modal
-        opened={productMappingModal}
-        onClose={() => setProductMappingModal(false)}
-        title="Add Products to Section"
-        size="md"
-      >
-        <div className="space-y-4">
-          <Select
-            label="Select Section"
-            placeholder="Choose a section"
-            data={sectionOptions}
-            value={selectedSection}
-            onChange={setSelectedSection}
-            required
-          />
-
-          <MultiSelect
-            label="Select Products"
-            placeholder="Choose products to add"
-            data={productOptions}
-            value={selectedProducts}
-            onChange={setSelectedProducts}
-            searchable
-            required
-          />
-
-          <Group position="right" mt="md">
-            <Button
-              variant="subtle"
-              onClick={() => setProductMappingModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleProductMapping}>Add Products</Button>
-          </Group>
-        </div>
-      </Modal>
 
       {/* Group-Section Mapping Modal */}
       <Modal
