@@ -30,7 +30,6 @@ const AddProduct = () => {
   const [brandOptions, setBrandOptions] = useState([]);
   const [storeOptions, setStoreOptions] = useState([]);
   const [warehouseOptions, setWarehouseOptions] = useState([]);
-  const [activeStep, setActiveStep] = useState(0); // Kept if needed for logic, though UI doesn't use it directly
 
   // Fetch Options
   useEffect(() => {
@@ -54,9 +53,16 @@ const AddProduct = () => {
           catsRes.data.data.forEach((cat) => {
             if (cat.subcategories) {
               cat.subcategories.forEach((sub) => {
-                allSubs.push(sub);
+                // Determine category_id (use cat.id)
+                const subWithParent = { ...sub, category_id: cat.id };
+                allSubs.push(subWithParent);
+
                 if (sub.groups) {
-                  sub.groups.forEach((grp) => allGroups.push(grp));
+                  sub.groups.forEach((grp) => {
+                    // Determine subcategory_id (use sub.id)
+                    const grpWithParent = { ...grp, subcategory_id: sub.id };
+                    allGroups.push(grpWithParent);
+                  });
                 }
               });
             }
@@ -343,6 +349,7 @@ const AddProduct = () => {
       brands={brandOptions}
       stores={storeOptions}
       warehouses={warehouseOptions}
+      onClose={() => navigate("/products")}
     />
   );
 };

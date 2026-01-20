@@ -15,15 +15,10 @@ import {
   Select,
   Modal,
   Textarea,
-  NumberInput,
-  FileInput,
-  Switch,
   Skeleton,
   CloseButton,
 } from "@mantine/core";
-import { createProductWithWarehouse } from "../../utils/warehouseApi";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload } from "react-icons/fa";
-import AddProduct from "./AddProduct";
 
 // Small inline placeholder SVG for missing product images
 const PRODUCT_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160' viewBox='0 0 240 160'><rect width='100%' height='100%' fill='%23f8fafc'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23cbd5e1' font-family='sans-serif' font-size='14'>No Image</text></svg>`;
@@ -240,14 +235,11 @@ const formatIndianPrice = (price) => {
 };
 
 import {
-  updateProduct,
   deleteProduct,
   getAllCategories,
   getAllSubcategories,
   getAllGroups,
 } from "../../utils/supabaseApi";
-
-import ProductVariantsManager from "../../Components/ProductVariantsManager";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -264,10 +256,6 @@ const ProductsPage = () => {
   const [subcategoryFilter, setSubcategoryFilter] = useState(null);
   const [groupFilter, setGroupFilter] = useState(null);
   const [activeFilter, setStatusFilter] = useState(null);
-  const [visible, setVisible] = useState(true);
-  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
-  const [selectedProductForVariants, setSelectedProductForVariants] =
-    useState(null);
   const [displayedItems, setDisplayedItems] = useState(10);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const itemsPerLoad = 10;
@@ -276,7 +264,7 @@ const ProductsPage = () => {
     const fetchSetting = async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`
+          `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`,
         );
         const result = await response.json();
 
@@ -301,7 +289,7 @@ const ProductsPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ is_visible: !visible }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -321,7 +309,7 @@ const ProductsPage = () => {
     async function getProducts() {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/admin/products`
+          `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
         );
         const result = await response.json();
 
@@ -351,7 +339,7 @@ const ProductsPage = () => {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/products`
+        `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
       );
       const result = await response.json();
 
@@ -433,7 +421,7 @@ const ProductsPage = () => {
       }
       // Find category through subcategory lookup
       const productSubcategory = subcategories.find(
-        (sub) => sub.id === product.subcategory_id
+        (sub) => sub.id === product.subcategory_id,
       );
       if (productSubcategory?.category_id === categoryFilter) {
         matchesCategory = true;
@@ -441,7 +429,7 @@ const ProductsPage = () => {
       // Find category through group->subcategory lookup
       const productGroup = groups.find((g) => g.id === product.group_id);
       const groupSubcategory = subcategories.find(
-        (sub) => sub.id === productGroup?.subcategory_id
+        (sub) => sub.id === productGroup?.subcategory_id,
       );
       if (groupSubcategory?.category_id === categoryFilter) {
         matchesCategory = true;
@@ -492,7 +480,7 @@ const ProductsPage = () => {
       setIsLoadingMore(true);
       setTimeout(() => {
         setDisplayedItems((prev) =>
-          Math.min(prev + itemsPerLoad, filteredProducts.length)
+          Math.min(prev + itemsPerLoad, filteredProducts.length),
         );
         setIsLoadingMore(false);
       }, 500);
@@ -537,10 +525,10 @@ const ProductsPage = () => {
     // If category filter changes, clear subcategory and group filters
     if (categoryFilter) {
       const validSubcategories = subcategories.filter(
-        (sub) => sub.category_id === categoryFilter
+        (sub) => sub.category_id === categoryFilter,
       );
       const currentSubcategoryValid = validSubcategories.some(
-        (sub) => sub.id === subcategoryFilter
+        (sub) => sub.id === subcategoryFilter,
       );
       if (!currentSubcategoryValid) {
         setSubcategoryFilter(null);
@@ -553,10 +541,10 @@ const ProductsPage = () => {
     // If subcategory filter changes, clear group filter if it's not valid
     if (subcategoryFilter) {
       const validGroups = groups.filter(
-        (group) => group.subcategory_id === subcategoryFilter
+        (group) => group.subcategory_id === subcategoryFilter,
       );
       const currentGroupValid = validGroups.some(
-        (group) => group.id === groupFilter
+        (group) => group.id === groupFilter,
       );
       if (!currentGroupValid) {
         setGroupFilter(null);
@@ -590,20 +578,6 @@ const ProductsPage = () => {
 
   const openEditModal = (product) => {
     navigate(`/products/edit/${product.id}`);
-  };
-
-  const openVariantsModal = (product) => {
-    setSelectedProductForVariants(product);
-    setVariantsModalOpen(true);
-  };
-
-  const [productDetailModalOpen, setProductDetailModalOpen] = useState(false);
-  const [selectedProductForDetail, setSelectedProductForDetail] =
-    useState(null);
-
-  const openProductDetailModal = (product) => {
-    setSelectedProductForDetail(product);
-    setProductDetailModalOpen(true);
   };
 
   return (
@@ -810,8 +784,7 @@ const ProductsPage = () => {
               {displayedProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 hover:border-blue-300 cursor-pointer"
-                  onClick={() => openProductDetailModal(product)}
+                  className="bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 hover:border-blue-300"
                 >
                   <div className="relative">
                     <img
@@ -858,7 +831,7 @@ const ProductsPage = () => {
                           ?.name || "Unknown"}{" "}
                         &gt;{" "}
                         {subcategories.find(
-                          (s) => s.id === product.subcategory_id
+                          (s) => s.id === product.subcategory_id,
                         )?.name || "Unknown"}{" "}
                         &gt;{" "}
                         {groups.find((g) => g.id === product.group_id)?.name ||
@@ -906,18 +879,6 @@ const ProductsPage = () => {
 
                     <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                       <div className="flex gap-2">
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          color="blue"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openVariantsModal(product);
-                          }}
-                          title="View Variants"
-                        >
-                          🎨
-                        </ActionIcon>
                         <ActionIcon
                           size="sm"
                           variant="light"
@@ -1061,308 +1022,6 @@ const ProductsPage = () => {
           )}
         </div>
       </Card>
-
-      {/* Product Variants Modal */}
-      <Modal
-        opened={variantsModalOpen}
-        onClose={() => setVariantsModalOpen(false)}
-        title="Product Variants Management"
-        size="xl"
-      >
-        {selectedProductForVariants && (
-          <ProductVariantsManager product={selectedProductForVariants} />
-        )}
-      </Modal>
-
-      {/* Add custom styles for line-clamp if not available */}
-      <style>
-        {`
-          .line-clamp-2 {
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-          }
-          .min-w-full {
-            min-width: 100%;
-          }
-        `}
-      </style>
-
-      {/* Product Detail Modal */}
-      <Modal
-        opened={productDetailModalOpen}
-        onClose={() => setProductDetailModalOpen(false)}
-        title={
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-linear-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              Product Details
-            </span>
-          </div>
-        }
-        size="80%"
-        classNames={{
-          modal: "rounded-2xl shadow-2xl border-0",
-          header:
-            "bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 rounded-t-2xl",
-          body: "p-6",
-          close: "hover:bg-gray-100 rounded-full",
-        }}
-      >
-        {selectedProductForDetail && (
-          <div className="space-y-6">
-            {/* Product Header */}
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="lg:w-1/3">
-                <img
-                  src={selectedProductForDetail.image || PRODUCT_PLACEHOLDER}
-                  alt={selectedProductForDetail.name}
-                  className="w-full h-80 object-cover rounded-xl shadow-lg border border-gray-200"
-                  onError={(e) => {
-                    e.target.src = PRODUCT_PLACEHOLDER;
-                  }}
-                />
-                {selectedProductForDetail.images &&
-                  selectedProductForDetail.images.length > 1 && (
-                    <div className="mt-4">
-                      <Text size="sm" weight={500} className="mb-2">
-                        Additional Images (
-                        {selectedProductForDetail.images.length - 1})
-                      </Text>
-                      <div className="grid grid-cols-4 gap-2">
-                        {selectedProductForDetail.images
-                          .slice(1, 5)
-                          .map((img, index) => (
-                            <img
-                              key={index}
-                              src={img}
-                              alt={`${selectedProductForDetail.name} ${
-                                index + 2
-                              }`}
-                              className="w-full h-16 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
-                              onClick={() => {
-                                setPreviewImage(img);
-                                setImagePreviewOpen(true);
-                              }}
-                            />
-                          ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-              <div className="lg:w-2/3 space-y-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    {selectedProductForDetail.name}
-                  </h2>
-                  <div className="flex gap-2 mb-4">
-                    <Badge
-                      color={selectedProductForDetail.active ? "green" : "red"}
-                      size="lg"
-                    >
-                      {selectedProductForDetail.active ? "Active" : "Inactive"}
-                    </Badge>
-                    <Badge
-                      color={
-                        selectedProductForDetail.in_stock ? "blue" : "gray"
-                      }
-                      size="lg"
-                    >
-                      {selectedProductForDetail.in_stock
-                        ? "In Stock"
-                        : "Out of Stock"}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Price
-                      </Text>
-                      <Text size="xl" weight={700} color="green">
-                        {formatIndianPrice(selectedProductForDetail.price)}
-                      </Text>
-                      {selectedProductForDetail.old_price > 0 && (
-                        <Text size="sm" className="line-through text-gray-500">
-                          {formatIndianPrice(
-                            selectedProductForDetail.old_price
-                          )}
-                        </Text>
-                      )}
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Category Path
-                      </Text>
-                      <Text size="sm">
-                        {categories.find(
-                          (c) => c.id === selectedProductForDetail.category_id
-                        )?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {subcategories.find(
-                          (s) =>
-                            s.id === selectedProductForDetail.subcategory_id
-                        )?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {groups.find(
-                          (g) => g.id === selectedProductForDetail.group_id
-                        )?.name || "Unknown"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Brand
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.brand_name || "Not specified"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Store
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.store_name || "Not assigned"}
-                      </Text>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Stock
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.stock || 0} units
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        UOM
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.uom_value}{" "}
-                        {selectedProductForDetail.uom_unit || "N/A"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Shipping
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.shipping_amount
-                          ? formatIndianPrice(
-                              selectedProductForDetail.shipping_amount
-                            )
-                          : "Free"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Rating
-                      </Text>
-                      <div className="flex items-center gap-2">
-                        <span className="text-yellow-500">★</span>
-                        <Text size="sm">
-                          {selectedProductForDetail.rating || 0}
-                        </Text>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedProductForDetail.discount > 0 && (
-                  <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                    <Text size="sm" weight={500} color="red">
-                      {selectedProductForDetail.discount}% Discount Applied
-                    </Text>
-                    <Text size="xs" color="dimmed">
-                      You save{" "}
-                      {formatIndianPrice(
-                        (selectedProductForDetail.old_price || 0) -
-                          selectedProductForDetail.price
-                      )}
-                    </Text>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Product Description */}
-            {selectedProductForDetail.description && (
-              <div className="border-t pt-6">
-                <Text size="lg" weight={600} className="mb-3">
-                  Description
-                </Text>
-                <Text size="sm" className="text-gray-700 leading-relaxed">
-                  {selectedProductForDetail.description}
-                </Text>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="border-t pt-6">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  color="blue"
-                  leftSection={<FaEdit />}
-                  onClick={() => {
-                    setProductDetailModalOpen(false);
-                    openEditModal(selectedProductForDetail);
-                  }}
-                >
-                  Edit Product
-                </Button>
-                <Button
-                  color="purple"
-                  variant="light"
-                  onClick={() => {
-                    setProductDetailModalOpen(false);
-                    openVariantsModal(selectedProductForDetail);
-                  }}
-                >
-                  Manage Variants
-                </Button>
-                <Button
-                  color="red"
-                  variant="light"
-                  leftSection={<FaTrash />}
-                  onClick={() => {
-                    setProductDetailModalOpen(false);
-                    handleDeleteProduct(selectedProductForDetail.id);
-                  }}
-                >
-                  Delete Product
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };

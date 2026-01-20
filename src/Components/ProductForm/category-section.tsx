@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
@@ -8,7 +9,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Label } from "../ui/label";
-import { Plus } from "lucide-react";
+import { Plus, ChevronUp, ChevronDown } from "lucide-react";
 
 interface CategorySectionProps {
   category: {
@@ -22,7 +23,6 @@ interface CategorySectionProps {
   categories: any[];
   subcategories: any[];
   groups: any[];
-  brands: any[];
   stores: any[];
 }
 
@@ -32,7 +32,6 @@ export default function CategorySection({
   categories = [],
   subcategories = [],
   groups = [],
-  brands = [],
   stores = [],
 }: CategorySectionProps) {
   const handleChange = (field: string, value: string) => {
@@ -40,73 +39,62 @@ export default function CategorySection({
   };
 
   const filteredSubcategories = category.category_id
-    ? subcategories.filter((sub) => sub.category_id === category.category_id)
+    ? subcategories.filter(
+        (sub) => String(sub.category_id) === String(category.category_id),
+      )
     : [];
 
   const filteredGroups = category.subcategory_id
-    ? groups.filter((grp) => grp.subcategory_id === category.subcategory_id)
+    ? groups.filter(
+        (grp) => String(grp.subcategory_id) === String(category.subcategory_id),
+      )
     : [];
+
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <Card className="bg-card border-border">
-      <CardHeader className="border-b border-border pb-4">
+      <CardHeader
+        className="border-b border-border pb-4 cursor-pointer flex flex-row items-center justify-between"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <CardTitle className="text-lg font-semibold">Category</CardTitle>
+        {isExpanded ? (
+          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+        )}
       </CardHeader>
-      <CardContent className="pt-6 space-y-4">
-        {/* Brand Select */}
-        <div className="space-y-2">
-          <Label htmlFor="brand" className="text-sm font-medium">
-            Brand
-          </Label>
-          <Select
-            value={category.brand_id}
-            onValueChange={(value) => handleChange("brand_id", value)}
-          >
-            <SelectTrigger className="bg-muted/50 border-input">
-              <SelectValue placeholder="Select brand" />
-            </SelectTrigger>
-            <SelectContent>
-              {brands.map((brand) => (
-                <SelectItem
-                  key={brand.value || brand.id}
-                  value={brand.value || brand.name}
-                >
-                  {brand.label || brand.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {isExpanded && (
+        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Category Select */}
+          <div className="space-y-2">
+            <Label htmlFor="category" className="text-sm font-medium">
+              Product Category
+            </Label>
+            <Select
+              value={category.category_id}
+              onValueChange={(value) => {
+                handleChange("category_id", value);
+                // Reset dependent fields
+                handleChange("subcategory_id", "");
+                handleChange("group_id", "");
+              }}
+            >
+              <SelectTrigger className="bg-muted/50 border-input">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Category Select */}
-        <div className="space-y-2">
-          <Label htmlFor="category" className="text-sm font-medium">
-            Product Category
-          </Label>
-          <Select
-            value={category.category_id}
-            onValueChange={(value) => {
-              handleChange("category_id", value);
-              // Reset dependent fields
-              handleChange("subcategory_id", "");
-              handleChange("group_id", "");
-            }}
-          >
-            <SelectTrigger className="bg-muted/50 border-input">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Subcategory Select */}
-        {filteredSubcategories.length > 0 && (
+          {/* Subcategory Select */}
           <div className="space-y-2">
             <Label htmlFor="subcategory" className="text-sm font-medium">
               Subcategory
@@ -117,6 +105,7 @@ export default function CategorySection({
                 handleChange("subcategory_id", value);
                 handleChange("group_id", "");
               }}
+              disabled={!category.category_id}
             >
               <SelectTrigger className="bg-muted/50 border-input">
                 <SelectValue placeholder="Select subcategory" />
@@ -130,10 +119,8 @@ export default function CategorySection({
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        {/* Group Select */}
-        {filteredGroups.length > 0 && (
+          {/* Group Select */}
           <div className="space-y-2">
             <Label htmlFor="group" className="text-sm font-medium">
               Group
@@ -141,6 +128,7 @@ export default function CategorySection({
             <Select
               value={category.group_id}
               onValueChange={(value) => handleChange("group_id", value)}
+              disabled={!category.subcategory_id}
             >
               <SelectTrigger className="bg-muted/50 border-input">
                 <SelectValue placeholder="Select group" />
@@ -154,39 +142,35 @@ export default function CategorySection({
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        {/* Store Select */}
-        <div className="space-y-2">
-          <Label htmlFor="store" className="text-sm font-medium">
-            Store
-          </Label>
-          <Select
-            value={category.store_id}
-            onValueChange={(value) => handleChange("store_id", value)}
-          >
-            <SelectTrigger className="bg-muted/50 border-input">
-              <SelectValue placeholder="Select store" />
-            </SelectTrigger>
-            <SelectContent>
-              {stores.map((store) => (
-                <SelectItem
-                  key={store.value || store.id}
-                  value={store.value || store.id}
-                >
-                  {store.label || store.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          {/* Store Select */}
+          <div className="space-y-2">
+            <Label htmlFor="store" className="text-sm font-medium">
+              Store
+            </Label>
+            <Select
+              value={category.store_id}
+              onValueChange={(value) => handleChange("store_id", value)}
+            >
+              <SelectTrigger className="bg-muted/50 border-input">
+                <SelectValue placeholder="Select store" />
+              </SelectTrigger>
+              <SelectContent>
+                {stores.map((store) => (
+                  <SelectItem
+                    key={store.value || store.id}
+                    value={store.value || store.id}
+                  >
+                    {store.label || store.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Add Category Button */}
-        <Button className="w-full gap-2 bg-green-500 hover:bg-green-600 text-white mt-4">
-          <Plus className="w-4 h-4" />
-          Add Category
-        </Button>
-      </CardContent>
+          {/* Add Category Button */}
+        </CardContent>
+      )}
     </Card>
   );
 }

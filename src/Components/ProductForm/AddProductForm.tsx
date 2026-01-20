@@ -7,7 +7,7 @@ import MediaUploader from "./media-uploader";
 import CategorySection from "./category-section";
 import WarehouseSection from "./warehouse-section";
 import FAQSection from "./faq-section";
-import { Save, Plus } from "lucide-react";
+import { Save, Plus, X } from "lucide-react";
 
 interface ProductData {
   name: string;
@@ -77,6 +77,7 @@ interface AddProductFormProps {
   brands: any[];
   stores: any[];
   warehouses: any[];
+  onClose?: () => void;
 }
 
 export default function AddProductForm({
@@ -89,6 +90,7 @@ export default function AddProductForm({
   brands = [],
   stores = [],
   warehouses = [],
+  onClose,
 }: AddProductFormProps) {
   const [product, setProduct] = useState<ProductData>({
     name: "",
@@ -218,12 +220,11 @@ export default function AddProductForm({
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-border bg-card sticky top-0 z-10">
+      <div className="border-b border-border bg-card">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-foreground rounded"></div>
-              <h2 className="text-2xl font-semibold text-foreground">
+              <h2 className="text-xl font-semibold text-foreground">
                 {isEditMode ? "Edit Product" : "Add New Product"}
               </h2>
             </div>
@@ -245,6 +246,11 @@ export default function AddProductForm({
                 <Plus className="w-4 h-4" />
                 {isEditMode ? "Update Product" : "Add Product"}
               </Button>
+              {onClose && (
+                <Button variant="ghost" size="icon" onClick={onClose}>
+                  <X className="w-5 h-5" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -262,7 +268,6 @@ export default function AddProductForm({
                 brands={brands}
               />
               <VariantsSection variants={variants} setVariants={setVariants} />
-              <FAQSection faqs={faqs} setFaqs={setFaqs} />
             </div>
 
             {/* Right Column - Media & Category */}
@@ -274,7 +279,6 @@ export default function AddProductForm({
                 categories={categories}
                 subcategories={subcategories}
                 groups={groups}
-                brands={brands}
                 stores={stores}
               />
               <WarehouseSection
@@ -282,6 +286,7 @@ export default function AddProductForm({
                 setWarehouse={setWarehouse}
                 warehouses={warehouses}
               />
+              <FAQSection faqs={faqs} setFaqs={setFaqs} />
             </div>
           </div>
         </div>
