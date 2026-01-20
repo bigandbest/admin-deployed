@@ -1,109 +1,23 @@
-@import "tailwindcss";
-@import "@mantine/core/styles.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-.mantine-bg {
-  background-color: #f9fafb;
-}
-.mantine-card {
-  background-color: #fff;
-  border: 1px solid #e5e7eb;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-bg {
-  background-color: #18181b;
-}
-[data-mantine-color-scheme="dark"] .mantine-card {
-  background-color: #23232b;
-  border: 1px solid #23232b;
-}
-
-.mantine-header {
-  background-color: #fff;
-  border-bottom: 1px solid #e5e7eb;
-}
-[data-mantine-color-scheme="dark"] .mantine-header {
-  background-color: #18181b;
-  border-bottom: 1px solid #23232b;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Table-table {
-  border-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Table-thead {
-  background-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Table-th {
-  background-color: #374151 !important;
-  color: #f9fafb !important;
-  border-color: #4b5563 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Table-td {
-  border-color: #374151 !important;
-  color: #f9fafb !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Table-tr {
-  border-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Table-tr:hover {
-  background-color: #374151 !important;
-}
-
-/* Additional dark theme support for modal and paper components */
-[data-mantine-color-scheme="dark"] .mantine-Modal-content {
-  background-color: #1f2937 !important;
-  border-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Modal-header {
-  background-color: #1f2937 !important;
-  border-bottom-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-Paper-root {
-  background-color: #1f2937 !important;
-  border-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-ScrollArea-scrollbar {
-  background-color: #374151 !important;
-}
-
-[data-mantine-color-scheme="dark"] .mantine-ScrollArea-thumb {
-  background-color: #6b7280 !important;
-}
-
-/* Better dark theme for green light color variables */
-[data-mantine-color-scheme="dark"] {
-  --mantine-color-green-light: #065f46;
-}
-
-[data-mantine-color-scheme="light"] {
-  --mantine-color-green-light: #d1fae5;
-}
-
-/* New UI Theme Variables */
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.98 0 0);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.37 0.12 142);
-  --primary-foreground: oklch(1 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.145 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.145 0 0);
+  --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -115,17 +29,12 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --header-bg: oklch(0.3 0.1 142);
-  --header-text: oklch(1 0 0);
-  --column-header-bg: oklch(0.55 0.15 260);
-  --column-header-text: oklch(1 0 0);
-  --row-number-bg: oklch(0.95 0.15 65);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.37 0.12 142);
+  --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.145 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
@@ -166,6 +75,8 @@
 }
 
 @theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -206,10 +117,9 @@
 
 @layer base {
   * {
-    border-color: var(--border);
+    @apply border-border outline-ring/50;
   }
   body {
-    background-color: var(--background);
-    color: var(--foreground);
+    @apply bg-background text-foreground;
   }
 }
