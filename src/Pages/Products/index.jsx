@@ -757,21 +757,21 @@ const ProductsPage = () => {
             subcategoryFilter ||
             groupFilter ||
             activeFilter) && (
-            <Button
-              variant="light"
-              color="gray"
-              onClick={() => {
-                setSearchQuery("");
-                setCategoryFilter(null);
-                setSubcategoryFilter(null);
-                setGroupFilter(null);
-                setStatusFilter(null);
-              }}
-              className="lg:w-auto w-full"
-            >
-              Clear Filters
-            </Button>
-          )}
+              <Button
+                variant="light"
+                color="gray"
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter(null);
+                  setSubcategoryFilter(null);
+                  setGroupFilter(null);
+                  setStatusFilter(null);
+                }}
+                className="lg:w-auto w-full"
+              >
+                Clear Filters
+              </Button>
+            )}
         </div>
 
         <div className="overflow-x-auto" style={{ maxHeight: "70vh" }}>
@@ -780,137 +780,140 @@ const ProductsPage = () => {
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {displayedProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 hover:border-blue-300"
-                >
-                  <div className="relative">
-                    <img
-                      src={product.image || PRODUCT_PLACEHOLDER}
-                      alt={product.name}
-                      className="w-full h-48 object-cover rounded-t-lg"
-                      onError={(e) => {
-                        e.target.src = PRODUCT_PLACEHOLDER;
-                      }}
-                    />
-                    {product.images && product.images.length > 1 && (
-                      <Badge
-                        className="absolute top-2 right-2 bg-blue-600 text-white"
-                        size="sm"
-                      >
-                        +{product.images.length - 1} photos
-                      </Badge>
-                    )}
-                    <div className="absolute top-2 left-2 flex gap-2">
-                      {product.active ? (
-                        <Badge className="bg-green-500 text-white" size="sm">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-red-500 text-white" size="sm">
-                          Inactive
-                        </Badge>
-                      )}
-                      {product.in_stock && (
-                        <Badge className="bg-blue-500 text-white" size="sm">
-                          In Stock
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="mb-3">
-                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {categories.find((c) => c.id === product.category_id)
-                          ?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {subcategories.find(
-                          (s) => s.id === product.subcategory_id,
-                        )?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {groups.find((g) => g.id === product.group_id)?.name ||
-                          "Unknown"}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <span className="text-xl font-bold text-green-600">
-                          {formatIndianPrice(product.price)}
-                        </span>
-                        {product.old_price > 0 && (
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            {formatIndianPrice(product.old_price)}
-                          </span>
-                        )}
-                        {product.discount > 0 && (
-                          <span className="text-sm text-red-600 ml-2">
-                            ({product.discount}% off)
-                          </span>
-                        )}
-                      </div>
-                      {product.rating > 0 && (
-                        <div className="flex items-center">
-                          <span className="text-yellow-500">★</span>
-                          <span className="text-sm text-gray-600 ml-1">
-                            {product.rating}
-                          </span>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+              <Table striped highlightOnHover verticalSpacing="md" fontSize="sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="w-20 pl-4 py-3 text-gray-500 font-medium">Image</th>
+                    <th className="py-3 text-gray-500 font-medium">Product Name</th>
+                    <th className="py-3 text-gray-500 font-medium">Category / Details</th>
+                    <th className="py-3 text-gray-500 font-medium">Price & Stock</th>
+                    <th className="py-3 text-gray-500 font-medium text-center">Status</th>
+                    <th className="py-3 text-gray-500 font-medium text-right pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedProducts.map((product) => (
+                    <tr key={product.id} className="group hover:bg-blue-50/50 transition-colors">
+                      <td className="pl-4 py-3">
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 cursor-pointer group-hover:border-blue-200 transition-colors"
+                          onClick={() => {
+                            setPreviewImage(product.image || PRODUCT_PLACEHOLDER);
+                            setImagePreviewOpen(true);
+                          }}>
+                          <img
+                            src={product.image || PRODUCT_PLACEHOLDER}
+                            alt={product.name}
+                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
+                            onError={(e) => {
+                              e.target.src = PRODUCT_PLACEHOLDER;
+                            }}
+                          />
+                          {product.images && product.images.length > 1 && (
+                            <div className="absolute bottom-0 right-0 left-0 bg-black/50 text-white text-[10px] text-center py-0.5 backdrop-blur-[2px]">
+                              +{product.images.length - 1}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-3">
-                      <div>Brand: {product.brand_name || "N/A"}</div>
-                      <div>Store: {product.store_name || "N/A"}</div>
-                      <div>
-                        Shipping:{" "}
-                        {formatIndianPrice(product.shipping_amount || 0)}
-                      </div>
-                      <div>
-                        UOM: {product.uom_value} {product.uom_unit || "N/A"}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                      <div className="flex gap-2">
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          color="green"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditModal(product);
-                          }}
-                          title="Edit Product"
-                        >
-                          <FaEdit />
-                        </ActionIcon>
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          color="red"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProduct(product.id);
-                          }}
-                          title="Delete Product"
-                        >
-                          <FaTrash />
-                        </ActionIcon>
-                      </div>
-                      <Text size="xs" color="dimmed">
-                        {new Date(product.created_at).toLocaleDateString()}
-                      </Text>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="font-semibold text-gray-900 line-clamp-2" title={product.name}>
+                            {product.name}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>Added: {new Date(product.created_at).toLocaleDateString()}</span>
+                            {product.rating > 0 && (
+                              <Badge size="xs" color="yellow" variant="light" className="flex items-center gap-1 px-1">
+                                ★ {product.rating}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1.5 text-xs">
+                          <div className="flex flex-wrap gap-1 items-center">
+                            <Badge size="xs" variant="outline" color="blue" className="font-normal">
+                              {categories.find((c) => c.id === product.category_id)?.name || "N/A"}
+                            </Badge>
+                            <span className="text-gray-300">›</span>
+                            <span className="text-gray-600">
+                              {subcategories.find((s) => s.id === product.subcategory_id)?.name || "-"}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-500">
+                            <div className="truncate" title={product.brand_name}>
+                              Brand: <span className="text-gray-700">{product.brand_name || "-"}</span>
+                            </div>
+                            <div className="truncate" title={product.store_name}>
+                              Store: <span className="text-gray-700">{product.store_name || "-"}</span>
+                            </div>
+                            <div>
+                              UOM: <span className="text-gray-700">{product.uom_value} {product.uom_unit}</span>
+                            </div>
+                            <div>
+                              Ship: <span className="text-gray-700">{formatIndianPrice(product.shipping_amount || 0)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="font-bold text-gray-900 border border-green-100 bg-green-50 px-2 py-0.5 rounded-md w-fit">
+                            {formatIndianPrice(product.price)}
+                          </div>
+                          {product.old_price > 0 && (
+                            <div className="text-xs text-gray-400 line-through pl-1">
+                              {formatIndianPrice(product.old_price)}
+                            </div>
+                          )}
+                          <div>
+                            {product.in_stock ? (
+                              <Badge size="xs" color="teal" variant="dot">In Stock</Badge>
+                            ) : (
+                              <Badge size="xs" color="red" variant="dot">Out of Stock</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 text-center">
+                        {product.active ? (
+                          <Badge color="green" variant="light" size="sm">Active</Badge>
+                        ) : (
+                          <Badge color="gray" variant="light" size="sm">Inactive</Badge>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <ActionIcon
+                            variant="subtle"
+                            color="blue"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(product);
+                            }}
+                            title="Edit"
+                          >
+                            <FaEdit size={16} />
+                          </ActionIcon>
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProduct(product.id);
+                            }}
+                            title="Delete"
+                          >
+                            <FaTrash size={16} />
+                          </ActionIcon>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
             </div>
           )}
 
@@ -931,10 +934,10 @@ const ProductsPage = () => {
                 </Title>
                 <Text size="md" color="dimmed" className="mb-6">
                   {searchQuery ||
-                  categoryFilter ||
-                  subcategoryFilter ||
-                  groupFilter ||
-                  activeFilter
+                    categoryFilter ||
+                    subcategoryFilter ||
+                    groupFilter ||
+                    activeFilter
                     ? "No products match your current filters. Try adjusting your search criteria or clearing some filters."
                     : "Get started by adding your first product to the inventory."}
                 </Text>
@@ -952,21 +955,21 @@ const ProductsPage = () => {
                     subcategoryFilter ||
                     groupFilter ||
                     activeFilter) && (
-                    <Button
-                      variant="light"
-                      color="gray"
-                      size="md"
-                      onClick={() => {
-                        setSearchQuery("");
-                        setCategoryFilter(null);
-                        setSubcategoryFilter(null);
-                        setGroupFilter(null);
-                        setStatusFilter(null);
-                      }}
-                    >
-                      Clear All Filters
-                    </Button>
-                  )}
+                      <Button
+                        variant="light"
+                        color="gray"
+                        size="md"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setCategoryFilter(null);
+                          setSubcategoryFilter(null);
+                          setGroupFilter(null);
+                          setStatusFilter(null);
+                        }}
+                      >
+                        Clear All Filters
+                      </Button>
+                    )}
                 </div>
               </div>
             </div>

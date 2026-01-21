@@ -24,6 +24,7 @@ interface CategorySectionProps {
   subcategories: any[];
   groups: any[];
   stores: any[];
+  brands: any[];
 }
 
 export default function CategorySection({
@@ -33,22 +34,36 @@ export default function CategorySection({
   subcategories = [],
   groups = [],
   stores = [],
+  brands = [],
 }: CategorySectionProps) {
   const handleChange = (field: string, value: string) => {
+    console.log("Category field changed:", field, "=", value);
     setCategory({ ...category, [field]: value });
   };
 
+  console.log("DEBUG - selected category_id:", category.category_id);
+  console.log("DEBUG - all subcategories:", subcategories.map(s => ({ id: s.id, name: s.name, category_id: s.category_id })));
+
   const filteredSubcategories = category.category_id
     ? subcategories.filter(
-        (sub) => String(sub.category_id) === String(category.category_id),
-      )
+      (sub) => String(sub.category_id) === String(category.category_id),
+    )
     : [];
 
   const filteredGroups = category.subcategory_id
     ? groups.filter(
-        (grp) => String(grp.subcategory_id) === String(category.subcategory_id),
-      )
+      (grp) => String(grp.subcategory_id) === String(category.subcategory_id),
+    )
     : [];
+
+  console.log("CategorySection render:", {
+    selectedCategoryId: category.category_id,
+    totalCategories: categories.length,
+    totalSubcategories: subcategories.length,
+    filteredSubcategories: filteredSubcategories.length,
+    totalGroups: groups.length,
+    filteredGroups: filteredGroups.length,
+  });
 
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -73,12 +88,15 @@ export default function CategorySection({
               Product Category
             </Label>
             <Select
-              value={category.category_id}
+              value={category.category_id || ""}
               onValueChange={(value) => {
-                handleChange("category_id", value);
-                // Reset dependent fields
-                handleChange("subcategory_id", "");
-                handleChange("group_id", "");
+                console.log("Category selected:", value);
+                setCategory((prev: typeof category) => ({
+                  ...prev,
+                  category_id: value,
+                  subcategory_id: "",
+                  group_id: "",
+                }));
               }}
             >
               <SelectTrigger className="bg-muted/50 border-input">
@@ -100,10 +118,14 @@ export default function CategorySection({
               Subcategory
             </Label>
             <Select
-              value={category.subcategory_id}
+              value={category.subcategory_id || ""}
               onValueChange={(value) => {
-                handleChange("subcategory_id", value);
-                handleChange("group_id", "");
+                console.log("Subcategory selected:", value);
+                setCategory((prev: typeof category) => ({
+                  ...prev,
+                  subcategory_id: value,
+                  group_id: "",
+                }));
               }}
               disabled={!category.category_id}
             >
@@ -126,8 +148,14 @@ export default function CategorySection({
               Group
             </Label>
             <Select
-              value={category.group_id}
-              onValueChange={(value) => handleChange("group_id", value)}
+              value={category.group_id || ""}
+              onValueChange={(value) => {
+                console.log("Group selected:", value);
+                setCategory((prev: typeof category) => ({
+                  ...prev,
+                  group_id: value,
+                }));
+              }}
               disabled={!category.subcategory_id}
             >
               <SelectTrigger className="bg-muted/50 border-input">
@@ -143,13 +171,38 @@ export default function CategorySection({
             </Select>
           </div>
 
+          {/* Brand Select */}
+          <div className="space-y-2">
+            <Label htmlFor="brand" className="text-sm font-medium">
+              Brand
+            </Label>
+            <Select
+              value={category.brand_id || ""}
+              onValueChange={(value) => handleChange("brand_id", value)}
+            >
+              <SelectTrigger className="bg-muted/50 border-input">
+                <SelectValue placeholder="Select brand" />
+              </SelectTrigger>
+              <SelectContent>
+                {brands.map((brand) => (
+                  <SelectItem
+                    key={brand.value || brand.id}
+                    value={brand.value || brand.id}
+                  >
+                    {brand.label || brand.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Store Select */}
           <div className="space-y-2">
             <Label htmlFor="store" className="text-sm font-medium">
               Store
             </Label>
             <Select
-              value={category.store_id}
+              value={category.store_id || ""}
               onValueChange={(value) => handleChange("store_id", value)}
             >
               <SelectTrigger className="bg-muted/50 border-input">

@@ -12,9 +12,8 @@ import { Save, Plus, X } from "lucide-react";
 interface ProductData {
   name: string;
   description: string;
-  specifications: string;
   vertical: string;
-  brand_name: string;
+  // brand_name removed
   hsn_code: string;
   sac_code: string;
   gst_rate: number;
@@ -95,9 +94,8 @@ export default function AddProductForm({
   const [product, setProduct] = useState<ProductData>({
     name: "",
     description: "",
-    specifications: "",
     vertical: "qwik",
-    brand_name: "",
+    // brand_name removed
     hsn_code: "",
     sac_code: "",
     gst_rate: 18,
@@ -159,12 +157,8 @@ export default function AddProductForm({
     if (initialData) {
       if (initialData.product) {
         setProduct((prev) => ({
-          ...prev,
           ...initialData.product,
-          brand_name:
-            initialData.product.brand_name ||
-            initialData.category?.brand_id ||
-            prev.brand_name,
+          // brand_name removed as it's not in schema
         }));
       }
       if (initialData.variants) setVariants(initialData.variants);
@@ -174,7 +168,6 @@ export default function AddProductForm({
           ...prev,
           ...initialData.category,
           brand_id:
-            initialData.product?.brand_name ||
             initialData.category.brand_id ||
             prev.brand_id,
         }));
@@ -184,12 +177,12 @@ export default function AddProductForm({
     }
   }, [initialData]);
 
-  // Sync brand_id from Category to Product.brand_name
-  useEffect(() => {
-    if (category.brand_id && category.brand_id !== product.brand_name) {
-      setProduct((prev) => ({ ...prev, brand_name: category.brand_id }));
-    }
-  }, [category.brand_id]);
+  // Sync brand_id from Category to Product.brand_name removed
+  // useEffect(() => {
+  //   if (category.brand_id && category.brand_id !== product.brand_name) {
+  //     setProduct((prev) => ({ ...prev, brand_name: category.brand_id }));
+  //   }
+  // }, [category.brand_id]);
 
   const handleSaveDraft = () => {
     const formData = {
@@ -280,6 +273,7 @@ export default function AddProductForm({
                 subcategories={subcategories}
                 groups={groups}
                 stores={stores}
+                brands={brands}
               />
               <WarehouseSection
                 warehouse={warehouse}

@@ -266,7 +266,7 @@ export async function updateOrderStatus(id, status, adminNotes = "") {
 // BRANDS
 export async function getAllBrands() {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand/list`);
+    const response = await fetch(`${API_BASE_URL}/brands/list`);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -275,7 +275,7 @@ export async function getAllBrands() {
 
 export async function getBrand(id) {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand/${id}`);
+    const response = await fetch(`${API_BASE_URL}/brands/${id}`);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -285,7 +285,7 @@ export async function getBrand(id) {
 export async function addBrand(brand, imageFile) {
   try {
     const formData = createFormData(brand, "image_url", imageFile);
-    const response = await fetch(`${API_BASE_URL}/brand/add`, {
+    const response = await fetch(`${API_BASE_URL}/brands/add`, {
       method: "POST",
       body: formData,
     });
@@ -298,7 +298,7 @@ export async function addBrand(brand, imageFile) {
 export async function updateBrand(id, brand, imageFile) {
   try {
     const formData = createFormData(brand, "image_url", imageFile);
-    const response = await fetch(`${API_BASE_URL}/brand/update/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/brands/update/${id}`, {
       method: "PUT",
       body: formData,
     });
@@ -310,7 +310,7 @@ export async function updateBrand(id, brand, imageFile) {
 
 export async function deleteBrand(id) {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand/delete/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/brands/delete/${id}`, {
       method: "DELETE",
     });
     return await handleResponse(response);
