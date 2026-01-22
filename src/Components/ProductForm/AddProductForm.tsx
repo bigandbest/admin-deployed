@@ -77,6 +77,7 @@ interface AddProductFormProps {
   stores: any[];
   warehouses: any[];
   onClose?: () => void;
+  isLoading?: boolean;
 }
 
 export default function AddProductForm({
@@ -90,6 +91,7 @@ export default function AddProductForm({
   stores = [],
   warehouses = [],
   onClose,
+  isLoading = false,
 }: AddProductFormProps) {
   const [product, setProduct] = useState<ProductData>({
     name: "",
@@ -226,6 +228,7 @@ export default function AddProductForm({
                 variant="outline"
                 size="sm"
                 onClick={handleSaveDraft}
+                disabled={isLoading}
                 className="gap-2 bg-transparent"
               >
                 <Save className="w-4 h-4" />
@@ -234,10 +237,20 @@ export default function AddProductForm({
               <Button
                 size="sm"
                 onClick={handleAddProduct}
+                disabled={isLoading}
                 className="gap-2 bg-green-500 hover:bg-green-600 text-white"
               >
-                <Plus className="w-4 h-4" />
-                {isEditMode ? "Update Product" : "Add Product"}
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    {isEditMode ? "Updating..." : "Adding..."}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    {isEditMode ? "Update Product" : "Add Product"}
+                  </>
+                )}
               </Button>
               {onClose && (
                 <Button variant="ghost" size="icon" onClick={onClose}>

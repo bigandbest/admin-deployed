@@ -4,6 +4,8 @@ import axios from "axios";
 
 import AddProductForm from "../../Components/ProductForm/AddProductForm";
 import { Loader2 } from "lucide-react";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Helper to format options for select components
 const formatOptions = (items, labelKey = "name", valueKey = "id") => {
@@ -184,6 +186,11 @@ const AddProduct = () => {
           variant_stock: v.inventory?.stock_quantity || v.variant_stock,
           variant_weight: v.variant_weight,
           variant_unit: v.variant_unit,
+          // Bulk Pricing Fields
+          is_bulk_enabled: v.is_bulk_enabled || false,
+          bulk_min_quantity: v.bulk_min_quantity || 50,
+          bulk_discount_percentage: v.bulk_discount_percentage || 0,
+          bulk_price: v.bulk_price || 0,
         }));
 
         // Transform FAQS
@@ -240,40 +247,41 @@ const AddProduct = () => {
     }
   };
 
+  // Optimize with Promise.all for parallel uploads
   const uploadImages = async (mediaItems) => {
-    const uploadedUrls = [];
-    for (const item of mediaItems) {
-      if (item.file) {
-        try {
-          const formData = new FormData();
-          formData.append("image", item.file);
-          const authToken = localStorage.getItem("admin_token");
+    const uploadPromises = mediaItems.map(async (item) => {
+      if (!item.file) return item.url; // Already uploaded
 
-          const response = await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/upload/image`,
-            formData,
-            {
-              headers: authToken
-                ? { Authorization: `Bearer ${authToken}` }
-                : {},
-              withCredentials: true,
-            },
-          );
+      try {
+        const formData = new FormData();
+        formData.append("image", item.file);
+        const authToken = localStorage.getItem("admin_token");
 
-          if (response.data.success) {
-            uploadedUrls.push(response.data.imageUrl);
-          } else {
-            console.error("Upload failed for file:", item.file.name);
-          }
-        } catch (error) {
-          console.error("Error uploading image:", error);
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/upload/image`,
+          formData,
+          {
+            headers: authToken
+              ? { Authorization: `Bearer ${authToken}` }
+              : {},
+            withCredentials: true,
+          },
+        );
+
+        if (response.data.success) {
+          return response.data.imageUrl;
+        } else {
+          console.error("Upload failed for file:", item.file.name);
+          return null;
         }
-      } else {
-        // Already a URL
-        uploadedUrls.push(item.url);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        return null;
       }
-    }
-    return uploadedUrls;
+    });
+
+    const results = await Promise.all(uploadPromises);
+    return results.filter(url => url !== null);
   };
 
   const handleSubmit = async (formData) => {
@@ -315,7 +323,7 @@ const AddProduct = () => {
         // Variants (map back to API structure)
         product_variants: variants.map((v) => {
           // Ensure attributes are properly formatted as {attribute_name, attribute_value} objects
-          const formattedAttributes = Array.isArray(v.attributes) 
+          const formattedAttributes = Array.isArray(v.attributes)
             ? v.attributes.filter(attr => attr && (attr.attribute_name || attr.attribute_value))
             : [];
 
@@ -333,6 +341,11 @@ const AddProduct = () => {
             is_default: v.is_default !== undefined ? v.is_default : false,
             active: v.active !== undefined ? v.active : true,
             attributes: formattedAttributes, // Properly formatted attributes array
+            // Bulk Pricing Payload
+            is_bulk_enabled: v.is_bulk_enabled,
+            bulk_min_quantity: v.bulk_min_quantity,
+            bulk_discount_percentage: v.bulk_discount_percentage,
+            bulk_price: (v.price || v.variant_price) * (1 - (v.bulk_discount_percentage || 0) / 100) // Calculate tentative bulk price
           };
         }),
 
@@ -375,33 +388,20 @@ const AddProduct = () => {
           response.data.productId || response.data.product?.id || id;
 
 
-        // Save Bulk Settings
-        // Save Bulk Settings
-        if (product.enable_bulk_pricing) {
-          // Calculate bulk price if not explicitly set (assuming product.price * discount)
-          const basePrice = parseFloat(product.price || 0);
-          const discount = parseFloat(product.bulk_discount_percentage || 0);
-          const bulkPrice = basePrice - (basePrice * discount) / 100;
+        // Removed separate Bulk Settings API call as it is now integrated into variants payload
 
-          await axios.post(
-            `${import.meta.env.VITE_API_BASE_URL}/bulk-products/settings/${productId}`,
-            {
-              product_id: productId,
-              min_quantity: product.bulk_min_quantity,
-              discount_percentage: product.bulk_discount_percentage,
-              bulk_price: bulkPrice.toFixed(2),
-              is_active: true,
-              is_bulk_enabled: true
-            },
-          );
-        }
-
-        navigate("/products");
+        toast.success(isEditMode ? "Product updated successfully" : "Product created successfully");
+        // Delay navigation slightly to let toast show
+        setTimeout(() => {
+          navigate("/products");
+        }, 1500);
       } else {
         console.error("Failed to save product:", response.data.message);
+        toast.error(response.data.message || "Failed to save product");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast.error(error.response?.data?.error || "An error occurred while saving the product");
     } finally {
       setLoading(false);
     }
@@ -434,18 +434,22 @@ const AddProduct = () => {
   });
 
   return (
-    <AddProductForm
-      initialData={initialData}
-      onSubmit={handleSubmit}
-      isEditMode={isEditMode}
-      categories={categories}
-      subcategories={subcategories}
-      groups={groups}
-      brands={brandOptions}
-      stores={storeOptions}
-      warehouses={warehouseOptions}
-      onClose={() => navigate("/products")}
-    />
+    <>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <AddProductForm
+        initialData={initialData}
+        onSubmit={handleSubmit}
+        isEditMode={isEditMode}
+        categories={categories}
+        subcategories={subcategories}
+        groups={groups}
+        brands={brandOptions}
+        stores={storeOptions}
+        warehouses={warehouseOptions}
+        onClose={() => navigate("/products")}
+        isLoading={loading}
+      />
+    </>
   );
 };
 

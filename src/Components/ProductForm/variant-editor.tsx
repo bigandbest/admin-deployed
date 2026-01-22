@@ -51,9 +51,8 @@ export default function VariantEditor({
       >
         <div className="flex items-center gap-3 text-left">
           <ChevronDown
-            className={`w-5 h-5 transition-transform ${
-              isExpanded ? 'rotate-180' : ''
-            }`}
+            className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''
+              }`}
           />
           <div>
             <p className="font-medium text-sm">
@@ -215,6 +214,51 @@ export default function VariantEditor({
               attributes={variant.attributes}
               onAttributeChange={handleAttributeChange}
             />
+          </div>
+
+          {/* Bulk Pricing */}
+          <div className="border-t border-border pt-4">
+            <div className="flex items-center justify-between mb-4">
+              <Label htmlFor={`bulk-enable-${variantIndex}`} className="text-sm font-semibold cursor-pointer">
+                Bulk Pricing
+              </Label>
+              <Switch
+                id={`bulk-enable-${variantIndex}`}
+                checked={variant.is_bulk_enabled}
+                onCheckedChange={(checked) => handleChange('is_bulk_enabled', checked)}
+              />
+            </div>
+
+            {variant.is_bulk_enabled && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor={`bulk-min-${variantIndex}`} className="text-sm font-medium">
+                    Min Quantity
+                  </Label>
+                  <Input
+                    id={`bulk-min-${variantIndex}`}
+                    type="number"
+                    placeholder="50"
+                    value={variant.bulk_min_quantity}
+                    onChange={(e) => handleChange('bulk_min_quantity', Number(e.target.value))}
+                    className="bg-card border-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`bulk-discount-${variantIndex}`} className="text-sm font-medium">
+                    Discount (%)
+                  </Label>
+                  <Input
+                    id={`bulk-discount-${variantIndex}`}
+                    type="number"
+                    placeholder="10"
+                    value={variant.bulk_discount_percentage}
+                    onChange={(e) => handleChange('bulk_discount_percentage', Number(e.target.value))}
+                    className="bg-card border-input"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Inventory */}

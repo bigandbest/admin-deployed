@@ -168,11 +168,10 @@ const WarehouseList = () => {
                   </td>
                   <td className="py-2 px-4">
                     <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        w.type === "zonal"
+                      className={`px-2 py-1 rounded text-xs font-medium ${w.type === "zonal"
                           ? "bg-green-100 text-green-800"
                           : "bg-purple-100 text-purple-800"
-                      }`}
+                        }`}
                     >
                       {w.type === "zonal" ? "Zonal" : "Division"}
                     </span>
@@ -191,15 +190,15 @@ const WarehouseList = () => {
                         {warehouses.filter(
                           (child) => child.parent_warehouse_id === w.id
                         ).length > 0 && (
-                          <div className="text-xs text-blue-600 mt-1">
-                            {warehouses
-                              .filter(
-                                (child) => child.parent_warehouse_id === w.id
-                              )
-                              .map((child) => child.name)
-                              .join(", ")}
-                          </div>
-                        )}
+                            <div className="text-xs text-blue-600 mt-1">
+                              {warehouses
+                                .filter(
+                                  (child) => child.parent_warehouse_id === w.id
+                                )
+                                .map((child) => child.name)
+                                .join(", ")}
+                            </div>
+                          )}
                       </div>
                     ) : w.parent_warehouse_id ? (
                       <div className="text-xs text-blue-600">
@@ -249,10 +248,10 @@ const WarehouseList = () => {
                           parent_warehouse_id: w.parent_warehouse_id || null,
                           pincode_assignments: w.pincodes
                             ? w.pincodes.map((p) => ({
-                                pincode: p,
-                                city: "", // We'll need to get this from the API
-                                state: "",
-                              }))
+                              pincode: p,
+                              city: "", // We'll need to get this from the API
+                              state: "",
+                            }))
                             : [],
                         });
                         setShowModal(true);
@@ -286,7 +285,7 @@ const WarehouseList = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 px-4">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
               {editingWarehouse ? "Edit Warehouse" : "Add Warehouse"}

@@ -29,6 +29,7 @@ import {
   FaMoneyBillWave,
   FaTicketAlt,
   FaClock,
+  FaBoxOpen,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -340,6 +341,12 @@ const Sidebar = ({ isOpen = true }) => {
       icon: <FaDatabase />,
       path: "/warehouse-management",
       description: "Manage warehouses, products, and stock inventory",
+    },
+    {
+      title: "Stock Management",
+      icon: <FaBoxOpen />,
+      path: "/stock-management",
+      description: "Manage inventory levels across warehouses",
     },
     {
       title: "Scheduling Management",

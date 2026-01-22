@@ -46,6 +46,7 @@ import StorageDetailsPage from "./Pages/Storage";
 import BusinessUsersList from "./Pages/BusinessWork/BusinessData.jsx";
 import EnhancedStoragePage from "./Pages/Storage/enhanced";
 import WarehouseManagement from "./Pages/WarehousePages/WarehouseManagement.jsx";
+import StockManagement from "./Pages/WarehousePages/StockManagement.jsx";
 import WarehouseProducts from "./Pages/WarehousePages/WarehouseProducts.jsx";
 import VideoBannerManagement from "./Pages/VideoBanners/VideoBannerManagement.jsx";
 import AdminOrders from "./Pages/Orders/index.jsx";
@@ -286,7 +287,7 @@ function App() {
         },
         {
           path: "/stock-management",
-          element: <WarehouseManagement />,
+          element: <StockManagement />,
         },
         {
           path: "/warehouseproducts/:id/products",

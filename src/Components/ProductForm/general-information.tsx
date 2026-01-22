@@ -200,6 +200,7 @@ export default function GeneralInformation({
               </div>
             )}
           </div>
+
         </CardContent>
       )}
     </Card>
