@@ -118,7 +118,7 @@ const ProductModal = ({
       setLoadingVariants(true);
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/product-variants/product/${data.selectedProductId}/variants`
+          `${API_BASE_URL}/variants/product/${data.selectedProductId}`
         );
 
         if (response.data.success && response.data.variants) {

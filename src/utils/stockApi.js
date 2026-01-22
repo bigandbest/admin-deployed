@@ -119,13 +119,13 @@ export const updateVariantStock = async (variantId, variantStock, active = null)
   try {
     const payload = {};
     if (variantStock !== null && variantStock !== undefined) {
-      payload.variant_stock = variantStock;
+      payload.stock_quantity = variantStock;
     }
     if (active !== null && active !== undefined) {
       payload.active = active;
     }
 
-    const response = await axios.put(`${API_BASE_URL}/product-variants/variant/${variantId}/stock`, payload);
+    const response = await axios.put(`${API_BASE_URL}/variants/update/${variantId}`, payload);
 
     return {
       success: true,

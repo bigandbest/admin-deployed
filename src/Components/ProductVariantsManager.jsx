@@ -5,10 +5,10 @@ import { FaTrash, FaPlus, FaUpload } from 'react-icons/fa';
 
 const ProductVariantsManager = ({ product }) => {
   // Initialize with variants from product if available
-  const initialVariants = product?.product_variants && Array.isArray(product.product_variants) 
+  const initialVariants = product?.product_variants && Array.isArray(product.product_variants)
     ? product.product_variants.filter(v => v.active !== false)
     : [];
-  
+
   const [variants, setVariants] = useState(initialVariants);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -25,7 +25,7 @@ const ProductVariantsManager = ({ product }) => {
 
   useEffect(() => {
     console.log('ProductVariantsManager - Product changed:', product);
-    
+
     if (product?.id) {
       // First check if product already has variants in the response
       if (product.product_variants && Array.isArray(product.product_variants) && product.product_variants.length > 0) {
@@ -41,16 +41,16 @@ const ProductVariantsManager = ({ product }) => {
 
   const fetchVariants = async () => {
     if (!product?.id) return;
-    
+
     setLoading(true);
     try {
       // Use API endpoint - this is a public endpoint so no auth needed
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-      const response = await fetch(`${API_BASE_URL}/product-variants/product/${product.id}/variants`);
+      const response = await fetch(`${API_BASE_URL}/variants/product/${product.id}`);
       const data = await response.json();
-      
+
       console.log('Fetched variants from API for product', product.id, ':', data);
-      
+
       if (data.success && data.variants && Array.isArray(data.variants)) {
         console.log('Setting variants from API response:', data.variants);
         setVariants(data.variants);
@@ -81,16 +81,16 @@ const ProductVariantsManager = ({ product }) => {
 
     try {
       let variantImageUrl = null;
-      
+
       // Upload variant image if provided
       if (variantImageFile) {
         const fileExt = variantImageFile.name.split('.').pop();
         const fileName = `variant_${Date.now()}.${fileExt}`;
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('product-images')
           .upload(`variants/${fileName}`, variantImageFile);
-        
+
         if (uploadError) {
           console.error('Error uploading variant image:', uploadError);
         } else {
@@ -122,10 +122,10 @@ const ProductVariantsManager = ({ product }) => {
         .select();
 
       if (error) throw error;
-      
+
       // Refresh variants list to show updated default status
       fetchVariants();
-      
+
       setNewVariant({
         variant_name: '',
         variant_price: '',
@@ -175,7 +175,7 @@ const ProductVariantsManager = ({ product }) => {
         .eq('id', variantId);
 
       if (error) throw error;
-      
+
       // Refresh the variants list
       fetchVariants();
     } catch (error) {
@@ -228,14 +228,14 @@ const ProductVariantsManager = ({ product }) => {
               label="Variant Name"
               placeholder="e.g., 10 kg Pack"
               value={newVariant.variant_name}
-              onChange={(e) => setNewVariant({...newVariant, variant_name: e.target.value})}
+              onChange={(e) => setNewVariant({ ...newVariant, variant_name: e.target.value })}
               required
             />
             <TextInput
               label="Weight/Size"
               placeholder="e.g., 10 kg"
               value={newVariant.variant_weight}
-              onChange={(e) => setNewVariant({...newVariant, variant_weight: e.target.value})}
+              onChange={(e) => setNewVariant({ ...newVariant, variant_weight: e.target.value })}
               required
             />
           </div>
@@ -244,7 +244,7 @@ const ProductVariantsManager = ({ product }) => {
               label="Price (₹)"
               placeholder="Enter price"
               value={newVariant.variant_price}
-              onChange={(value) => setNewVariant({...newVariant, variant_price: value})}
+              onChange={(value) => setNewVariant({ ...newVariant, variant_price: value })}
               required
               min={0}
             />
@@ -252,14 +252,14 @@ const ProductVariantsManager = ({ product }) => {
               label="Old Price (₹)"
               placeholder="Enter old price"
               value={newVariant.variant_old_price}
-              onChange={(value) => setNewVariant({...newVariant, variant_old_price: value})}
+              onChange={(value) => setNewVariant({ ...newVariant, variant_old_price: value })}
               min={0}
             />
             <NumberInput
               label="Stock"
               placeholder="Enter stock"
               value={newVariant.variant_stock}
-              onChange={(value) => setNewVariant({...newVariant, variant_stock: value})}
+              onChange={(value) => setNewVariant({ ...newVariant, variant_stock: value })}
               required
               min={0}
             />
@@ -268,7 +268,7 @@ const ProductVariantsManager = ({ product }) => {
             <Select
               label="Unit"
               value={newVariant.variant_unit}
-              onChange={(value) => setNewVariant({...newVariant, variant_unit: value})}
+              onChange={(value) => setNewVariant({ ...newVariant, variant_unit: value })}
               data={[
                 { value: 'kg', label: 'kg' },
                 { value: 'gm', label: 'gm' },
@@ -290,7 +290,7 @@ const ProductVariantsManager = ({ product }) => {
             <Switch
               label="Default Variant"
               checked={newVariant.is_default}
-              onChange={(e) => setNewVariant({...newVariant, is_default: e.currentTarget.checked})}
+              onChange={(e) => setNewVariant({ ...newVariant, is_default: e.currentTarget.checked })}
             />
             <Group>
               <Button type="submit" color="green" size="sm">Add</Button>
@@ -351,11 +351,10 @@ const ProductVariantsManager = ({ product }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleSetDefault(variant.id)}
-                  className={`px-3 py-1 text-xs rounded ${
-                    variant.is_default 
+                  className={`px-3 py-1 text-xs rounded ${variant.is_default
                       ? 'bg-blue-500 text-white cursor-default'
                       : 'bg-gray-200 text-gray-700 hover:bg-blue-100'
-                  }`}
+                    }`}
                   disabled={variant.is_default}
                 >
                   {variant.is_default ? 'Default' : 'Set Default'}

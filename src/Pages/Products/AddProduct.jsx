@@ -285,6 +285,14 @@ const AddProduct = () => {
       // 2. Prepare Payload
       const { product, variants, category, warehouse, faqs, status } = formData;
 
+      // Prepare media objects with proper structure for backend
+      const mediaObjects = imageUrls.map((url, index) => ({
+        media_type: 'image',
+        url: url,
+        is_primary: index === 0,
+        sort_order: index
+      }));
+
       const payload = {
         ...product,
         // Category Fields
@@ -292,12 +300,10 @@ const AddProduct = () => {
         subcategory_id: category.subcategory_id,
         group_id: category.group_id,
         store_id: category.store_id,
-        group_id: category.group_id,
-        store_id: category.store_id,
         brand_name: category.brand_id, // Map brand from category selection to brand_name field for controller
 
-        // Media
-        images: imageUrls,
+        // Media - CRITICAL: Send as 'media' array with proper object structure
+        media: mediaObjects,
 
         // Warehouse
         primary_warehouses: warehouse ? [warehouse] : [],
@@ -307,19 +313,28 @@ const AddProduct = () => {
         faq: faqs,
 
         // Variants (map back to API structure)
-        product_variants: variants.map((v) => ({
-          id: v.id, // Include ID for updates
-          variant_name: v.title || v.variant_name,
-          variant_price: v.price || v.variant_price,
-          variant_old_price: v.old_price || v.variant_old_price,
-          discount_percentage: v.discount_percentage,
-          variant_stock: v.inventory?.stock_quantity || v.variant_stock,
-          variant_weight: v.variant_weight || "0", // Default
-          variant_unit: v.variant_unit || "kg", // Default
-          shipping_amount: product.shipping_amount,
-          is_default: v.is_default,
-          attributes: v.attributes, // Pass attributes array
-        })),
+        product_variants: variants.map((v) => {
+          // Ensure attributes are properly formatted as {attribute_name, attribute_value} objects
+          const formattedAttributes = Array.isArray(v.attributes) 
+            ? v.attributes.filter(attr => attr && (attr.attribute_name || attr.attribute_value))
+            : [];
+
+          return {
+            id: v.id, // Include ID for updates
+            sku: v.sku || "",
+            variant_name: v.title || v.variant_name,
+            variant_price: v.price || v.variant_price,
+            variant_old_price: v.old_price || v.variant_old_price,
+            discount_percentage: v.discount_percentage || 0,
+            variant_stock: v.inventory?.stock_quantity || v.variant_stock,
+            variant_weight: v.variant_weight || "0", // Default
+            variant_unit: v.variant_unit || "kg", // Default
+            shipping_amount: product.shipping_amount,
+            is_default: v.is_default !== undefined ? v.is_default : false,
+            active: v.active !== undefined ? v.active : true,
+            attributes: formattedAttributes, // Properly formatted attributes array
+          };
+        }),
 
         status: status, // active or draft
       };

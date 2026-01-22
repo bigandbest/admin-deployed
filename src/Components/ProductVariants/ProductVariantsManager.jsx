@@ -52,7 +52,7 @@ const ProductVariantsManager = ({ productId, productName }) => {
   const fetchVariants = async () => {
     setLoading(true);
     try {
-      const response = await apiCall(`/product-variants/product/${productId}/variants`);
+      const response = await apiCall(`/variants/product/${productId}`);
       if (response.success) {
         setVariants(response.variants || []);
       }
@@ -65,10 +65,10 @@ const ProductVariantsManager = ({ productId, productName }) => {
 
   const uploadImage = async (file) => {
     if (!file) return null;
-    
+
     const formData = new FormData();
     formData.append('image', file);
-    
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/upload/image`, {
         method: 'POST',
@@ -114,7 +114,7 @@ const ProductVariantsManager = ({ productId, productName }) => {
 
       if (editingVariant) {
         // CRITICAL: Only update product_variants table, never products table
-        const response = await apiCall(`/product-variants/variant/${editingVariant.id}`, {
+        const response = await apiCall(`/variants/update/${editingVariant.id}`, {
           method: 'PUT',
           body: JSON.stringify(variantData)
         });
@@ -122,7 +122,7 @@ const ProductVariantsManager = ({ productId, productName }) => {
         console.log('Variant updated successfully. Main product pricing preserved.');
       } else {
         // CRITICAL: Only insert into product_variants table, never modify products table
-        const response = await apiCall(`/product-variants/product/${productId}/variants`, {
+        const response = await apiCall(`/variants/add`, {
           method: 'POST',
           body: JSON.stringify(variantData)
         });
@@ -146,7 +146,7 @@ const ProductVariantsManager = ({ productId, productName }) => {
 
     setLoading(true);
     try {
-      const response = await apiCall(`/product-variants/variant/${variantId}`, {
+      const response = await apiCall(`/variants/delete/${variantId}`, {
         method: 'DELETE'
       });
       if (!response.success) throw new Error(response.error || 'Failed to delete variant');
@@ -234,7 +234,7 @@ const ProductVariantsManager = ({ productId, productName }) => {
   return (
     <Card shadow="sm" p="lg" radius="md">
       <LoadingOverlay visible={loading} />
-      
+
       <Group position="apart" mb="md">
         <Title order={3}>Product Variants - {productName}</Title>
         <Button leftIcon={<FaPlus size={16} />} onClick={openAddModal}>
@@ -341,7 +341,7 @@ const ProductVariantsManager = ({ productId, productName }) => {
               </div>
             )}
           </div>
-          
+
           <TextInput
             label="Weight/Size"
             placeholder="e.g., 10 kg"
