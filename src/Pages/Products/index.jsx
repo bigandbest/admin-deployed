@@ -28,8 +28,7 @@ const ProductRowSkeleton = () => (
   <tr className="border-b border-gray-100 dark:border-gray-700">
     <td style={{ textAlign: "center", padding: "8px" }}>
       <div className="flex flex-col items-center gap-2">
-        <Skeleton height={60} width={80} radius="sm" />
-        <Skeleton height={12} width={40} />
+        <Skeleton height={80} width={80} radius="sm" />
       </div>
     </td>
     <td style={{ padding: "8px" }}>
@@ -43,31 +42,38 @@ const ProductRowSkeleton = () => (
       <Skeleton height={14} width="70%" />
     </td>
     <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="60%" />
+    </td>
+    <td style={{ padding: "8px" }}>
       <Skeleton height={14} width="80%" />
     </td>
-    <td style={{ textAlign: "right", padding: "8px" }}>
-      <Skeleton height={16} width={60} ml="auto" />
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="50%" />
     </td>
-    <td style={{ textAlign: "right", padding: "8px" }}>
-      <Skeleton height={14} width={50} ml="auto" />
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="50%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="60%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="80%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
     </td>
     <td style={{ textAlign: "center", padding: "8px" }}>
       <Skeleton height={20} width={40} mx="auto" radius="sm" />
     </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={20} width={30} mx="auto" radius="sm" />
-    </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={20} width={35} mx="auto" radius="sm" />
-    </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={16} width={40} mx="auto" />
-    </td>
-    {Array.from({ length: 15 }).map((_, index) => (
-      <td key={index} style={{ textAlign: "center", padding: "8px" }}>
-        <Skeleton height={20} width={35} mx="auto" radius="sm" />
-      </td>
-    ))}
     <td style={{ textAlign: "center", padding: "8px" }}>
       <div className="flex justify-center gap-1">
         <Skeleton height={24} width={24} radius="sm" />
@@ -232,6 +238,46 @@ const formatIndianPrice = (price) => {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(price);
+};
+
+// Helper function to get product image from media array
+const getProductImage = (product) => {
+  if (!product.media || product.media.length === 0) {
+    return null;
+  }
+  // Get primary image or first image
+  const primaryImage = product.media.find((m) => m.is_primary);
+  return primaryImage ? primaryImage.url : product.media[0].url;
+};
+
+// Helper function to get default variant
+const getDefaultVariant = (product) => {
+  if (!product.variants || product.variants.length === 0) {
+    return null;
+  }
+  return product.variants.find((v) => v.is_default) || product.variants[0];
+};
+
+// Helper function to get product price from variant
+const getProductPrice = (product) => {
+  const variant = getDefaultVariant(product);
+  return variant ? parseFloat(variant.price) : 0;
+};
+
+// Helper function to get product old price from variant
+const getProductOldPrice = (product) => {
+  const variant = getDefaultVariant(product);
+  return variant && variant.old_price ? parseFloat(variant.old_price) : 0;
+};
+
+// Helper function to check if product is in stock
+const isProductInStock = (product) => {
+  const variant = getDefaultVariant(product);
+  if (!variant || !variant.inventory || variant.inventory.length === 0) {
+    return false;
+  }
+  // Check if any warehouse has stock
+  return variant.inventory.some((inv) => inv.stock_qty > inv.reserved_qty);
 };
 
 import {
@@ -757,21 +803,21 @@ const ProductsPage = () => {
             subcategoryFilter ||
             groupFilter ||
             activeFilter) && (
-              <Button
-                variant="light"
-                color="gray"
-                onClick={() => {
-                  setSearchQuery("");
-                  setCategoryFilter(null);
-                  setSubcategoryFilter(null);
-                  setGroupFilter(null);
-                  setStatusFilter(null);
-                }}
-                className="lg:w-auto w-full"
-              >
-                Clear Filters
-              </Button>
-            )}
+            <Button
+              variant="light"
+              color="gray"
+              onClick={() => {
+                setSearchQuery("");
+                setCategoryFilter(null);
+                setSubcategoryFilter(null);
+                setGroupFilter(null);
+                setStatusFilter(null);
+              }}
+              className="lg:w-auto w-full"
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
 
         <div className="overflow-x-auto" style={{ maxHeight: "70vh" }}>
@@ -781,107 +827,286 @@ const ProductsPage = () => {
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-              <Table striped highlightOnHover verticalSpacing="md" fontSize="sm">
+              <Table
+                striped
+                highlightOnHover
+                verticalSpacing="md"
+                fontSize="sm"
+              >
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="w-20 pl-4 py-3 text-gray-500 font-medium">Image</th>
-                    <th className="py-3 text-gray-500 font-medium">Product Name</th>
-                    <th className="py-3 text-gray-500 font-medium">Category / Details</th>
-                    <th className="py-3 text-gray-500 font-medium">Price & Stock</th>
-                    <th className="py-3 text-gray-500 font-medium text-center">Status</th>
-                    <th className="py-3 text-gray-500 font-medium text-right pr-4">Actions</th>
+                    <th className="w-20 pl-4 py-3 text-gray-500 font-medium">
+                      Image
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Product Name
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Description
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Category / Subcategory
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Group
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Brand / Store
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      HSN/SAC
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      GST / CESS
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Vertical
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Return Policy
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Rating
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Price & Stock
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Variant Details
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium">
+                      Bulk Pricing
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium text-center">
+                      Status
+                    </th>
+                    <th className="py-3 text-gray-500 font-medium text-right pr-4">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedProducts.map((product) => (
-                    <tr key={product.id} className="group hover:bg-blue-50/50 transition-colors">
+                  {displayedProducts.map((product) => {
+                    const defaultVariant = getDefaultVariant(product);
+                    return (
+                    <tr
+                      key={product.id}
+                      className="group hover:bg-blue-50/50 transition-colors"
+                    >
                       <td className="pl-4 py-3">
-                        <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 cursor-pointer group-hover:border-blue-200 transition-colors"
+                        <div
+                          className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 cursor-pointer group-hover:border-blue-300 transition-colors shadow-sm"
                           onClick={() => {
-                            setPreviewImage(product.image || PRODUCT_PLACEHOLDER);
+                            const productImage = getProductImage(product);
+                            setPreviewImage(
+                              productImage || PRODUCT_PLACEHOLDER,
+                            );
                             setImagePreviewOpen(true);
-                          }}>
+                          }}
+                        >
                           <img
-                            src={product.image || PRODUCT_PLACEHOLDER}
+                            src={
+                              getProductImage(product) || PRODUCT_PLACEHOLDER
+                            }
                             alt={product.name}
                             className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
                             onError={(e) => {
                               e.target.src = PRODUCT_PLACEHOLDER;
                             }}
                           />
-                          {product.images && product.images.length > 1 && (
+                          {product.media && product.media.length > 1 && (
                             <div className="absolute bottom-0 right-0 left-0 bg-black/50 text-white text-[10px] text-center py-0.5 backdrop-blur-[2px]">
-                              +{product.images.length - 1}
+                              +{product.media.length - 1}
                             </div>
                           )}
                         </div>
                       </td>
                       <td className="py-3">
                         <div className="flex flex-col gap-1">
-                          <div className="font-semibold text-gray-900 line-clamp-2" title={product.name}>
+                          <div
+                            className="font-semibold text-gray-900 line-clamp-2 max-w-xs"
+                            title={product.name}
+                          >
                             {product.name}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <span>Added: {new Date(product.created_at).toLocaleDateString()}</span>
-                            {product.rating > 0 && (
-                              <Badge size="xs" color="yellow" variant="light" className="flex items-center gap-1 px-1">
-                                ★ {product.rating}
-                              </Badge>
-                            )}
+                            <span>
+                              Added:{" "}
+                              {new Date(
+                                product.created_at,
+                              ).toLocaleDateString()}
+                            </span>
                           </div>
                         </div>
                       </td>
                       <td className="py-3">
-                        <div className="flex flex-col gap-1.5 text-xs">
-                          <div className="flex flex-wrap gap-1 items-center">
-                            <Badge size="xs" variant="outline" color="blue" className="font-normal">
-                              {categories.find((c) => c.id === product.category_id)?.name || "N/A"}
-                            </Badge>
-                            <span className="text-gray-300">›</span>
-                            <span className="text-gray-600">
-                              {subcategories.find((s) => s.id === product.subcategory_id)?.name || "-"}
-                            </span>
+                        <div className="text-xs text-gray-600 line-clamp-3 max-w-xs" title={product.description}>
+                          {product.description || "-"}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs">
+                          <Badge
+                            size="xs"
+                            variant="outline"
+                            color="blue"
+                            className="font-normal w-fit"
+                          >
+                            {categories.find(
+                              (c) => c.id === product.category_id,
+                            )?.name || "N/A"}
+                          </Badge>
+                          <span className="text-gray-600">
+                            {subcategories.find(
+                              (s) => s.id === product.subcategory_id,
+                            )?.name || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-xs text-gray-600">
+                          {groups.find(
+                            (g) => g.id === product.group_id,
+                          )?.name || "-"}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs text-gray-600">
+                          <div className="truncate max-w-[120px]" title={product.brand_name}>
+                            Brand: {product.brand_name || "-"}
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-500">
-                            <div className="truncate" title={product.brand_name}>
-                              Brand: <span className="text-gray-700">{product.brand_name || "-"}</span>
-                            </div>
-                            <div className="truncate" title={product.store_name}>
-                              Store: <span className="text-gray-700">{product.store_name || "-"}</span>
-                            </div>
-                            <div>
-                              UOM: <span className="text-gray-700">{product.uom_value} {product.uom_unit}</span>
-                            </div>
-                            <div>
-                              Ship: <span className="text-gray-700">{formatIndianPrice(product.shipping_amount || 0)}</span>
-                            </div>
+                          <div className="truncate max-w-[120px]" title={product.store_name}>
+                            Store: {product.store_name || "-"}
                           </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-xs text-gray-600">
+                          {product.hsn_or_sac_code || "-"}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs text-gray-600">
+                          <div>GST: {product.gst_rate}%</div>
+                          <div>CESS: {product.cess_rate}%</div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <Badge size="xs" variant="light" color="indigo">
+                          {product.vertical || "N/A"}
+                        </Badge>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs text-gray-600">
+                          <div>{product.return_applicable ? "✓ Applicable" : "✗ Not Applicable"}</div>
+                          {product.return_applicable && (
+                            <div className="text-blue-600">{product.return_days} days</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs">
+                          {product.rating > 0 ? (
+                            <>
+                              <Badge
+                                size="xs"
+                                color="yellow"
+                                variant="light"
+                                className="flex items-center gap-1 px-1 w-fit"
+                              >
+                                ★ {product.rating}
+                              </Badge>
+                              <span className="text-gray-500">
+                                ({product.review_count} reviews)
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-gray-400">No ratings</span>
+                          )}
                         </div>
                       </td>
                       <td className="py-3">
                         <div className="flex flex-col gap-1">
                           <div className="font-bold text-gray-900 border border-green-100 bg-green-50 px-2 py-0.5 rounded-md w-fit">
-                            {formatIndianPrice(product.price)}
+                            {formatIndianPrice(getProductPrice(product))}
                           </div>
-                          {product.old_price > 0 && (
+                          {getProductOldPrice(product) > 0 && (
                             <div className="text-xs text-gray-400 line-through pl-1">
-                              {formatIndianPrice(product.old_price)}
+                              {formatIndianPrice(getProductOldPrice(product))}
                             </div>
                           )}
+                          {defaultVariant?.discount_percentage > 0 && (
+                            <Badge size="xs" color="red" variant="light">
+                              {defaultVariant.discount_percentage}% OFF
+                            </Badge>
+                          )}
                           <div>
-                            {product.in_stock ? (
-                              <Badge size="xs" color="teal" variant="dot">In Stock</Badge>
+                            {isProductInStock(product) ? (
+                              <Badge size="xs" color="teal" variant="dot">
+                                In Stock
+                              </Badge>
                             ) : (
-                              <Badge size="xs" color="red" variant="dot">Out of Stock</Badge>
+                              <Badge size="xs" color="red" variant="dot">
+                                Out of Stock
+                              </Badge>
                             )}
                           </div>
+                          <div className="text-xs text-gray-500">
+                            Ship: {formatIndianPrice(product.shipping_amount || defaultVariant?.shipping_amount || 0)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs text-gray-600">
+                          {defaultVariant ? (
+                            <>
+                              <div className="font-medium text-gray-700">{defaultVariant.title}</div>
+                              <div>SKU: {defaultVariant.sku}</div>
+                              {defaultVariant.packaging_details && (
+                                <div className="text-gray-500">{defaultVariant.packaging_details}</div>
+                              )}
+                              {product.has_variants && product.variants?.length > 1 && (
+                                <Badge size="xs" color="grape" variant="light">
+                                  +{product.variants.length - 1} more
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-gray-400">No variants</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-1 text-xs">
+                          {defaultVariant?.is_bulk_enabled ? (
+                            <>
+                              <Badge size="xs" color="green" variant="light">
+                                ✓ Enabled
+                              </Badge>
+                              <div className="text-gray-600">
+                                Min: {defaultVariant.bulk_min_quantity} qty
+                              </div>
+                              <div className="text-green-600 font-medium">
+                                {formatIndianPrice(parseFloat(defaultVariant.bulk_price))}
+                              </div>
+                              <div className="text-gray-500">
+                                ({defaultVariant.bulk_discount_percentage}% off)
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-gray-400">Not enabled</span>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 text-center">
                         {product.active ? (
-                          <Badge color="green" variant="light" size="sm">Active</Badge>
+                          <Badge color="green" variant="light" size="sm">
+                            Active
+                          </Badge>
                         ) : (
-                          <Badge color="gray" variant="light" size="sm">Inactive</Badge>
+                          <Badge color="gray" variant="light" size="sm">
+                            Inactive
+                          </Badge>
                         )}
                       </td>
                       <td className="py-3 pr-4 text-right">
@@ -911,7 +1136,8 @@ const ProductsPage = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </Table>
             </div>
@@ -934,10 +1160,10 @@ const ProductsPage = () => {
                 </Title>
                 <Text size="md" color="dimmed" className="mb-6">
                   {searchQuery ||
-                    categoryFilter ||
-                    subcategoryFilter ||
-                    groupFilter ||
-                    activeFilter
+                  categoryFilter ||
+                  subcategoryFilter ||
+                  groupFilter ||
+                  activeFilter
                     ? "No products match your current filters. Try adjusting your search criteria or clearing some filters."
                     : "Get started by adding your first product to the inventory."}
                 </Text>
@@ -955,21 +1181,21 @@ const ProductsPage = () => {
                     subcategoryFilter ||
                     groupFilter ||
                     activeFilter) && (
-                      <Button
-                        variant="light"
-                        color="gray"
-                        size="md"
-                        onClick={() => {
-                          setSearchQuery("");
-                          setCategoryFilter(null);
-                          setSubcategoryFilter(null);
-                          setGroupFilter(null);
-                          setStatusFilter(null);
-                        }}
-                      >
-                        Clear All Filters
-                      </Button>
-                    )}
+                    <Button
+                      variant="light"
+                      color="gray"
+                      size="md"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setCategoryFilter(null);
+                        setSubcategoryFilter(null);
+                        setGroupFilter(null);
+                        setStatusFilter(null);
+                      }}
+                    >
+                      Clear All Filters
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -159,102 +159,162 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
           <div className="space-y-3">
             <p className="text-sm font-semibold">Product Images</p>
 
-            {/* Drag & Drop Area */}
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${dragActive
-                ? "border-green-500 bg-green-50/10"
-                : "border-border bg-muted/20"
-                }`}
-            >
-              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium mb-1">
-                Drag images here or click to browse
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Supports PNG, JPG, WebP
-              </p>
-              <Button
-                size="sm"
-                onClick={() => imageInputRef.current?.click()}
-                className="gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                Select Images
-              </Button>
-              <input
-                ref={imageInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageInput}
-                className="hidden"
-              />
-              <input
-                ref={replaceInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleReplaceInput}
-                className="hidden"
-              />
-            </div>
-
-            {/* Images Grid */}
+            {/* Images Display */}
             {images.length > 0 && (
-              <div className="grid grid-cols-3 gap-3">
-                {images.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <div className="aspect-square rounded-lg overflow-hidden bg-muted border border-border">
+              <div className="space-y-3">
+                {/* Large Primary Image */}
+                {images.filter(img => img.is_primary).map((image, index) => (
+                  <div key={`primary-${index}`} className="relative group rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                    <div className="aspect-[4/3] flex items-center justify-center p-4">
                       <img
                         src={image.url || "/placeholder.svg"}
-                        alt={`Product ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        alt="Primary product"
+                        className="max-w-full max-h-full object-contain"
                       />
                     </div>
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                       <Button
                         size="sm"
-                        onClick={() => setPrimary(index)}
-                        variant={image.is_primary ? "default" : "ghost"}
-                        className={`gap-1 h-8 ${image.is_primary
-                          ? "bg-yellow-500 hover:bg-yellow-600"
-                          : "bg-white/20 hover:bg-white/30 text-white"
-                          }`}
-                        title="Set as Primary"
-                      >
-                        <Star className="w-3 h-3" fill="currentColor" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => triggerReplace(index)}
+                        onClick={() => triggerReplace(images.findIndex(img => img.is_primary))}
                         variant="ghost"
-                        className="bg-blue-500/80 hover:bg-blue-600 text-white h-8"
+                        className="bg-blue-500/90 hover:bg-blue-600 text-white h-9 px-4"
                         title="Replace Image"
                       >
-                        <Upload className="w-3 h-3" />
+                        <Upload className="w-4 h-4 mr-2" />
+                        Replace
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => removeMedia(index)}
+                        onClick={() => removeMedia(images.findIndex(img => img.is_primary))}
                         variant="ghost"
-                        className="bg-red-500/80 hover:bg-red-600 text-white h-8"
+                        className="bg-red-500/90 hover:bg-red-600 text-white h-9 px-4"
                         title="Remove Image"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4 mr-2" />
+                        Remove
                       </Button>
                     </div>
-                    {image.is_primary && (
-                      <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
-                        Primary
-                      </div>
-                    )}
+                    <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                      <Star className="w-3 h-3" fill="currentColor" />
+                      Primary
+                    </div>
                   </div>
                 ))}
+
+                {/* Thumbnail Grid */}
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {images.map((image, index) => (
+                    <div 
+                      key={index} 
+                      className={`relative group flex-shrink-0 ${
+                        image.is_primary ? 'hidden' : ''
+                      }`}
+                    >
+                      <div 
+                        className={`w-20 h-20 rounded-lg overflow-hidden bg-muted border-2 cursor-pointer transition-all ${
+                          image.is_primary 
+                            ? 'border-yellow-500 ring-2 ring-yellow-500/20' 
+                            : 'border-border hover:border-primary'
+                        }`}
+                        onClick={() => setPrimary(index)}
+                        title="Click to set as primary"
+                      >
+                        <img
+                          src={image.url || "/placeholder.svg"}
+                          alt={`Thumbnail ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPrimary(index);
+                          }}
+                          variant="ghost"
+                          className="bg-white/90 hover:bg-white text-gray-900 h-7 w-7 p-0"
+                          title="Set as Primary"
+                        >
+                          <Star className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeMedia(index);
+                          }}
+                          variant="ghost"
+                          className="bg-red-500/90 hover:bg-red-600 text-white h-7 w-7 p-0"
+                          title="Remove"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Add More Button */}
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-green-50 hover:border-green-500 dark:hover:bg-green-900/20 transition-all flex items-center justify-center group"
+                    title="Add more images"
+                  >
+                    <div className="text-center">
+                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-1 group-hover:scale-110 transition-transform">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
+
+            {/* Empty State - Only show if no images */}
+            {images.length === 0 && (
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
+                  ? "border-green-500 bg-green-50/10"
+                  : "border-border bg-muted/20"
+                  }`}
+              >
+                <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm font-medium mb-1">
+                  Drag images here or click to browse
+                </p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Supports PNG, JPG, WebP
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="gap-2 bg-green-500 hover:bg-green-600"
+                >
+                  <Upload className="w-4 h-4" />
+                  Select Images
+                </Button>
+              </div>
+            )}
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageInput}
+              className="hidden"
+            />
+            <input
+              ref={replaceInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleReplaceInput}
+              className="hidden"
+            />
           </div>
 
           {/* YouTube Video Section */}

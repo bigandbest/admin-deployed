@@ -98,7 +98,10 @@ const AddProduct = () => {
         // Process Brands
         if (brandsRes.data.success) {
           const brandsData = brandsRes.data.brands || brandsRes.data.data || [];
-          setBrandOptions(formatOptions(brandsData));
+          const formattedBrands = formatOptions(brandsData);
+          console.log("Brands received:", brandsData);
+          console.log("Formatted brands:", formattedBrands);
+          setBrandOptions(formattedBrands);
         } else {
           console.error("Failed to fetch brands:", brandsRes.data.message);
         }
@@ -151,19 +154,29 @@ const AddProduct = () => {
       );
       if (response.data.success) {
         const product = response.data.product;
+        console.log("Fetched product for edit:", product);
 
         // Transform media
-        // Existing images are strings (URLs)
-        const mediaItems = (product.images || []).map((url, index) => ({
-          media_type: "image",
-          url: url,
-          is_primary: index === 0, // Assume first is primary
-          sort_order: index,
-        }));
+        // Handle both old format (strings/URLs) and new format (media objects with metadata)
+        const mediaItems = (product.images || product.media || []).map((item, index) => {
+          const url = typeof item === 'string' ? item : item.url;
+          const isPrimary = typeof item === 'object' ? item.is_primary : (index === 0);
+          const sortOrder = typeof item === 'object' ? item.sort_order : index;
+          
+          return {
+            id: item.id || null,
+            media_type: item.media_type || "image",
+            url: url,
+            is_primary: isPrimary,
+            sort_order: sortOrder,
+          };
+        });
 
         // Transform variants
         // Check both variants (Prisma default) and product_variants (alias if used)
         const rawVariants = product.variants || product.product_variants || [];
+        console.log("Raw variants:", rawVariants);
+        
         const variantItems = rawVariants.map((v) => ({
           id: v.id, // CRITICAL: Map ID so updates work!
           sku: v.sku || "",
@@ -175,7 +188,9 @@ const AddProduct = () => {
           variant_old_price: v.old_price || v.variant_old_price,
           discount_percentage: v.discount_percentage || v.variant_discount || 0,
           packaging_details: v.packaging_details || "",
-          gst_rate_override: v.gst_rate_override || 0,
+          gst_rate_override: v.gst_rate_override || null,
+          cess_rate_override: v.cess_rate_override || null,
+          features: v.features || null,
           is_default: v.is_default !== undefined ? v.is_default : false,
           active: v.active !== undefined ? v.active : true,
           attributes: v.attributes || [],
@@ -186,6 +201,7 @@ const AddProduct = () => {
           variant_stock: v.inventory?.stock_quantity || v.variant_stock,
           variant_weight: v.variant_weight,
           variant_unit: v.variant_unit,
+          shipping_amount: v.shipping_amount || product.shipping_amount || "0",
           // Bulk Pricing Fields
           is_bulk_enabled: v.is_bulk_enabled || false,
           bulk_min_quantity: v.bulk_min_quantity || 50,
@@ -193,42 +209,51 @@ const AddProduct = () => {
           bulk_price: v.bulk_price || 0,
         }));
 
+        console.log("Transformed variants:", variantItems);
+
         // Transform FAQS
-        const faqItems = product.faq || [{ question: "", answer: "" }];
+        const faqItems = product.faq || product.faqs || [{ question: "", answer: "" }];
+
+        // Extract brand_id from brands array
+        const brandId = (product.brands && product.brands.length > 0 ? product.brands[0].brand_id : "") || product.brand_id || "";
+        const brandName = (product.brands && product.brands.length > 0 ? product.brands[0].brand?.name : "") || product.brand_name || "";
+
+        console.log("Brand extraction:", {
+          hasBrands: product.brands && product.brands.length > 0,
+          brandsArray: product.brands,
+          extractedBrandId: brandId,
+          extractedBrandName: brandName
+        });
 
         // Map data to Form Structure
         setInitialData({
           product: {
             ...product,
-            ...product,
-            brand_id: product.brand_id || product.brand_name, // Ensure ID is passed, handle quirk
-            brand_name: product.brand_name,
-            stock: product.stock || 0,
-            shipping_amount: product.shipping_amount || 0,
-            hsn_code: product.hsn_code || "",
+            name: product.name,
+            description: product.description,
+            hsn_or_sac_code: product.hsn_or_sac_code || product.hsn_code || product.sac_code || "",
+            hsn_code: product.hsn_or_sac_code || product.hsn_code || "",
             sac_code: product.sac_code || "",
+            gst_rate: product.gst_rate || "0",
+            cess_rate: product.cess_rate || "0",
+            vertical: product.vertical || "",
+            brand_id: brandId,
+            brand_name: brandName,
+            stock: product.stock || 0,
+            shipping_amount: product.shipping_amount || "0",
             return_applicable: product.return_applicable || false,
             return_days: product.return_days || 7,
+            rating: product.rating || "0",
+            review_count: product.review_count || 0,
+            active: product.active !== undefined ? product.active : true,
+            has_variants: product.has_variants || false,
           },
           category: {
             category_id: product.category_id,
             subcategory_id: product.subcategory_id,
             group_id: product.group_id,
-            // Check if product keys map to what we want. 
-            // store_id in product might be null if we use recommended stores.
-            // We should check if we have recommended store linked?
-            // The API response user pasted earlier showed `store_id: null`.
-            // But we need to populate generic 'store_id' field in form.
-            store_id: product.store_id || ((product.product_recommended_stores || product.product_recommended_store) && (product.product_recommended_stores || product.product_recommended_store).length > 0 ? (product.product_recommended_stores || product.product_recommended_store)[0].recommended_store_id : "") || "",
-
-            // brand_name usually holds the name. If brands are loaded, we need ID to match Select value.
-            // User reported issue mapping brand.
-            // If product.brand_name is "Nike", and brands list has {id: "123", name: "Nike"}, form needs "123".
-            // If product.brand_id exists use it.
-            // If backend only stores name in brand_name, we might need to find ID from loaded options?
-            // If backend only stores name in brand_name, OR uses brand relation.
-            // Check product.brands array first (most reliable if relations used)
-            brand_id: (product.brands && product.brands.length > 0 ? product.brands[0].brand_id : "") || product.brand_id || product.brand_name || "",
+            store_id: product.store_id || "",
+            brand_id: brandId,
           },
           variants: variantItems,
           media: mediaItems,
@@ -238,10 +263,21 @@ const AddProduct = () => {
               ? product.assigned_warehouse_ids[0]
               : "", // Take first warehouse
           faqs: faqItems,
+          status: product.active ? "active" : "draft",
+        });
+        console.log("Initial data set for form:", {
+          category: {
+            category_id: product.category_id,
+            subcategory_id: product.subcategory_id,
+            group_id: product.group_id,
+            store_id: product.store_id,
+            brand_id: brandId
+          }
         });
       }
     } catch (error) {
       console.error("Error fetching product:", error);
+      toast.error("Failed to load product data");
     } finally {
       setLoading(false);
     }
@@ -293,13 +329,18 @@ const AddProduct = () => {
       // 2. Prepare Payload
       const { product, variants, category, warehouse, faqs, status } = formData;
 
-      // Prepare media objects with proper structure for backend
-      const mediaObjects = imageUrls.map((url, index) => ({
-        media_type: 'image',
-        url: url,
-        is_primary: index === 0,
-        sort_order: index
-      }));
+      // Prepare media objects with proper structure and detect media type
+      const mediaObjects = imageUrls.map((url, index) => {
+        // Detect if URL is a video link (YouTube, Vimeo, etc.)
+        const isVideo = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
+        
+        return {
+          media_type: isVideo ? 'video' : 'image',
+          url: url,
+          is_primary: index === 0,
+          sort_order: index
+        };
+      });
 
       const payload = {
         ...product,
@@ -308,7 +349,8 @@ const AddProduct = () => {
         subcategory_id: category.subcategory_id,
         group_id: category.group_id,
         store_id: category.store_id,
-        brand_name: category.brand_id, // Map brand from category selection to brand_name field for controller
+        brand_id: category.brand_id, // Send brand_id
+        brand_name: category.brand_id, // Also send as brand_name for compatibility
 
         // Media - CRITICAL: Send as 'media' array with proper object structure
         media: mediaObjects,
@@ -317,10 +359,11 @@ const AddProduct = () => {
         primary_warehouses: warehouse ? [warehouse] : [],
         assigned_warehouse_ids: warehouse ? [warehouse] : [],
 
-        // FAQS
-        faq: faqs,
+        // FAQS - Filter out empty FAQs
+        faq: faqs.filter(f => f.question && f.answer),
 
         // Variants (map back to API structure)
+        // Stock is handled via variant inventory, not at product level
         product_variants: variants.map((v) => {
           // Ensure attributes are properly formatted as {attribute_name, attribute_value} objects
           const formattedAttributes = Array.isArray(v.attributes)
@@ -351,6 +394,14 @@ const AddProduct = () => {
 
         status: status, // active or draft
       };
+
+      console.log("Submitting payload:", {
+        ...payload,
+        brand_id: payload.brand_id,
+        stock: payload.stock,
+        faq: payload.faq,
+        media_count: payload.media?.length
+      });
 
       // API Call
       let response;
