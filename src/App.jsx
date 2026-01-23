@@ -48,6 +48,8 @@ import EnhancedStoragePage from "./Pages/Storage/enhanced";
 import WarehouseManagement from "./Pages/WarehousePages/WarehouseManagement.jsx";
 import StockManagement from "./Pages/WarehousePages/StockManagement.jsx";
 import WarehouseProducts from "./Pages/WarehousePages/WarehouseProducts.jsx";
+import InventoryManagement from "./Pages/WarehousePages/InventoryManagement.jsx";
+import PincodeManagement from "./Pages/WarehousePages/PincodeManagement.jsx";
 import VideoBannerManagement from "./Pages/VideoBanners/VideoBannerManagement.jsx";
 import AdminOrders from "./Pages/Orders/index.jsx";
 import ShippingBanner from "./Pages/ShippingBanner/ShippingBanner.jsx";
@@ -292,6 +294,14 @@ function App() {
         {
           path: "/warehouseproducts/:id/products",
           element: <WarehouseProducts />,
+        },
+        {
+          path: "/warehouses/inventory",
+          element: <InventoryManagement />,
+        },
+        {
+          path: "/warehouses/pincodes",
+          element: <PincodeManagement />,
         },
         {
           path: "/AdminOrders",
