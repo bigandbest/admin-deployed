@@ -284,8 +284,9 @@ const WarehouseManagement = () => {
             for (const assignment of assignments) {
               const stockQuantity = typeof assignment === 'object' ? assignment.stock_quantity : productForm.initial_stock;
               const variantId = typeof assignment === 'object' ? assignment.variant_id : null;
+              const minThreshold = typeof assignment === 'object' ? (assignment.minimum_threshold || productForm.minimum_threshold) : productForm.minimum_threshold;
 
-              if (warehouseId && stockQuantity > 0) {
+              if (warehouseId && (stockQuantity !== undefined && stockQuantity !== null)) {
                 if (variantId) {
                   // Update variant stock in warehouse (not add, just update the quantity)
                   console.log(`Updating variant ${variantId} stock in warehouse ${warehouseId} to ${stockQuantity}`);
@@ -295,7 +296,7 @@ const WarehouseManagement = () => {
                       {
                         variant_id: variantId,
                         stock_quantity: stockQuantity,
-                        minimum_threshold: productForm.minimum_threshold || 10,
+                        minimum_threshold: minThreshold || 10,
                         cost_per_unit: productForm.cost_per_unit || 0
                       },
                       {
@@ -313,7 +314,7 @@ const WarehouseManagement = () => {
                       warehouseId,
                       productForm.selectedProductId,
                       stockQuantity,
-                      productForm.minimum_threshold || 10,
+                      minThreshold || 10,
                       productForm.cost_per_unit || 0,
                       variantId
                     );
@@ -326,7 +327,7 @@ const WarehouseManagement = () => {
                       `${API_BASE_URL}/warehouses/${warehouseId}/products/${productForm.selectedProductId}`,
                       {
                         stock_quantity: stockQuantity,
-                        minimum_threshold: productForm.minimum_threshold || 10,
+                        minimum_threshold: minThreshold || 10,
                         cost_per_unit: productForm.cost_per_unit || 0
                       },
                       {
@@ -344,7 +345,7 @@ const WarehouseManagement = () => {
                       warehouseId,
                       productForm.selectedProductId,
                       stockQuantity,
-                      productForm.minimum_threshold || 10,
+                      minThreshold || 10,
                       productForm.cost_per_unit || 0
                     );
                   }
@@ -359,6 +360,12 @@ const WarehouseManagement = () => {
 
         setShowProductModal(false);
         setEditingProduct(null);
+
+        // Refresh data to show updated quantities
+        fetchProducts();
+        fetchWarehouses();
+        fetchWarehouseHierarchy();
+
         setProductForm({
           selectedProductId: "",
           searchTerm: "",

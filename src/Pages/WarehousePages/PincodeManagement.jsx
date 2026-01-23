@@ -80,7 +80,7 @@ const PincodeManagement = () => {
       const response = await axios.get(`${API_BASE_URL}/warehouses`);
       setWarehouses(response.data.data || []);
       if (response.data.data?.length > 0) {
-        setSelectedWarehouse(response.data.data[0].id);
+        setSelectedWarehouse(response.data.data[0].id.toString());
       }
     } catch (error) {
       console.error("Error fetching warehouses:", error);
@@ -199,7 +199,7 @@ const PincodeManagement = () => {
       p.state?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const warehouse = warehouses.find((w) => w.id === selectedWarehouse);
+  const warehouse = warehouses.find((w) => w.id.toString() === selectedWarehouse);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -229,10 +229,10 @@ const PincodeManagement = () => {
         {/* Warehouse Selector */}
         <Select
           placeholder="Select Warehouse"
-          value={selectedWarehouse}
+          value={selectedWarehouse?.toString()}
           onChange={setSelectedWarehouse}
           data={warehouses.map((w) => ({
-            value: w.id,
+            value: w.id.toString(),
             label: `${w.name} (${w.type})`,
           }))}
           className="max-w-md"

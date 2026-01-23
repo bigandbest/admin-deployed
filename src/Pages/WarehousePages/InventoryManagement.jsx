@@ -111,12 +111,23 @@ const InventoryManagement = () => {
 
   // Fetch inventory when warehouse changes
   useEffect(() => {
-    if (selectedWarehouse) {
-      fetchInventory();
-      fetchAnalytics();
-      fetchLowStockItems();
-    }
+    if (!selectedWarehouse) return;
+
+    const fetchAllData = async () => {
+      try {
+        await Promise.all([
+          fetchInventory(),
+          fetchAnalytics(),
+          fetchLowStockItems(),
+        ]);
+      } catch (error) {
+        console.error("Error fetching warehouse data:", error);
+      }
+    };
+
+    fetchAllData();
   }, [selectedWarehouse]);
+
 
   const fetchWarehouses = async () => {
     try {
@@ -124,7 +135,7 @@ const InventoryManagement = () => {
       const response = await axios.get(`${API_BASE_URL}/warehouses`);
       setWarehouses(response.data.data || []);
       if (response.data.data?.length > 0) {
-        setSelectedWarehouse(response.data.data[0].id);
+        setSelectedWarehouse(response.data.data[0].id.toString());
       }
     } catch (error) {
       console.error("Error fetching warehouses:", error);
@@ -174,6 +185,7 @@ const InventoryManagement = () => {
 
     try {
       const token = localStorage.getItem("admin_token");
+
       await axios.post(
         `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/update-stock`,
         stockForm,
@@ -181,6 +193,12 @@ const InventoryManagement = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+
+      // Run both fetches in parallel
+      await Promise.all([
+        fetchInventory(),
+        fetchAnalytics(),
+      ]);
 
       setShowStockModal(false);
       setStockForm({
@@ -190,13 +208,12 @@ const InventoryManagement = () => {
         minimum_threshold: "",
         cost_per_unit: "",
       });
-      fetchInventory();
-      fetchAnalytics();
     } catch (error) {
       console.error("Error updating stock:", error);
       alert("Failed to update stock");
     }
   };
+
 
   const handleBulkUpload = async () => {
     if (!csvFile) {
@@ -205,52 +222,60 @@ const InventoryManagement = () => {
     }
 
     try {
-      const formData = new FormData();
-      formData.append("file", csvFile);
-
-      // Parse CSV file
       const reader = new FileReader();
+
       reader.onload = async (e) => {
-        const csv = e.target.result;
-        const lines = csv.split("\n");
-        const records = [];
+        try {
+          const csv = e.target.result;
+          const lines = csv.split("\n");
+          const records = [];
 
-        // Skip header row
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
+          // Skip header row
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
 
-          const [product_id, variant_id, stock_quantity, minimum_threshold] =
-            lines[i].split(",");
-          records.push({
-            product_id: product_id.trim(),
-            variant_id: variant_id?.trim() || null,
-            stock_quantity: parseInt(stock_quantity),
-            minimum_threshold: parseInt(minimum_threshold) || 10,
-          });
-        }
+            const [product_id, variant_id, stock_quantity, minimum_threshold] =
+              lines[i].split(",");
 
-        // Send to backend
-        const token = localStorage.getItem("admin_token");
-        const response = await axios.post(
-          `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/bulk-update`,
-          { inventory_records: records },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setUploadProgress(percentCompleted);
-            },
+            records.push({
+              product_id: product_id.trim(),
+              variant_id: variant_id?.trim() || null,
+              stock_quantity: parseInt(stock_quantity),
+              minimum_threshold: parseInt(minimum_threshold) || 10,
+            });
           }
-        );
 
-        alert(`Successfully updated ${response.data.count} inventory records`);
-        setShowBulkUploadModal(false);
-        setCsvFile(null);
-        setUploadProgress(0);
-        fetchInventory();
-        fetchAnalytics();
+          const token = localStorage.getItem("admin_token");
+
+          const response = await axios.post(
+            `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/bulk-update`,
+            { inventory_records: records },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+              onUploadProgress: (progressEvent) => {
+                const percentCompleted = Math.round(
+                  (progressEvent.loaded * 100) / progressEvent.total
+                );
+                setUploadProgress(percentCompleted);
+              },
+            }
+          );
+
+          alert(`Successfully updated ${response.data.count} inventory records`);
+
+          setShowBulkUploadModal(false);
+          setCsvFile(null);
+          setUploadProgress(0);
+
+          // 🔥 Fetch data in parallel
+          await Promise.all([
+            fetchInventory(),
+            fetchAnalytics(),
+          ]);
+        } catch (err) {
+          console.error("Bulk upload processing failed:", err);
+          alert("Failed to process CSV upload");
+        }
       };
 
       reader.readAsText(csvFile);
@@ -259,6 +284,7 @@ const InventoryManagement = () => {
       alert("Failed to upload inventory data");
     }
   };
+
 
   const handleAllocateToZonal = async (e) => {
     e.preventDefault();
@@ -306,7 +332,7 @@ const InventoryManagement = () => {
       item.sku?.includes(searchQuery)
   );
 
-  const warehouse = warehouses.find((w) => w.id === selectedWarehouse);
+  const warehouse = warehouses.find((w) => w.id.toString() === selectedWarehouse);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -343,10 +369,10 @@ const InventoryManagement = () => {
         {/* Warehouse Selector */}
         <Select
           placeholder="Select Warehouse"
-          value={selectedWarehouse}
+          value={selectedWarehouse?.toString()}
           onChange={setSelectedWarehouse}
           data={warehouses.map((w) => ({
-            value: w.id,
+            value: w.id.toString(),
             label: `${w.name} (${w.type})`,
           }))}
           className="max-w-md"
@@ -721,8 +747,8 @@ const InventoryManagement = () => {
             <Group key={index} grow>
               <Select
                 placeholder="Select Warehouse"
-                data={warehouses.map(w => ({ value: w.id, label: `${w.name} (${w.type})` }))}
-                value={record.warehouse_id}
+                data={warehouses.map(w => ({ value: w.id.toString(), label: `${w.name} (${w.type})` }))}
+                value={record.warehouse_id?.toString()}
                 onChange={(val) => {
                   const newRecords = [...multiWarehouseForm.records];
                   newRecords[index].warehouse_id = val;
