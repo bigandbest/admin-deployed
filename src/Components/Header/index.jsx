@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { Link } from "react-router-dom";
 import {
-  TextInput,
+
   ActionIcon,
   useMantineTheme,
   Menu,
@@ -12,20 +12,16 @@ import {
   Group,
   Avatar,
   Text,
-  Badge,
   Divider,
-  Indicator,
 } from "@mantine/core";
 import { spotlight } from "@mantine/spotlight";
 import { motion } from "framer-motion";
 import {
-  FaBell,
   FaCog,
   FaSearch,
   FaSignOutAlt,
   FaUser,
   FaBars,
-  FaEnvelope,
   FaMoon,
   FaSun,
   FaWallet,

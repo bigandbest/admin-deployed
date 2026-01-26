@@ -139,7 +139,7 @@ const BbmDost = () => {
   const isVendor = form.role === "Vendor";
 
   return (
-    <div className="p-4 sm:p-6 max-w-screen-xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">BBM Dosts</h1>
 
       {/* Add/Edit Form & Download Button */}
