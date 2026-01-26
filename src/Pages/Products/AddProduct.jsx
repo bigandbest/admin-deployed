@@ -4,8 +4,8 @@ import axios from "axios";
 
 import AddProductForm from "../../Components/ProductForm/AddProductForm";
 import { Loader2 } from "lucide-react";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Helper to format options for select components
 const formatOptions = (items, labelKey = "name", valueKey = "id") => {
@@ -40,15 +40,20 @@ const AddProduct = () => {
       try {
         const [catsRes, brandsRes, storesRes, warehousesRes] =
           await Promise.all([
-            axios.get(`${import.meta.env.VITE_API_BASE_URL}/categories/hierarchy`),
+            axios.get(
+              `${import.meta.env.VITE_API_BASE_URL}/categories/hierarchy`,
+            ),
             axios.get(`${import.meta.env.VITE_API_BASE_URL}/brands/list`),
-            axios.get(`${import.meta.env.VITE_API_BASE_URL}/recommended-stores/list`),
+            axios.get(
+              `${import.meta.env.VITE_API_BASE_URL}/recommended-stores/list`,
+            ),
             axios.get(`${import.meta.env.VITE_API_BASE_URL}/warehouses`),
           ]);
 
         // Process Categories with hierarchy
         if (catsRes.data.success) {
-          const categoriesData = catsRes.data.categories || catsRes.data.data || [];
+          const categoriesData =
+            catsRes.data.categories || catsRes.data.data || [];
           console.log("Categories received from API:", categoriesData);
           const formattedCategories = formatOptions(categoriesData);
           console.log("Formatted categories:", formattedCategories);
@@ -64,7 +69,7 @@ const AddProduct = () => {
                 // Explicitly ensure category_id is set
                 const subWithParent = {
                   ...sub,
-                  category_id: sub.category_id || cat.id  // Use existing or set from parent
+                  category_id: sub.category_id || cat.id, // Use existing or set from parent
                 };
                 allSubs.push(subWithParent);
 
@@ -73,7 +78,7 @@ const AddProduct = () => {
                     // Explicitly ensure subcategory_id is set
                     const grpWithParent = {
                       ...grp,
-                      subcategory_id: grp.subcategory_id || sub.id  // Use existing or set from parent
+                      subcategory_id: grp.subcategory_id || sub.id, // Use existing or set from parent
                     };
                     allGroups.push(grpWithParent);
                   });
@@ -88,7 +93,11 @@ const AddProduct = () => {
           setSubcategories(formattedSubs);
           setGroups(formattedGroups);
 
-          console.log("Subcategories (before format):", allSubs.length, allSubs);
+          console.log(
+            "Subcategories (before format):",
+            allSubs.length,
+            allSubs,
+          );
           console.log("Subcategories (after format):", formattedSubs);
           console.log("Groups:", allGroups.length, allGroups);
         } else {
@@ -109,7 +118,8 @@ const AddProduct = () => {
         // Process Stores (Now Recommended Stores)
         if (storesRes.data.success) {
           // recommendedStoreController returns { recommendedStores: [...] }
-          const storesData = storesRes.data.recommendedStores || storesRes.data.data || [];
+          const storesData =
+            storesRes.data.recommendedStores || storesRes.data.data || [];
           console.log("Recommended Stores received:", storesData);
           const formattedStores = formatOptions(storesData);
           console.log("Formatted stores:", formattedStores);
@@ -124,7 +134,10 @@ const AddProduct = () => {
             formatOptions(warehousesRes.data.data, "warehouse_name", "id"),
           );
         } else {
-          console.error("Failed to fetch warehouses:", warehousesRes.data.message);
+          console.error(
+            "Failed to fetch warehouses:",
+            warehousesRes.data.message,
+          );
         }
       } catch (error) {
         console.error("Error fetching options:", error);
@@ -158,25 +171,29 @@ const AddProduct = () => {
 
         // Transform media
         // Handle both old format (strings/URLs) and new format (media objects with metadata)
-        const mediaItems = (product.images || product.media || []).map((item, index) => {
-          const url = typeof item === 'string' ? item : item.url;
-          const isPrimary = typeof item === 'object' ? item.is_primary : (index === 0);
-          const sortOrder = typeof item === 'object' ? item.sort_order : index;
-          
-          return {
-            id: item.id || null,
-            media_type: item.media_type || "image",
-            url: url,
-            is_primary: isPrimary,
-            sort_order: sortOrder,
-          };
-        });
+        const mediaItems = (product.images || product.media || []).map(
+          (item, index) => {
+            const url = typeof item === "string" ? item : item.url;
+            const isPrimary =
+              typeof item === "object" ? item.is_primary : index === 0;
+            const sortOrder =
+              typeof item === "object" ? item.sort_order : index;
+
+            return {
+              id: item.id || null,
+              media_type: item.media_type || "image",
+              url: url,
+              is_primary: isPrimary,
+              sort_order: sortOrder,
+            };
+          },
+        );
 
         // Transform variants
         // Check both variants (Prisma default) and product_variants (alias if used)
         const rawVariants = product.variants || product.product_variants || [];
         console.log("Raw variants:", rawVariants);
-        
+
         const variantItems = rawVariants.map((v) => ({
           id: v.id, // CRITICAL: Map ID so updates work!
           sku: v.sku || "",
@@ -212,17 +229,40 @@ const AddProduct = () => {
         console.log("Transformed variants:", variantItems);
 
         // Transform FAQS
-        const faqItems = product.faq || product.faqs || [{ question: "", answer: "" }];
+        const faqItems = product.faq ||
+          product.faqs || [{ question: "", answer: "" }];
 
         // Extract brand_id from brands array
-        const brandId = (product.brands && product.brands.length > 0 ? product.brands[0].brand_id : "") || product.brand_id || "";
-        const brandName = (product.brands && product.brands.length > 0 ? product.brands[0].brand?.name : "") || product.brand_name || "";
+        // Extract Brand ID: Prioritize flattened 'brand_id' from backend (now available), fallback to relation array
+        const brandId =
+          product.brand_id ||
+          (product.brands && product.brands.length > 0
+            ? product.brands[0].brand_id
+            : "") ||
+          "";
+        const brandName =
+          product.brand_name ||
+          (product.brands && product.brands.length > 0
+            ? product.brands[0].brand?.name
+            : "") ||
+          "";
 
-        console.log("Brand extraction:", {
-          hasBrands: product.brands && product.brands.length > 0,
-          brandsArray: product.brands,
-          extractedBrandId: brandId,
-          extractedBrandName: brandName
+        // Extract Store ID: Prioritize flattened 'store_id' from backend (now available), fallback to relation array
+        const storeId =
+          product.store_id ||
+          (product.product_recommended_store &&
+          product.product_recommended_store.length > 0
+            ? product.product_recommended_store[0].recommended_store_id
+            : "") ||
+          "";
+
+        console.log("Brand/Store Extraction Debug:", {
+          product_brand_id: product.brand_id,
+          product_store_id: product.store_id,
+          relation_brand: product.brands,
+          relation_store: product.product_recommended_store,
+          final_brandId: brandId,
+          final_storeId: storeId,
         });
 
         // Map data to Form Structure
@@ -231,7 +271,11 @@ const AddProduct = () => {
             ...product,
             name: product.name,
             description: product.description,
-            hsn_or_sac_code: product.hsn_or_sac_code || product.hsn_code || product.sac_code || "",
+            hsn_or_sac_code:
+              product.hsn_or_sac_code ||
+              product.hsn_code ||
+              product.sac_code ||
+              "",
             hsn_code: product.hsn_or_sac_code || product.hsn_code || "",
             sac_code: product.sac_code || "",
             gst_rate: product.gst_rate || "0",
@@ -239,6 +283,7 @@ const AddProduct = () => {
             vertical: product.vertical || "",
             brand_id: brandId,
             brand_name: brandName,
+            store_id: storeId,
             stock: product.stock || 0,
             shipping_amount: product.shipping_amount || "0",
             return_applicable: product.return_applicable || false,
@@ -252,14 +297,14 @@ const AddProduct = () => {
             category_id: product.category_id,
             subcategory_id: product.subcategory_id,
             group_id: product.group_id,
-            store_id: product.store_id || "",
+            store_id: storeId,
             brand_id: brandId,
           },
           variants: variantItems,
           media: mediaItems,
           warehouse:
             product.assigned_warehouse_ids &&
-              product.assigned_warehouse_ids.length > 0
+            product.assigned_warehouse_ids.length > 0
               ? product.assigned_warehouse_ids[0]
               : "", // Take first warehouse
           faqs: faqItems,
@@ -271,8 +316,8 @@ const AddProduct = () => {
             subcategory_id: product.subcategory_id,
             group_id: product.group_id,
             store_id: product.store_id,
-            brand_id: brandId
-          }
+            brand_id: brandId,
+          },
         });
       }
     } catch (error) {
@@ -297,9 +342,7 @@ const AddProduct = () => {
           `${import.meta.env.VITE_API_BASE_URL}/upload/image`,
           formData,
           {
-            headers: authToken
-              ? { Authorization: `Bearer ${authToken}` }
-              : {},
+            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
             withCredentials: true,
           },
         );
@@ -317,7 +360,7 @@ const AddProduct = () => {
     });
 
     const results = await Promise.all(uploadPromises);
-    return results.filter(url => url !== null);
+    return results.filter((url) => url !== null);
   };
 
   const handleSubmit = async (formData) => {
@@ -332,13 +375,16 @@ const AddProduct = () => {
       // Prepare media objects with proper structure and detect media type
       const mediaObjects = imageUrls.map((url, index) => {
         // Detect if URL is a video link (YouTube, Vimeo, etc.)
-        const isVideo = url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
-        
+        const isVideo =
+          url.includes("youtube.com") ||
+          url.includes("youtu.be") ||
+          url.includes("vimeo.com");
+
         return {
-          media_type: isVideo ? 'video' : 'image',
+          media_type: isVideo ? "video" : "image",
           url: url,
           is_primary: index === 0,
-          sort_order: index
+          sort_order: index,
         };
       });
 
@@ -360,14 +406,16 @@ const AddProduct = () => {
         assigned_warehouse_ids: warehouse ? [warehouse] : [],
 
         // FAQS - Filter out empty FAQs
-        faq: faqs.filter(f => f.question && f.answer),
+        faq: faqs.filter((f) => f.question && f.answer),
 
         // Variants (map back to API structure)
         // Stock is handled via variant inventory, not at product level
         product_variants: variants.map((v) => {
           // Ensure attributes are properly formatted as {attribute_name, attribute_value} objects
           const formattedAttributes = Array.isArray(v.attributes)
-            ? v.attributes.filter(attr => attr && (attr.attribute_name || attr.attribute_value))
+            ? v.attributes.filter(
+                (attr) => attr && (attr.attribute_name || attr.attribute_value),
+              )
             : [];
 
           return {
@@ -388,7 +436,9 @@ const AddProduct = () => {
             is_bulk_enabled: v.is_bulk_enabled,
             bulk_min_quantity: v.bulk_min_quantity,
             bulk_discount_percentage: v.bulk_discount_percentage,
-            bulk_price: (v.price || v.variant_price) * (1 - (v.bulk_discount_percentage || 0) / 100) // Calculate tentative bulk price
+            bulk_price:
+              (v.price || v.variant_price) *
+              (1 - (v.bulk_discount_percentage || 0) / 100), // Calculate tentative bulk price
           };
         }),
 
@@ -400,7 +450,7 @@ const AddProduct = () => {
         brand_id: payload.brand_id,
         stock: payload.stock,
         faq: payload.faq,
-        media_count: payload.media?.length
+        media_count: payload.media?.length,
       });
 
       // API Call
@@ -438,10 +488,13 @@ const AddProduct = () => {
         const productId =
           response.data.productId || response.data.product?.id || id;
 
-
         // Removed separate Bulk Settings API call as it is now integrated into variants payload
 
-        toast.success(isEditMode ? "Product updated successfully" : "Product created successfully");
+        toast.success(
+          isEditMode
+            ? "Product updated successfully"
+            : "Product created successfully",
+        );
         // Delay navigation slightly to let toast show
         setTimeout(() => {
           navigate("/products");
@@ -452,7 +505,10 @@ const AddProduct = () => {
       }
     } catch (error) {
       console.error("Error submitting form:", error);
-      toast.error(error.response?.data?.error || "An error occurred while saving the product");
+      toast.error(
+        error.response?.data?.error ||
+          "An error occurred while saving the product",
+      );
     } finally {
       setLoading(false);
     }
@@ -488,6 +544,7 @@ const AddProduct = () => {
     <>
       <ToastContainer position="top-right" autoClose={3000} />
       <AddProductForm
+        key={initialData?.product?.id || "add-product-form"} // Force remount when product loads
         initialData={initialData}
         onSubmit={handleSubmit}
         isEditMode={isEditMode}
