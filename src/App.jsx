@@ -101,7 +101,7 @@ import CertificationManager from "./Pages/Certifications/CertificationManager.js
 import AboutContentManager from "./Pages/AboutManager/AboutContentManager.jsx";
 import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
 import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
-import Coupons from "./pages/Coupons/index.jsx";
+import Coupons from "./Pages/Coupons/index.jsx";
 import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
 
 // Seller Pages
@@ -124,8 +124,9 @@ const MainLayout = () => {
     <div className="flex h-screen mantine-bg">
       <Sidebar isOpen={sidebarOpen} />
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "ml-60" : "ml-[70px]"
-          }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${
+          sidebarOpen ? "ml-60" : "ml-[70px]"
+        }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
