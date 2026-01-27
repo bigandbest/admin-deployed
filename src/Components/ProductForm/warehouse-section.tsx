@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import {
   Select,
@@ -7,8 +7,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Label } from "../ui/label";
+} from "../UI/select";
+import { Label } from "../UI/label";
 
 interface WarehouseSectionProps {
   warehouse: string;

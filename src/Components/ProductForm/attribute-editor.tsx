@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Plus, X } from 'lucide-react';
+import { Button } from "../UI/button";
+import { Input } from "../UI/input";
+import { Label } from "../UI/label";
+import { Plus, X } from "lucide-react";
 
 interface Attribute {
   attribute_name: string;
@@ -22,7 +22,7 @@ export default function AttributeEditor({
   const addAttribute = () => {
     onAttributeChange([
       ...attributes,
-      { attribute_name: '', attribute_value: '' },
+      { attribute_name: "", attribute_value: "" },
     ]);
   };
 
@@ -30,11 +30,7 @@ export default function AttributeEditor({
     onAttributeChange(attributes.filter((_, i) => i !== index));
   };
 
-  const updateAttribute = (
-    index: number,
-    field: string,
-    value: string
-  ) => {
+  const updateAttribute = (index: number, field: string, value: string) => {
     const updated = [...attributes];
     updated[index] = { ...updated[index], [field]: value };
     onAttributeChange(updated);
@@ -57,13 +53,12 @@ export default function AttributeEditor({
 
       <div className="space-y-3">
         {attributes.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No attributes added yet</p>
+          <p className="text-xs text-muted-foreground">
+            No attributes added yet
+          </p>
         ) : (
           attributes.map((attr, index) => (
-            <div
-              key={index}
-              className="flex gap-2 items-end"
-            >
+            <div key={index} className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
                 <Label
                   htmlFor={`attr-name-${index}`}
@@ -76,7 +71,7 @@ export default function AttributeEditor({
                   placeholder="e.g., Size, Color, Weight"
                   value={attr.attribute_name}
                   onChange={(e) =>
-                    updateAttribute(index, 'attribute_name', e.target.value)
+                    updateAttribute(index, "attribute_name", e.target.value)
                   }
                   className="bg-card border-input text-sm h-8"
                 />
@@ -93,7 +88,7 @@ export default function AttributeEditor({
                   placeholder="e.g., M, Red, 1kg"
                   value={attr.attribute_value}
                   onChange={(e) =>
-                    updateAttribute(index, 'attribute_value', e.target.value)
+                    updateAttribute(index, "attribute_value", e.target.value)
                   }
                   className="bg-card border-input text-sm h-8"
                 />

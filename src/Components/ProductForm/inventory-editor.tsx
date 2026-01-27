@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import { Input } from "../UI/input";
+import { Label } from "../UI/label";
 
 interface InventoryEditorProps {
   inventory: { stock_quantity: number; reserved_quantity: number };
@@ -30,7 +30,7 @@ export default function InventoryEditor({
             placeholder="0"
             value={inventory.stock_quantity}
             onChange={(e) =>
-              handleChange('stock_quantity', Number(e.target.value))
+              handleChange("stock_quantity", Number(e.target.value))
             }
             className="bg-card border-input"
           />
@@ -45,7 +45,7 @@ export default function InventoryEditor({
             placeholder="0"
             value={inventory.reserved_quantity}
             onChange={(e) =>
-              handleChange('reserved_quantity', Number(e.target.value))
+              handleChange("reserved_quantity", Number(e.target.value))
             }
             className="bg-card border-input"
             disabled
@@ -55,7 +55,7 @@ export default function InventoryEditor({
       </div>
       <div className="p-3 bg-muted/30 rounded border border-border">
         <p className="text-xs text-muted-foreground">
-          Available:{' '}
+          Available:{" "}
           <span className="font-semibold text-foreground">
             {inventory.stock_quantity - inventory.reserved_quantity}
           </span>

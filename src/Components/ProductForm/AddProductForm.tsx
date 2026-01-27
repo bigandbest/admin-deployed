@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
+import { Button } from "../UI/button";
+import { ScrollArea } from "../UI/scroll-area";
 import GeneralInformation from "./general-information";
 import VariantsSection from "./variants-section";
 import MediaUploader from "./media-uploader";
@@ -169,9 +169,7 @@ export default function AddProductForm({
         setCategory((prev) => ({
           ...prev,
           ...initialData.category,
-          brand_id:
-            initialData.category.brand_id ||
-            prev.brand_id,
+          brand_id: initialData.category.brand_id || prev.brand_id,
         }));
       }
       if (initialData.warehouse) setWarehouse(initialData.warehouse);

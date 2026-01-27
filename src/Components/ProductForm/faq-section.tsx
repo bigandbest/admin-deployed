@@ -1,17 +1,17 @@
 "use client";
 import { useState } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
-import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
+import { Input } from "../UI/input";
+import { Label } from "../UI/label";
+import { Textarea } from "../UI/textarea";
+import { Button } from "../UI/button";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "../ui/accordion";
+} from "../UI/accordion";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
 interface FAQItem {
