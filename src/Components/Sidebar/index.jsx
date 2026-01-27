@@ -29,6 +29,7 @@ import {
   FaMoneyBillWave,
   FaTicketAlt,
   FaClock,
+  FaBoxOpen,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -336,16 +337,40 @@ const Sidebar = ({ isOpen = true }) => {
     },
 
     {
-      title: "Warehouse Management",
+      title: "Warehouse Manager",
       icon: <FaDatabase />,
-      path: "/warehouse-management",
-      description: "Manage warehouses, products, and stock inventory",
-    },
-    {
-      title: "Scheduling Management",
-      icon: <FaClock />,
-      path: "/scheduling-management",
-      description: "Configure 2-hour scheduling slots and warehouse mappings",
+      submenu: [
+        {
+          title: "Inventory Management",
+          icon: <FaBoxOpen />,
+          path: "/warehouses/inventory",
+          description: "Manage stock levels, analytics, and bulk operations",
+        },
+        {
+          title: "Pincode Management",
+          icon: <FaList />,
+          path: "/warehouses/pincodes",
+          description: "Manage warehouse pincodes and delivery areas",
+        },
+        {
+          title: "Warehouse Management",
+          icon: <FaDatabase />,
+          path: "/warehouse-management",
+          description: "Manage warehouses, products, and stock inventory",
+        },
+        {
+          title: "Stock Management",
+          icon: <FaBoxOpen />,
+          path: "/stock-management",
+          description: "Manage inventory levels across warehouses",
+        },
+        {
+          title: "Scheduling Management",
+          icon: <FaClock />,
+          path: "/scheduling-management",
+          description: "Configure 2-hour scheduling slots and warehouse mappings",
+        },
+      ],
     },
     {
       title: "Storage",

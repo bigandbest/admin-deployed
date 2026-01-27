@@ -107,6 +107,7 @@ export const {
   updateProductSection,
   toggleProductSectionStatus,
   updateProductSectionOrder,
+  getSectionCounts,
 
   // Promo Banners
   getAllPromoBanners,

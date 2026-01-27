@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AdminAuthProvider, useAdminAuth } from "./contexts/AdminAuthContext";
+import { SellerAuthProvider } from "./contexts/SellerAuthContext";
 import {
   createBrowserRouter,
   RouterProvider,
@@ -27,6 +28,11 @@ import Header from "./Components/Header";
 import AuthenticationForm from "./Components/AuthenticationForm";
 import ErrorBoundary from "./Components/ErrorBoundary";
 
+// Seller Components
+import SellerAuthenticationForm from "./Components/Seller/SellerAuthenticationForm";
+import SellerProtectedRoute from "./Components/Seller/SellerProtectedRoute";
+import SellerLayout from "./Components/Seller/SellerLayout";
+
 // Pages
 import Dashboard from "./Pages/Dashboard";
 import ProductsPage from "./Pages/Products";
@@ -46,7 +52,10 @@ import StorageDetailsPage from "./Pages/Storage";
 import BusinessUsersList from "./Pages/BusinessWork/BusinessData.jsx";
 import EnhancedStoragePage from "./Pages/Storage/enhanced";
 import WarehouseManagement from "./Pages/WarehousePages/WarehouseManagement.jsx";
+import StockManagement from "./Pages/WarehousePages/StockManagement.jsx";
 import WarehouseProducts from "./Pages/WarehousePages/WarehouseProducts.jsx";
+import InventoryManagement from "./Pages/WarehousePages/InventoryManagement.jsx";
+import PincodeManagement from "./Pages/WarehousePages/PincodeManagement.jsx";
 import VideoBannerManagement from "./Pages/VideoBanners/VideoBannerManagement.jsx";
 import AdminOrders from "./Pages/Orders/index.jsx";
 import ShippingBanner from "./Pages/ShippingBanner/ShippingBanner.jsx";
@@ -94,6 +103,15 @@ import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
 import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
 import Coupons from "./pages/Coupons/index.jsx";
 import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
+
+// Seller Pages
+import SellerDashboard from "./Pages/Seller/Dashboard";
+import SellerProducts from "./Pages/Seller/Products/index";
+import SellerAddProduct from "./Pages/Seller/Products/AddProduct";
+import SellerOrders from "./Pages/Seller/Orders";
+import SellerNegotiations from "./Pages/Seller/Negotiations";
+import SellerEarnings from "./Pages/Seller/Earnings";
+import SellerNotifications from "./Pages/Seller/Notifications";
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -188,6 +206,47 @@ function App() {
     {
       path: "/login",
       element: <AuthenticationForm />,
+    },
+    {
+      path: "/seller/login",
+      element: <SellerAuthenticationForm />,
+    },
+    {
+      element: <SellerLayout />,
+      children: [
+        {
+          path: "/seller/dashboard",
+          element: <SellerDashboard />,
+        },
+        {
+          path: "/seller/products",
+          element: <SellerProducts />,
+        },
+        {
+          path: "/seller/add-product",
+          element: <SellerAddProduct />,
+        },
+        {
+          path: "/seller/products/edit/:id",
+          element: <SellerAddProduct />,
+        },
+        {
+          path: "/seller/orders",
+          element: <SellerOrders />,
+        },
+        {
+          path: "/seller/negotiations",
+          element: <SellerNegotiations />,
+        },
+        {
+          path: "/seller/earnings",
+          element: <SellerEarnings />,
+        },
+        {
+          path: "/seller/notifications",
+          element: <SellerNotifications />,
+        },
+      ],
     },
     {
       element: (
@@ -286,11 +345,19 @@ function App() {
         },
         {
           path: "/stock-management",
-          element: <WarehouseManagement />,
+          element: <StockManagement />,
         },
         {
           path: "/warehouseproducts/:id/products",
           element: <WarehouseProducts />,
+        },
+        {
+          path: "/warehouses/inventory",
+          element: <InventoryManagement />,
+        },
+        {
+          path: "/warehouses/pincodes",
+          element: <PincodeManagement />,
         },
         {
           path: "/AdminOrders",
@@ -480,18 +547,20 @@ function App() {
   return (
     <ErrorBoundary>
       <AdminAuthProvider>
-        <ModalsProvider>
-          <Notifications position="top-right" zIndex={1000} />
-          <Spotlight
-            actions={spotlightActions}
-            searchProps={{
-              placeholder: "Search...",
-              leftSection: <FaSearch size={18} />,
-            }}
-            shortcut="mod + k"
-          />
-          <RouterProvider router={router} />
-        </ModalsProvider>
+        <SellerAuthProvider>
+          <ModalsProvider>
+            <Notifications position="top-right" zIndex={1000} />
+            <Spotlight
+              actions={spotlightActions}
+              searchProps={{
+                placeholder: "Search...",
+                leftSection: <FaSearch size={18} />,
+              }}
+              shortcut="mod + k"
+            />
+            <RouterProvider router={router} />
+          </ModalsProvider>
+        </SellerAuthProvider>
       </AdminAuthProvider>
     </ErrorBoundary>
   );

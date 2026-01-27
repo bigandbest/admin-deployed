@@ -99,19 +99,30 @@ export const AdminAuthProvider = ({ children }) => {
 
         if (result.success && result.user) {
           setCurrentUser(result.user);
-          setIsAdmin(result.user.user_metadata?.role === "admin");
+          // Check both user.role and user_metadata.role for compatibility
+          const userRole = result.user.role || result.user.user_metadata?.role;
+          setIsAdmin(userRole === "ADMIN" || userRole === "admin");
           setError(null);
         } else {
           // Only remove token if we get a clear authentication error (401, 403)
           // Don't remove on network errors or server errors
-          if (result.error && (result.error.includes('401') || result.error.includes('403') || result.error.includes('Unauthorized') || result.error.includes('Invalid token'))) {
+          if (
+            result.error &&
+            (result.error.includes("401") ||
+              result.error.includes("403") ||
+              result.error.includes("Unauthorized") ||
+              result.error.includes("Invalid token"))
+          ) {
             console.log("Invalid token, clearing storage");
             localStorage.removeItem("admin_token");
             setCurrentUser(null);
             setIsAdmin(false);
           } else {
             // For other errors (network, server), keep the user logged in
-            console.warn("Auth check failed but keeping session:", result.error);
+            console.warn(
+              "Auth check failed but keeping session:",
+              result.error,
+            );
             // Keep existing state if we have it, or set a minimal user state
             if (!currentUser && storedToken) {
               // Set a temporary authenticated state
@@ -138,7 +149,6 @@ export const AdminAuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-
   // Authentication functions
   const loginUser = async (email, password) => {
     try {
@@ -147,7 +157,9 @@ export const AdminAuthProvider = ({ children }) => {
 
       if (result.success && result.user) {
         setCurrentUser(result.user);
-        const isAdminUser = result.user.user_metadata?.role === "admin";
+        // Check both user.role and user_metadata.role for compatibility
+        const userRole = result.user.role || result.user.user_metadata?.role;
+        const isAdminUser = userRole === "ADMIN" || userRole === "admin";
         setIsAdmin(isAdminUser);
         // Store the access token in localStorage
         if (result.session?.access_token) {

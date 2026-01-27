@@ -20,11 +20,11 @@ import { FaEdit } from 'react-icons/fa';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-const VariantStockManager = ({ 
-  opened, 
-  onClose, 
-  product, 
-  onStockUpdated 
+const VariantStockManager = ({
+  opened,
+  onClose,
+  product,
+  onStockUpdated
 }) => {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,14 +44,14 @@ const VariantStockManager = ({
 
   const fetchVariants = async () => {
     if (!product?.id) return;
-    
+
     setFetching(true);
     setError('');
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/product-variants/product/${product.id}/variants`
+        `${API_BASE_URL}/variants/product/${product.id}`
       );
-      
+
       if (response.data.success) {
         setVariants(response.data.variants || []);
       } else {
@@ -95,18 +95,18 @@ const VariantStockManager = ({
         stockQuantity,
         isActive
       );
-      
+
       if (result.success) {
         setSuccess(`Variant stock updated successfully! New quantity: ${result.variant.variant_stock}`);
-        
+
         // Refresh variants list
         await fetchVariants();
-        
+
         // Notify parent component
         if (onStockUpdated) {
           onStockUpdated(result.variant);
         }
-        
+
         // Auto-close after 2 seconds
         setTimeout(() => {
           setEditModalOpen(false);
@@ -126,7 +126,7 @@ const VariantStockManager = ({
   const getVariantStockStatus = (variant) => {
     const stock = variant.variant_stock || 0;
     const active = variant.active !== false;
-    
+
     if (!active || stock === 0) {
       return { color: 'red', label: 'Out of Stock' };
     } else if (stock <= 10) {
@@ -139,7 +139,7 @@ const VariantStockManager = ({
   const getCurrentStockStatus = () => {
     const currentStock = editingVariant?.variant_stock || 0;
     const currentActive = editingVariant?.active !== false;
-    
+
     if (!currentActive || currentStock === 0) {
       return { color: 'red', label: 'Out of Stock' };
     } else if (currentStock <= 10) {
@@ -161,7 +161,7 @@ const VariantStockManager = ({
         centered
       >
         <LoadingOverlay visible={fetching} />
-        
+
         <div className="space-y-4">
           {/* Product Info */}
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -276,8 +276,8 @@ const VariantStockManager = ({
                 </div>
                 <div>
                   <Text size="sm" color="dimmed">Active Status:</Text>
-                  <Badge 
-                    color={editingVariant.active !== false ? 'green' : 'red'} 
+                  <Badge
+                    color={editingVariant.active !== false ? 'green' : 'red'}
                     size="sm"
                   >
                     {editingVariant.active !== false ? 'Active' : 'Inactive'}
@@ -342,8 +342,8 @@ const VariantStockManager = ({
 
             {/* Action Buttons */}
             <Group position="right" spacing="md" className="mt-6">
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 onClick={() => {
                   setEditModalOpen(false);
                   setEditingVariant(null);
@@ -354,8 +354,8 @@ const VariantStockManager = ({
               >
                 Cancel
               </Button>
-              <Button 
-                color="blue" 
+              <Button
+                color="blue"
                 onClick={handleUpdateVariantStock}
                 loading={loading}
                 disabled={

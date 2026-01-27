@@ -15,15 +15,10 @@ import {
   Select,
   Modal,
   Textarea,
-  NumberInput,
-  FileInput,
-  Switch,
   Skeleton,
   CloseButton,
 } from "@mantine/core";
-import { createProductWithWarehouse } from "../../utils/warehouseApi";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload } from "react-icons/fa";
-import AddProduct from "./AddProduct";
 
 // Small inline placeholder SVG for missing product images
 const PRODUCT_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160' viewBox='0 0 240 160'><rect width='100%' height='100%' fill='%23f8fafc'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23cbd5e1' font-family='sans-serif' font-size='14'>No Image</text></svg>`;
@@ -33,8 +28,7 @@ const ProductRowSkeleton = () => (
   <tr className="border-b border-gray-100 dark:border-gray-700">
     <td style={{ textAlign: "center", padding: "8px" }}>
       <div className="flex flex-col items-center gap-2">
-        <Skeleton height={60} width={80} radius="sm" />
-        <Skeleton height={12} width={40} />
+        <Skeleton height={80} width={80} radius="sm" />
       </div>
     </td>
     <td style={{ padding: "8px" }}>
@@ -48,31 +42,38 @@ const ProductRowSkeleton = () => (
       <Skeleton height={14} width="70%" />
     </td>
     <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="60%" />
+    </td>
+    <td style={{ padding: "8px" }}>
       <Skeleton height={14} width="80%" />
     </td>
-    <td style={{ textAlign: "right", padding: "8px" }}>
-      <Skeleton height={16} width={60} ml="auto" />
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="50%" />
     </td>
-    <td style={{ textAlign: "right", padding: "8px" }}>
-      <Skeleton height={14} width={50} ml="auto" />
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="50%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="60%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="80%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
     </td>
     <td style={{ textAlign: "center", padding: "8px" }}>
       <Skeleton height={20} width={40} mx="auto" radius="sm" />
     </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={20} width={30} mx="auto" radius="sm" />
-    </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={20} width={35} mx="auto" radius="sm" />
-    </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={16} width={40} mx="auto" />
-    </td>
-    {Array.from({ length: 15 }).map((_, index) => (
-      <td key={index} style={{ textAlign: "center", padding: "8px" }}>
-        <Skeleton height={20} width={35} mx="auto" radius="sm" />
-      </td>
-    ))}
     <td style={{ textAlign: "center", padding: "8px" }}>
       <div className="flex justify-center gap-1">
         <Skeleton height={24} width={24} radius="sm" />
@@ -239,15 +240,52 @@ const formatIndianPrice = (price) => {
   }).format(price);
 };
 
+// Helper function to get product image from media array
+const getProductImage = (product) => {
+  if (!product.media || product.media.length === 0) {
+    return null;
+  }
+  // Get primary image or first image
+  const primaryImage = product.media.find((m) => m.is_primary);
+  return primaryImage ? primaryImage.url : product.media[0].url;
+};
+
+// Helper function to get default variant
+const getDefaultVariant = (product) => {
+  if (!product.variants || product.variants.length === 0) {
+    return null;
+  }
+  return product.variants.find((v) => v.is_default) || product.variants[0];
+};
+
+// Helper function to get product price from variant
+const getProductPrice = (product) => {
+  const variant = getDefaultVariant(product);
+  return variant ? parseFloat(variant.price) : 0;
+};
+
+// Helper function to get product old price from variant
+const getProductOldPrice = (product) => {
+  const variant = getDefaultVariant(product);
+  return variant && variant.old_price ? parseFloat(variant.old_price) : 0;
+};
+
+// Helper function to check if product is in stock
+const isProductInStock = (product) => {
+  const variant = getDefaultVariant(product);
+  if (!variant || !variant.inventory || variant.inventory.length === 0) {
+    return false;
+  }
+  // Check if any warehouse has stock
+  return variant.inventory.some((inv) => inv.stock_qty > inv.reserved_qty);
+};
+
 import {
-  updateProduct,
   deleteProduct,
   getAllCategories,
   getAllSubcategories,
   getAllGroups,
 } from "../../utils/supabaseApi";
-
-import ProductVariantsManager from "../../Components/ProductVariantsManager";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -264,10 +302,6 @@ const ProductsPage = () => {
   const [subcategoryFilter, setSubcategoryFilter] = useState(null);
   const [groupFilter, setGroupFilter] = useState(null);
   const [activeFilter, setStatusFilter] = useState(null);
-  const [visible, setVisible] = useState(true);
-  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
-  const [selectedProductForVariants, setSelectedProductForVariants] =
-    useState(null);
   const [displayedItems, setDisplayedItems] = useState(10);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const itemsPerLoad = 10;
@@ -276,7 +310,7 @@ const ProductsPage = () => {
     const fetchSetting = async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`
+          `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`,
         );
         const result = await response.json();
 
@@ -301,7 +335,7 @@ const ProductsPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ is_visible: !visible }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -321,7 +355,7 @@ const ProductsPage = () => {
     async function getProducts() {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/admin/products`
+          `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
         );
         const result = await response.json();
 
@@ -351,7 +385,7 @@ const ProductsPage = () => {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/products`
+        `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
       );
       const result = await response.json();
 
@@ -433,7 +467,7 @@ const ProductsPage = () => {
       }
       // Find category through subcategory lookup
       const productSubcategory = subcategories.find(
-        (sub) => sub.id === product.subcategory_id
+        (sub) => sub.id === product.subcategory_id,
       );
       if (productSubcategory?.category_id === categoryFilter) {
         matchesCategory = true;
@@ -441,7 +475,7 @@ const ProductsPage = () => {
       // Find category through group->subcategory lookup
       const productGroup = groups.find((g) => g.id === product.group_id);
       const groupSubcategory = subcategories.find(
-        (sub) => sub.id === productGroup?.subcategory_id
+        (sub) => sub.id === productGroup?.subcategory_id,
       );
       if (groupSubcategory?.category_id === categoryFilter) {
         matchesCategory = true;
@@ -492,7 +526,7 @@ const ProductsPage = () => {
       setIsLoadingMore(true);
       setTimeout(() => {
         setDisplayedItems((prev) =>
-          Math.min(prev + itemsPerLoad, filteredProducts.length)
+          Math.min(prev + itemsPerLoad, filteredProducts.length),
         );
         setIsLoadingMore(false);
       }, 500);
@@ -537,10 +571,10 @@ const ProductsPage = () => {
     // If category filter changes, clear subcategory and group filters
     if (categoryFilter) {
       const validSubcategories = subcategories.filter(
-        (sub) => sub.category_id === categoryFilter
+        (sub) => sub.category_id === categoryFilter,
       );
       const currentSubcategoryValid = validSubcategories.some(
-        (sub) => sub.id === subcategoryFilter
+        (sub) => sub.id === subcategoryFilter,
       );
       if (!currentSubcategoryValid) {
         setSubcategoryFilter(null);
@@ -553,10 +587,10 @@ const ProductsPage = () => {
     // If subcategory filter changes, clear group filter if it's not valid
     if (subcategoryFilter) {
       const validGroups = groups.filter(
-        (group) => group.subcategory_id === subcategoryFilter
+        (group) => group.subcategory_id === subcategoryFilter,
       );
       const currentGroupValid = validGroups.some(
-        (group) => group.id === groupFilter
+        (group) => group.id === groupFilter,
       );
       if (!currentGroupValid) {
         setGroupFilter(null);
@@ -592,20 +626,6 @@ const ProductsPage = () => {
     navigate(`/products/edit/${product.id}`);
   };
 
-  const openVariantsModal = (product) => {
-    setSelectedProductForVariants(product);
-    setVariantsModalOpen(true);
-  };
-
-  const [productDetailModalOpen, setProductDetailModalOpen] = useState(false);
-  const [selectedProductForDetail, setSelectedProductForDetail] =
-    useState(null);
-
-  const openProductDetailModal = (product) => {
-    setSelectedProductForDetail(product);
-    setProductDetailModalOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 p-6">
       <Modal
@@ -629,7 +649,7 @@ const ProductsPage = () => {
         radius="md"
         className="bg-white/80 backdrop-blur-sm border-0 shadow-xl mb-6"
       >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-sm -mx-6 px-6 py-4 mb-6 border-b border-gray-100">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Products Management
@@ -800,156 +820,367 @@ const ProductsPage = () => {
           )}
         </div>
 
-        <div className="overflow-x-auto" style={{ maxHeight: "70vh" }}>
+        <div
+          className="overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+          style={{ maxHeight: "70vh" }}
+        >
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {displayedProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 hover:border-blue-300 cursor-pointer"
-                  onClick={() => openProductDetailModal(product)}
-                >
-                  <div className="relative">
-                    <img
-                      src={product.image || PRODUCT_PLACEHOLDER}
-                      alt={product.name}
-                      className="w-full h-48 object-cover rounded-t-lg"
-                      onError={(e) => {
-                        e.target.src = PRODUCT_PLACEHOLDER;
-                      }}
-                    />
-                    {product.images && product.images.length > 1 && (
-                      <Badge
-                        className="absolute top-2 right-2 bg-blue-600 text-white"
-                        size="sm"
+            <div className="bg-white rounded-lg shadow-sm w-full border border-gray-200">
+              <Table
+                striped
+                highlightOnHover
+                verticalSpacing="md"
+                fontSize="sm"
+                className="w-full min-w-[1200px]" // Ensure table has minimum width for horizontal scroll
+              >
+                <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="w-20 px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Image
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Product Name
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Category / Subcategory
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Group
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Brand / Store
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      HSN/SAC
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      GST / CESS
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Vertical
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Return Policy
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Rating
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Price & Stock
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Variant Details
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
+                      Bulk Pricing
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium text-center whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedProducts.map((product) => {
+                    const defaultVariant = getDefaultVariant(product);
+                    return (
+                      <tr
+                        key={product.id}
+                        className="group hover:bg-blue-50/50 transition-colors"
                       >
-                        +{product.images.length - 1} photos
-                      </Badge>
-                    )}
-                    <div className="absolute top-2 left-2 flex gap-2">
-                      {product.active ? (
-                        <Badge className="bg-green-500 text-white" size="sm">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-red-500 text-white" size="sm">
-                          Inactive
-                        </Badge>
-                      )}
-                      {product.in_stock && (
-                        <Badge className="bg-blue-500 text-white" size="sm">
-                          In Stock
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="mb-3">
-                      <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {categories.find((c) => c.id === product.category_id)
-                          ?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {subcategories.find(
-                          (s) => s.id === product.subcategory_id
-                        )?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {groups.find((g) => g.id === product.group_id)?.name ||
-                          "Unknown"}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-center mb-3">
-                      <div>
-                        <span className="text-xl font-bold text-green-600">
-                          {formatIndianPrice(product.price)}
-                        </span>
-                        {product.old_price > 0 && (
-                          <span className="text-sm text-gray-500 line-through ml-2">
-                            {formatIndianPrice(product.old_price)}
-                          </span>
-                        )}
-                        {product.discount > 0 && (
-                          <span className="text-sm text-red-600 ml-2">
-                            ({product.discount}% off)
-                          </span>
-                        )}
-                      </div>
-                      {product.rating > 0 && (
-                        <div className="flex items-center">
-                          <span className="text-yellow-500">★</span>
-                          <span className="text-sm text-gray-600 ml-1">
-                            {product.rating}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-3">
-                      <div>Brand: {product.brand_name || "N/A"}</div>
-                      <div>Store: {product.store_name || "N/A"}</div>
-                      <div>
-                        Shipping:{" "}
-                        {formatIndianPrice(product.shipping_amount || 0)}
-                      </div>
-                      <div>
-                        UOM: {product.uom_value} {product.uom_unit || "N/A"}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                      <div className="flex gap-2">
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          color="blue"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openVariantsModal(product);
-                          }}
-                          title="View Variants"
-                        >
-                          🎨
-                        </ActionIcon>
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          color="green"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditModal(product);
-                          }}
-                          title="Edit Product"
-                        >
-                          <FaEdit />
-                        </ActionIcon>
-                        <ActionIcon
-                          size="sm"
-                          variant="light"
-                          color="red"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProduct(product.id);
-                          }}
-                          title="Delete Product"
-                        >
-                          <FaTrash />
-                        </ActionIcon>
-                      </div>
-                      <Text size="xs" color="dimmed">
-                        {new Date(product.created_at).toLocaleDateString()}
-                      </Text>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                        <td className="px-4 py-3">
+                          <div
+                            className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 cursor-pointer group-hover:border-blue-300 transition-colors shadow-sm"
+                            onClick={() => {
+                              const productImage = getProductImage(product);
+                              setPreviewImage(
+                                productImage || PRODUCT_PLACEHOLDER,
+                              );
+                              setImagePreviewOpen(true);
+                            }}
+                          >
+                            <img
+                              src={
+                                getProductImage(product) || PRODUCT_PLACEHOLDER
+                              }
+                              alt={product.name}
+                              className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
+                              onError={(e) => {
+                                e.target.src = PRODUCT_PLACEHOLDER;
+                              }}
+                            />
+                            {product.media && product.media.length > 1 && (
+                              <div className="absolute bottom-0 right-0 left-0 bg-black/50 text-white text-[10px] text-center py-0.5 backdrop-blur-[2px]">
+                                +{product.media.length - 1}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <div
+                              className="font-semibold text-gray-900 line-clamp-2 w-48 text-sm"
+                              title={product.name}
+                            >
+                              {product.name}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <span>
+                                Added:{" "}
+                                {new Date(
+                                  product.created_at,
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div
+                            className="text-sm text-gray-600 line-clamp-3 w-48"
+                            title={product.description}
+                          >
+                            {product.description || "-"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm w-32">
+                            <Badge
+                              size="sm"
+                              variant="outline"
+                              color="blue"
+                              className="font-normal w-fit"
+                            >
+                              {categories.find(
+                                (c) => c.id === product.category_id,
+                              )?.name || "N/A"}
+                            </Badge>
+                            <span className="text-gray-600">
+                              {subcategories.find(
+                                (s) => s.id === product.subcategory_id,
+                              )?.name || "-"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-600 w-24">
+                            {groups.find((g) => g.id === product.group_id)
+                              ?.name || "-"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-32">
+                            <div
+                              className="truncate"
+                              title={product.brand_name}
+                            >
+                              Brand: {product.brand_name || "-"}
+                            </div>
+                            <div
+                              className="truncate"
+                              title={product.store_name}
+                            >
+                              Store: {product.store_name || "-"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-600 w-24">
+                            {product.hsn_or_sac_code || "-"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-24">
+                            <div>GST: {product.gst_rate}%</div>
+                            <div>CESS: {product.cess_rate}%</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge size="sm" variant="light" color="indigo">
+                            {product.vertical || "N/A"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-28">
+                            <div>
+                              {product.return_applicable
+                                ? "✓ Applicable"
+                                : "✗ Not Applicable"}
+                            </div>
+                            {product.return_applicable && (
+                              <div className="text-blue-600">
+                                {product.return_days} days
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm w-24">
+                            {product.rating > 0 ? (
+                              <>
+                                <Badge
+                                  size="sm"
+                                  color="yellow"
+                                  variant="light"
+                                  className="flex items-center gap-1 px-1 w-fit"
+                                >
+                                  ★ {product.rating}
+                                </Badge>
+                                <span className="text-gray-500">
+                                  ({product.review_count} reviews)
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">No ratings</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 w-32">
+                            <div className="font-bold text-gray-900 border border-green-100 bg-green-50 px-2 py-0.5 rounded-md w-fit text-sm">
+                              {formatIndianPrice(getProductPrice(product))}
+                            </div>
+                            {getProductOldPrice(product) > 0 && (
+                              <div className="text-xs text-gray-400 line-through pl-1">
+                                {formatIndianPrice(getProductOldPrice(product))}
+                              </div>
+                            )}
+                            {defaultVariant?.discount_percentage > 0 && (
+                              <Badge size="sm" color="red" variant="light">
+                                {defaultVariant.discount_percentage}% OFF
+                              </Badge>
+                            )}
+                            <div>
+                              {isProductInStock(product) ? (
+                                <Badge size="sm" color="teal" variant="dot">
+                                  In Stock
+                                </Badge>
+                              ) : (
+                                <Badge size="sm" color="red" variant="dot">
+                                  Out of Stock
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Ship:{" "}
+                              {formatIndianPrice(
+                                product.shipping_amount ||
+                                  defaultVariant?.shipping_amount ||
+                                  0,
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-40">
+                            {defaultVariant ? (
+                              <>
+                                <div
+                                  className="font-medium text-gray-700 truncate"
+                                  title={defaultVariant.title}
+                                >
+                                  {defaultVariant.title}
+                                </div>
+                                <div>SKU: {defaultVariant.sku}</div>
+                                {defaultVariant.packaging_details && (
+                                  <div
+                                    className="text-gray-500 truncate"
+                                    title={defaultVariant.packaging_details}
+                                  >
+                                    {defaultVariant.packaging_details}
+                                  </div>
+                                )}
+                                {product.has_variants &&
+                                  product.variants?.length > 1 && (
+                                    <Badge
+                                      size="sm"
+                                      color="grape"
+                                      variant="light"
+                                    >
+                                      +{product.variants.length - 1} more
+                                    </Badge>
+                                  )}
+                              </>
+                            ) : (
+                              <span className="text-gray-400">No variants</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm w-32">
+                            {defaultVariant?.is_bulk_enabled ? (
+                              <>
+                                <Badge size="sm" color="green" variant="light">
+                                  ✓ Enabled
+                                </Badge>
+                                <div className="text-gray-600">
+                                  Min: {defaultVariant.bulk_min_quantity} qty
+                                </div>
+                                <div className="text-green-600 font-medium">
+                                  {formatIndianPrice(
+                                    parseFloat(defaultVariant.bulk_price),
+                                  )}
+                                </div>
+                                <div className="text-gray-500">
+                                  ({defaultVariant.bulk_discount_percentage}%
+                                  off)
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Not enabled</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {product.active ? (
+                            <Badge color="green" variant="light" size="sm">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge color="gray" variant="light" size="sm">
+                              Inactive
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <ActionIcon
+                              variant="subtle"
+                              color="blue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(product);
+                              }}
+                              title="Edit"
+                            >
+                              <FaEdit size={16} />
+                            </ActionIcon>
+                            <ActionIcon
+                              variant="subtle"
+                              color="red"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProduct(product.id);
+                              }}
+                              title="Delete"
+                            >
+                              <FaTrash size={16} />
+                            </ActionIcon>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
             </div>
           )}
 
@@ -1061,308 +1292,6 @@ const ProductsPage = () => {
           )}
         </div>
       </Card>
-
-      {/* Product Variants Modal */}
-      <Modal
-        opened={variantsModalOpen}
-        onClose={() => setVariantsModalOpen(false)}
-        title="Product Variants Management"
-        size="xl"
-      >
-        {selectedProductForVariants && (
-          <ProductVariantsManager product={selectedProductForVariants} />
-        )}
-      </Modal>
-
-      {/* Add custom styles for line-clamp if not available */}
-      <style>
-        {`
-          .line-clamp-2 {
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-          }
-          .min-w-full {
-            min-width: 100%;
-          }
-        `}
-      </style>
-
-      {/* Product Detail Modal */}
-      <Modal
-        opened={productDetailModalOpen}
-        onClose={() => setProductDetailModalOpen(false)}
-        title={
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-linear-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              Product Details
-            </span>
-          </div>
-        }
-        size="80%"
-        classNames={{
-          modal: "rounded-2xl shadow-2xl border-0",
-          header:
-            "bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 rounded-t-2xl",
-          body: "p-6",
-          close: "hover:bg-gray-100 rounded-full",
-        }}
-      >
-        {selectedProductForDetail && (
-          <div className="space-y-6">
-            {/* Product Header */}
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="lg:w-1/3">
-                <img
-                  src={selectedProductForDetail.image || PRODUCT_PLACEHOLDER}
-                  alt={selectedProductForDetail.name}
-                  className="w-full h-80 object-cover rounded-xl shadow-lg border border-gray-200"
-                  onError={(e) => {
-                    e.target.src = PRODUCT_PLACEHOLDER;
-                  }}
-                />
-                {selectedProductForDetail.images &&
-                  selectedProductForDetail.images.length > 1 && (
-                    <div className="mt-4">
-                      <Text size="sm" weight={500} className="mb-2">
-                        Additional Images (
-                        {selectedProductForDetail.images.length - 1})
-                      </Text>
-                      <div className="grid grid-cols-4 gap-2">
-                        {selectedProductForDetail.images
-                          .slice(1, 5)
-                          .map((img, index) => (
-                            <img
-                              key={index}
-                              src={img}
-                              alt={`${selectedProductForDetail.name} ${
-                                index + 2
-                              }`}
-                              className="w-full h-16 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
-                              onClick={() => {
-                                setPreviewImage(img);
-                                setImagePreviewOpen(true);
-                              }}
-                            />
-                          ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-              <div className="lg:w-2/3 space-y-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    {selectedProductForDetail.name}
-                  </h2>
-                  <div className="flex gap-2 mb-4">
-                    <Badge
-                      color={selectedProductForDetail.active ? "green" : "red"}
-                      size="lg"
-                    >
-                      {selectedProductForDetail.active ? "Active" : "Inactive"}
-                    </Badge>
-                    <Badge
-                      color={
-                        selectedProductForDetail.in_stock ? "blue" : "gray"
-                      }
-                      size="lg"
-                    >
-                      {selectedProductForDetail.in_stock
-                        ? "In Stock"
-                        : "Out of Stock"}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Price
-                      </Text>
-                      <Text size="xl" weight={700} color="green">
-                        {formatIndianPrice(selectedProductForDetail.price)}
-                      </Text>
-                      {selectedProductForDetail.old_price > 0 && (
-                        <Text size="sm" className="line-through text-gray-500">
-                          {formatIndianPrice(
-                            selectedProductForDetail.old_price
-                          )}
-                        </Text>
-                      )}
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Category Path
-                      </Text>
-                      <Text size="sm">
-                        {categories.find(
-                          (c) => c.id === selectedProductForDetail.category_id
-                        )?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {subcategories.find(
-                          (s) =>
-                            s.id === selectedProductForDetail.subcategory_id
-                        )?.name || "Unknown"}{" "}
-                        &gt;{" "}
-                        {groups.find(
-                          (g) => g.id === selectedProductForDetail.group_id
-                        )?.name || "Unknown"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Brand
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.brand_name || "Not specified"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Store
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.store_name || "Not assigned"}
-                      </Text>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Stock
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.stock || 0} units
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        UOM
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.uom_value}{" "}
-                        {selectedProductForDetail.uom_unit || "N/A"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Shipping
-                      </Text>
-                      <Text size="sm">
-                        {selectedProductForDetail.shipping_amount
-                          ? formatIndianPrice(
-                              selectedProductForDetail.shipping_amount
-                            )
-                          : "Free"}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text size="sm" color="dimmed" className="mb-1">
-                        Rating
-                      </Text>
-                      <div className="flex items-center gap-2">
-                        <span className="text-yellow-500">★</span>
-                        <Text size="sm">
-                          {selectedProductForDetail.rating || 0}
-                        </Text>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedProductForDetail.discount > 0 && (
-                  <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                    <Text size="sm" weight={500} color="red">
-                      {selectedProductForDetail.discount}% Discount Applied
-                    </Text>
-                    <Text size="xs" color="dimmed">
-                      You save{" "}
-                      {formatIndianPrice(
-                        (selectedProductForDetail.old_price || 0) -
-                          selectedProductForDetail.price
-                      )}
-                    </Text>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Product Description */}
-            {selectedProductForDetail.description && (
-              <div className="border-t pt-6">
-                <Text size="lg" weight={600} className="mb-3">
-                  Description
-                </Text>
-                <Text size="sm" className="text-gray-700 leading-relaxed">
-                  {selectedProductForDetail.description}
-                </Text>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="border-t pt-6">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  color="blue"
-                  leftSection={<FaEdit />}
-                  onClick={() => {
-                    setProductDetailModalOpen(false);
-                    openEditModal(selectedProductForDetail);
-                  }}
-                >
-                  Edit Product
-                </Button>
-                <Button
-                  color="purple"
-                  variant="light"
-                  onClick={() => {
-                    setProductDetailModalOpen(false);
-                    openVariantsModal(selectedProductForDetail);
-                  }}
-                >
-                  Manage Variants
-                </Button>
-                <Button
-                  color="red"
-                  variant="light"
-                  leftSection={<FaTrash />}
-                  onClick={() => {
-                    setProductDetailModalOpen(false);
-                    handleDeleteProduct(selectedProductForDetail.id);
-                  }}
-                >
-                  Delete Product
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };

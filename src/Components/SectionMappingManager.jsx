@@ -205,7 +205,7 @@ const SectionMappingManager = ({
                 const categoryIds = [];
                 Object.keys(selectedMappings).forEach((key) => {
                     if (key.startsWith("cat_") && selectedMappings[key]) {
-                        categoryIds.push(parseInt(key.replace("cat_", "")));
+                        categoryIds.push(key.replace("cat_", ""));
                     }
                 });
 

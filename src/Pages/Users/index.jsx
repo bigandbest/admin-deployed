@@ -36,12 +36,12 @@ import {
 } from "react-icons/fa";
 
 import {
-  getAllUsersWithDetailedAddress,
-  addUserWithDetailedAddress,
-  updateUserWithDetailedAddress,
-  deleteUser,
-  toggleUserStatus,
-} from "../../utils/supabaseApi";
+  getAdminUsers,
+  createAdminUser,
+  updateAdminUser,
+  deleteAdminUser,
+  toggleAdminUserStatus,
+} from "../../utils/userManagementApi";
 import { supabase } from "../../utils/supabase";
 import { formatDateOnlyIST } from "../../utils/dateUtils";
 import UserAddressManager from "../../Components/UserAddressManager";
@@ -82,21 +82,29 @@ const UsersPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("basic"); // Added for tab navigation
+  const [activeTab, setActiveTab] = useState("basic");
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  // Fetch users on component mount
+  // Fetch users when dependencies change
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [activePage, searchQuery, roleFilter, statusFilter]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const result = await getAllUsersWithDetailedAddress();
+      const result = await getAdminUsers(
+        activePage,
+        itemsPerPage,
+        searchQuery,
+        roleFilter,
+        statusFilter
+      );
 
       if (result.success) {
         setUsers(result.users || []);
+        setTotalPages(result.pagination?.totalPages || 1);
         setError(null);
       } else {
         console.error("Error fetching users:", result.error);
@@ -146,7 +154,7 @@ const UsersPage = () => {
 
     try {
       setLoading(true);
-      const result = await addUserWithDetailedAddress(newUser, newUserPassword);
+      const result = await createAdminUser({ ...newUser, password: newUserPassword });
 
       if (result.success) {
         showNotification("User created successfully");
@@ -190,7 +198,7 @@ const UsersPage = () => {
   const handleUpdateUser = async (userId, updatedData) => {
     try {
       setLoading(true);
-      const result = await updateUserWithDetailedAddress(userId, updatedData);
+      const result = await updateAdminUser(userId, updatedData);
 
       if (result.success) {
         showNotification("User updated successfully");
@@ -210,7 +218,7 @@ const UsersPage = () => {
   const handleToggleStatus = async (userId, newStatus) => {
     try {
       setLoading(true);
-      const result = await toggleUserStatus(userId, newStatus);
+      const result = await toggleAdminUserStatus(userId, newStatus);
 
       if (result.success) {
         showNotification(
@@ -255,24 +263,8 @@ const UsersPage = () => {
     }
   };
 
-  // Filter users based on search and filters
-  const filteredUsers = users.filter((user) => {
-    return (
-      (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
-      (roleFilter === "" || user.role === roleFilter) &&
-      (statusFilter === "" ||
-        (statusFilter === "active" && user.active) ||
-        (statusFilter === "inactive" && !user.active))
-    );
-  });
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const paginatedUsers = filteredUsers.slice(
-    (activePage - 1) * itemsPerPage,
-    activePage * itemsPerPage
-  );
+  // We no longer need client-side filtering and pagination
+  const paginatedUsers = users;
 
   const handleTabChange = (value) => {
     console.log("Tab changed to:", value);
@@ -306,7 +298,7 @@ const UsersPage = () => {
 
     setDeleteLoading(true);
     try {
-      const result = await deleteUser(userToDelete.id);
+      const result = await deleteAdminUser(userToDelete.id);
       if (result.success) {
         setUsers((prev) => prev.filter((user) => user.id !== userToDelete.id));
         setDeleteModalOpen(false);
@@ -488,13 +480,12 @@ const UsersPage = () => {
                   <Table.Td style={{ width: "200px" }}>
                     <Group gap="sm">
                       <Avatar
-                        src={
-                          user.avatar ||
-                          `https://i.pravatar.cc/150?u=${user.email}`
-                        }
+                        src={user.avatar}
                         size="md"
                         radius="xl"
-                      />
+                      >
+                        {user.name?.slice(0, 2).toUpperCase()}
+                      </Avatar>
                       <div style={{ overflow: "hidden" }}>
                         <Text
                           fw={500}
@@ -819,8 +810,8 @@ const UsersPage = () => {
                 }}
                 error={
                   !currentUser &&
-                  newUser.phone &&
-                  !/^[6-9]\d{9}$/.test(newUser.phone)
+                    newUser.phone &&
+                    !/^[6-9]\d{9}$/.test(newUser.phone)
                     ? "10 digits, starts with 6-9"
                     : undefined
                 }
@@ -957,9 +948,8 @@ const UsersPage = () => {
                   <UserAddressManager
                     userId={currentUser.id}
                     onAddressChange={handleAddressUpdated}
-                    key={`address-manager-${
-                      currentUser.id
-                    }-${new Date().getTime()}`} // Add key with timestamp to force re-render
+                    key={`address-manager-${currentUser.id
+                      }-${new Date().getTime()}`} // Add key with timestamp to force re-render
                   />
                 </div>
               )}
@@ -981,7 +971,9 @@ const UsersPage = () => {
         </Text>
         {userToDelete && (
           <Group spacing="xs" mb="lg">
-            <Avatar src={userToDelete.avatar} size="sm" />
+            <Avatar src={userToDelete.avatar} size="sm">
+              {userToDelete.name?.slice(0, 2).toUpperCase()}
+            </Avatar>
             <div>
               <Text size="sm" weight={500}>
                 {userToDelete.name}

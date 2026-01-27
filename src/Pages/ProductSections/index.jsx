@@ -37,10 +37,10 @@ import {
   updateProductSection,
   toggleProductSectionStatus,
   updateProductSectionOrder,
-  addCategoriesToSection,
   getCategoriesInSection,
   removeCategoryFromSection,
   getAllCategories,
+  getSectionCounts,
 } from "../../utils/supabaseApi";
 import axios from "axios";
 
@@ -76,19 +76,26 @@ const ProductSectionsManagement = () => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [categoryCounts, setCategoryCounts] = useState({});
 
-  // Fetch all product sections
+  // Fetch all sections and their counts
   const fetchSections = async () => {
     try {
       setLoading(true);
-      const result = await getAllProductSections();
+      // Fetch sections and counts in parallel
+      const [sectionsResult, countsResult] = await Promise.all([
+        getAllProductSections(),
+        getSectionCounts()
+      ]);
 
-      if (result.success) {
-        const sanitizedSections = (result.sections || result.data || []).filter(Boolean);
+      if (sectionsResult.success) {
+        const sanitizedSections = (sectionsResult.sections || sectionsResult.data || []).filter(Boolean);
         setSections(sanitizedSections);
-        // Fetch product counts for all sections
-        fetchProductCounts(sanitizedSections);
+
+        if (countsResult.success) {
+          setProductCounts(countsResult.data.products || {});
+          setCategoryCounts(countsResult.data.categories || {});
+        }
       } else {
-        throw new Error(result.error || "Failed to fetch sections");
+        throw new Error(sectionsResult.error || "Failed to fetch sections");
       }
     } catch (error) {
       console.error("Error fetching sections:", error);
@@ -103,33 +110,7 @@ const ProductSectionsManagement = () => {
     }
   };
 
-  // Fetch product counts for all sections
-  const fetchProductCounts = async (sectionsList) => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-      const counts = {};
-
-      await Promise.all(
-        sectionsList.map(async (section) => {
-          try {
-            const response = await axios.get(
-              `${apiUrl}/product-sections/${section.id}/products?limit=1`
-            );
-            if (response.data.success && response.data.pagination) {
-              counts[section.id] = response.data.pagination.total;
-            }
-          } catch (error) {
-            console.error(`Error fetching count for section ${section.id}:`, error);
-            counts[section.id] = 0;
-          }
-        })
-      );
-
-      setProductCounts(counts);
-    } catch (error) {
-      console.error("Error fetching product counts:", error);
-    }
-  };
+  // Removed fetchProductCounts and fetchCategoryCounts as they are now handled by getSectionCounts in fetchSections
 
   // Fetch products in a section
   const fetchSectionProducts = async (sectionId) => {
@@ -201,28 +182,7 @@ const ProductSectionsManagement = () => {
     }
   };
 
-  // Fetch category counts for all sections
-  const fetchCategoryCounts = async (sectionsList) => {
-    try {
-      const counts = {};
-      await Promise.all(
-        sectionsList.map(async (section) => {
-          try {
-            const result = await getCategoriesInSection(section.id);
-            if (result.success) {
-              counts[section.id] = result.total || 0;
-            }
-          } catch (error) {
-            console.error(`Error fetching category count for section ${section.id}:`, error);
-            counts[section.id] = 0;
-          }
-        })
-      );
-      setCategoryCounts(counts);
-    } catch (error) {
-      console.error("Error fetching category counts:", error);
-    }
-  };
+  // fetchCategoryCounts is now handled by getSectionCounts in fetchSections
 
   // Open products modal
   const openManageProducts = (section) => {
@@ -508,12 +468,6 @@ const ProductSectionsManagement = () => {
   useEffect(() => {
     fetchSections();
   }, []);
-
-  useEffect(() => {
-    if (sections.length > 0) {
-      fetchCategoryCounts(sections);
-    }
-  }, [sections]);
 
   return (
     <Container size="xl" py="xl">

@@ -36,6 +36,64 @@ const ProductModal = ({
   const [variantStockConfig, setVariantStockConfig] = useState({});
   const [existingStock, setExistingStock] = useState({});
   const [loadingExistingStock, setLoadingExistingStock] = useState(false);
+  const [hasSynced, setHasSynced] = useState(false);
+
+  // Aggregate total stock across all warehouses
+  const totalStockInfo = useMemo(() => {
+    const info = {
+      base: 0,
+      variants: {}
+    };
+
+    Object.values(existingStock).forEach(whStock => {
+      info.base += (whStock.baseStock || 0);
+      if (whStock.variantStock) {
+        Object.entries(whStock.variantStock).forEach(([vId, qty]) => {
+          info.variants[vId] = (info.variants[vId] || 0) + (qty || 0);
+        });
+      }
+    });
+
+    return info;
+  }, [existingStock]);
+
+  // Sync existing stock into warehouse_assignments for editing
+  useEffect(() => {
+    if (isEditing && Object.keys(existingStock).length > 0 && !hasSynced && data.selectedProductId) {
+      const initialAssignments = [];
+      Object.entries(existingStock).forEach(([whId, whData]) => {
+        const warehouseId = parseInt(whId);
+
+        // Add base stock if any
+        if (whData.baseStock > 0) {
+          initialAssignments.push({
+            warehouse_id: warehouseId,
+            stock_quantity: whData.baseStock,
+            variant_id: null
+          });
+        }
+
+        // Add variant stock
+        if (whData.variantStock) {
+          Object.entries(whData.variantStock).forEach(([vId, qty]) => {
+            if (qty > 0) {
+              initialAssignments.push({
+                warehouse_id: warehouseId,
+                stock_quantity: qty,
+                variant_id: vId
+              });
+            }
+          });
+        }
+      });
+
+      if (initialAssignments.length > 0) {
+        console.log("♻️ Syncing existing stock to assignments:", initialAssignments);
+        setData(prev => ({ ...prev, warehouse_assignments: initialAssignments }));
+      }
+      setHasSynced(true);
+    }
+  }, [existingStock, isEditing, hasSynced, data.selectedProductId, setData]);
 
   // Fetch existing stock for all warehouses when editing
   useEffect(() => {
@@ -61,16 +119,17 @@ const ProductModal = ({
               }
             );
 
-            if (response.data.success && response.data.products) {
+            const warehouseProducts = response.data.products || response.data.data || [];
+            if (response.data.success && warehouseProducts.length > 0) {
               // Find this product in the warehouse
-              const productInWarehouse = response.data.products.find(
+              const productInWarehouse = warehouseProducts.find(
                 p => p.product_id === data.selectedProductId || p.id === data.selectedProductId
               );
 
               if (productInWarehouse) {
                 return {
                   warehouseId: warehouse.id,
-                  stock: productInWarehouse.stock_quantity || 0,
+                  stock: productInWarehouse.base_stock?.stock_quantity || productInWarehouse.stock_quantity || 0,
                   variantStock: productInWarehouse.variant_stock || {}
                 };
               }
@@ -115,21 +174,37 @@ const ProductModal = ({
         return;
       }
 
+      // Check if we already have variants in availableProducts
+      const currentProduct = data.availableProducts?.find(p => p.id === data.selectedProductId);
+      if (currentProduct?.variants && currentProduct.variants.length > 0) {
+        setProductVariants(currentProduct.variants);
+        const initialConfig = {};
+        currentProduct.variants.forEach(variant => {
+          initialConfig[variant.id] = {
+            enabled: true,
+            stock_quantity: variant.stock_qty || 0
+          };
+        });
+        setVariantStockConfig(initialConfig);
+        return;
+      }
+
       setLoadingVariants(true);
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/product-variants/product/${data.selectedProductId}/variants`
+          `${API_BASE_URL}/variants/product/${data.selectedProductId}`
         );
 
-        if (response.data.success && response.data.variants) {
-          setProductVariants(response.data.variants);
+        if (response.data.success && response.data.data) {
+          const variants = response.data.data;
+          setProductVariants(variants);
 
           // Initialize variant stock config
           const initialConfig = {};
-          response.data.variants.forEach(variant => {
+          variants.forEach(variant => {
             initialConfig[variant.id] = {
               enabled: true,
-              stock_quantity: variant.variant_stock || 0
+              stock_quantity: variant.stock_qty || 0
             };
           });
           setVariantStockConfig(initialConfig);
@@ -153,10 +228,10 @@ const ProductModal = ({
     if (isOpen) {
       setCurrentStep(0);
       setStepErrors({});
-      setProductVariants([]);
-      setVariantStockConfig({});
+      setHasSynced(false);
+      // Do not clear productVariants here as it interferes with fetching
     }
-  }, [isOpen, isEditing]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -296,11 +371,7 @@ const ProductModal = ({
         }
         break;
       case "pricing":
-        if (data.price === "" || Number.isNaN(Number.parseFloat(data.price))) {
-          errorMessage = "Enter a valid price";
-        } else if (Number.parseFloat(data.price) < 0) {
-          errorMessage = "Price cannot be negative";
-        } else if (totalAssignedWarehouses === 0) {
+        if (totalAssignedWarehouses === 0) {
           errorMessage =
             "Assign stock to at least one warehouse before saving";
         }
@@ -389,10 +460,10 @@ const ProductModal = ({
               />
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-700">
-                  {variant.variant_name}
+                  {variant.title || variant.variant_name}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {variant.variant_weight} {variant.variant_unit} • ₹{variant.variant_price}
+                  {variant.packaging_details || variant.variant_weight} • ₹{variant.price || variant.variant_price}
                   {isEditing && variantCurrentStock !== undefined && (
                     <span className="ml-2 text-blue-600 font-semibold">
                       • Current: {variantCurrentStock} units
@@ -471,14 +542,15 @@ const ProductModal = ({
                   {productVariants.map(variant => (
                     <div key={variant.id} className="flex items-center justify-between p-3 bg-white rounded border">
                       <div>
-                        <p className="font-medium text-gray-900">{variant.variant_name}</p>
+                        <p className="font-medium text-gray-900">{variant.title || variant.variant_name}</p>
                         <p className="text-sm text-gray-600">
-                          {variant.variant_weight} {variant.variant_unit} • ₹{variant.variant_price}
+                          {variant.packaging_details || variant.variant_weight ? `${variant.packaging_details || variant.variant_weight} • ` : ""}
+                          ₹{variant.price || variant.variant_price}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">Initial Stock</p>
-                        <p className="font-semibold text-gray-900">{variant.variant_stock || 0}</p>
+                        <p className="text-sm text-gray-600">Current Stock</p>
+                        <p className="font-semibold text-gray-900">{totalStockInfo.variants[variant.id] || 0}</p>
                       </div>
                     </div>
                   ))}
@@ -511,10 +583,10 @@ const ProductModal = ({
                     setData({ ...data, initial_stock: event.target.value })
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="100"
+                  placeholder="Enter initial stock quantity"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  How many units to add to each selected warehouse
+                <p className="text-xs text-blue-600 mt-1 font-medium">
+                  Total Current Stock across warehouses: {totalStockInfo.base} units
                 </p>
               </div>
             )}
@@ -673,41 +745,23 @@ const ProductModal = ({
       case "pricing":
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={data.price}
-                  onChange={(event) =>
-                    setData({ ...data, price: event.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter product price"
-                />
-              </div>
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                <p className="text-sm text-blue-700">
-                  <span className="font-semibold">Delivery Type:</span>{" "}
-                  {data.delivery_type === "nationwide"
-                    ? "Nationwide"
-                    : "Zone-specific"}
-                </p>
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+              <p className="text-sm text-blue-700">
+                <span className="font-semibold">Delivery Type:</span>{" "}
+                {data.delivery_type === "nationwide"
+                  ? "Nationwide"
+                  : "Zone-specific"}
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                <span className="font-semibold">Assigned warehouses:</span>{" "}
+                {totalAssignedWarehouses}
+              </p>
+              {productVariants.length > 0 && (
                 <p className="text-sm text-blue-700 mt-1">
-                  <span className="font-semibold">Assigned warehouses:</span>{" "}
-                  {totalAssignedWarehouses}
+                  <span className="font-semibold">Variants:</span>{" "}
+                  {productVariants.length}
                 </p>
-                {productVariants.length > 0 && (
-                  <p className="text-sm text-blue-700 mt-1">
-                    <span className="font-semibold">Variants:</span>{" "}
-                    {productVariants.length}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
 
             <div className="border rounded-lg p-4 bg-white">
@@ -725,18 +779,23 @@ const ProductModal = ({
                     if (!warehouse) return null;
 
                     const variant = assignment.variant_id
-                      ? productVariants.find(v => v.id === assignment.variant_id)
+                      ? productVariants.find((v) => v.id === assignment.variant_id)
                       : null;
 
                     return (
                       <div
-                        key={`${assignment.warehouse_id}-${assignment.variant_id || 'base'}`}
+                        key={`${assignment.warehouse_id}-${assignment.variant_id || "base"
+                          }`}
                         className="flex items-center justify-between text-sm border-b border-gray-100 pb-2 last:border-0"
                       >
                         <div>
                           <p className="font-medium text-gray-900">
                             {warehouse.name}
-                            {variant && <span className="text-blue-600 ml-2">• {variant.variant_name}</span>}
+                            {variant && (
+                              <span className="text-blue-600 ml-2">
+                                • {variant.title || variant.variant_name}
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs text-gray-500">
                             {warehouse.type === "zonal"
