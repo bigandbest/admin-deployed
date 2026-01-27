@@ -3,9 +3,9 @@
 import React from "react";
 
 import { useState, useRef } from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Input } from "../ui/input";
+import { Button } from "../UI/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
+import { Input } from "../UI/input";
 import { Upload, X, Star, ChevronUp, ChevronDown } from "lucide-react";
 // import Image from 'next/image';
 
@@ -60,7 +60,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
           resolve({
             media_type: mediaType,
             url,
-            file
+            file,
           });
         };
         reader.readAsDataURL(file);
@@ -77,7 +77,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
         updated.push({
           ...item,
           is_primary: updated.length === 0 && index === 0,
-          sort_order: updated.length
+          sort_order: updated.length,
         });
       });
       console.log("Updated media with previews:", updated);
@@ -104,7 +104,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
           ...updatedMedia[replaceIndex],
           media_type: mediaType,
           url: url,
-          file: file
+          file: file,
         };
         setMedia(updatedMedia);
         setReplaceIndex(null);
@@ -163,58 +163,71 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
             {images.length > 0 && (
               <div className="space-y-3">
                 {/* Large Primary Image */}
-                {images.filter(img => img.is_primary).map((image, index) => (
-                  <div key={`primary-${index}`} className="relative group rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                    <div className="aspect-[4/3] flex items-center justify-center p-4">
-                      <img
-                        src={image.url || "/placeholder.svg"}
-                        alt="Primary product"
-                        className="max-w-full max-h-full object-contain"
-                      />
+                {images
+                  .filter((img) => img.is_primary)
+                  .map((image, index) => (
+                    <div
+                      key={`primary-${index}`}
+                      className="relative group rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
+                    >
+                      <div className="aspect-[4/3] flex items-center justify-center p-4">
+                        <img
+                          src={image.url || "/placeholder.svg"}
+                          alt="Primary product"
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            triggerReplace(
+                              images.findIndex((img) => img.is_primary),
+                            )
+                          }
+                          variant="ghost"
+                          className="bg-blue-500/90 hover:bg-blue-600 text-white h-9 px-4"
+                          title="Replace Image"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Replace
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            removeMedia(
+                              images.findIndex((img) => img.is_primary),
+                            )
+                          }
+                          variant="ghost"
+                          className="bg-red-500/90 hover:bg-red-600 text-white h-9 px-4"
+                          title="Remove Image"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                      <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                        <Star className="w-3 h-3" fill="currentColor" />
+                        Primary
+                      </div>
                     </div>
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => triggerReplace(images.findIndex(img => img.is_primary))}
-                        variant="ghost"
-                        className="bg-blue-500/90 hover:bg-blue-600 text-white h-9 px-4"
-                        title="Replace Image"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Replace
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => removeMedia(images.findIndex(img => img.is_primary))}
-                        variant="ghost"
-                        className="bg-red-500/90 hover:bg-red-600 text-white h-9 px-4"
-                        title="Remove Image"
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Remove
-                      </Button>
-                    </div>
-                    <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
-                      <Star className="w-3 h-3" fill="currentColor" />
-                      Primary
-                    </div>
-                  </div>
-                ))}
+                  ))}
 
                 {/* Thumbnail Grid */}
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {images.map((image, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className={`relative group flex-shrink-0 ${
-                        image.is_primary ? 'hidden' : ''
+                        image.is_primary ? "hidden" : ""
                       }`}
                     >
-                      <div 
+                      <div
                         className={`w-20 h-20 rounded-lg overflow-hidden bg-muted border-2 cursor-pointer transition-all ${
-                          image.is_primary 
-                            ? 'border-yellow-500 ring-2 ring-yellow-500/20' 
-                            : 'border-border hover:border-primary'
+                          image.is_primary
+                            ? "border-yellow-500 ring-2 ring-yellow-500/20"
+                            : "border-border hover:border-primary"
                         }`}
                         onClick={() => setPrimary(index)}
                         title="Click to set as primary"
@@ -253,7 +266,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* Add More Button */}
                   <button
                     onClick={() => imageInputRef.current?.click()}
@@ -277,10 +290,11 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
-                  ? "border-green-500 bg-green-50/10"
-                  : "border-border bg-muted/20"
-                  }`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragActive
+                    ? "border-green-500 bg-green-50/10"
+                    : "border-border bg-muted/20"
+                }`}
               >
                 <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-sm font-medium mb-1">
@@ -333,7 +347,9 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                   const url = e.target.value;
                   if (url) {
                     // Remove existing video if any
-                    const filteredMedia = media.filter(m => m.media_type !== "video");
+                    const filteredMedia = media.filter(
+                      (m) => m.media_type !== "video",
+                    );
                     // Add new video URL
                     setMedia([
                       ...filteredMedia,
@@ -345,7 +361,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                     ]);
                   } else {
                     // Remove video if URL is cleared
-                    setMedia(media.filter(m => m.media_type !== "video"));
+                    setMedia(media.filter((m) => m.media_type !== "video"));
                   }
                 }}
                 className="bg-muted/50 border-input"
@@ -357,7 +373,9 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                   </p>
                   <Button
                     size="sm"
-                    onClick={() => setMedia(media.filter(m => m.media_type !== "video"))}
+                    onClick={() =>
+                      setMedia(media.filter((m) => m.media_type !== "video"))
+                    }
                     variant="ghost"
                     className="h-6 text-red-600 hover:text-red-700 hover:bg-red-50"
                   >

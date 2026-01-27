@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
+import { Input } from "../UI/input";
+import { Label } from "../UI/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Textarea } from "../ui/textarea";
-import { Switch } from "../ui/switch";
+} from "../UI/select";
+import { Textarea } from "../UI/textarea";
+import { Switch } from "../UI/switch";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface GeneralInformationProps {
@@ -200,7 +200,6 @@ export default function GeneralInformation({
               </div>
             )}
           </div>
-
         </CardContent>
       )}
     </Card>

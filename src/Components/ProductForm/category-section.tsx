@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../UI/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Label } from "../ui/label";
+} from "../UI/select";
+import { Label } from "../UI/label";
 import { Plus, ChevronUp, ChevronDown } from "lucide-react";
 
 interface CategorySectionProps {
@@ -45,18 +45,25 @@ export default function CategorySection({
   console.log("DEBUG - selected brand_id:", category.brand_id);
   console.log("DEBUG - available brands (RAW):", brands);
   console.log("DEBUG - first brand structure:", brands[0]);
-  console.log("DEBUG - all subcategories:", subcategories.map(s => ({ id: s.id, name: s.name, category_id: s.category_id })));
+  console.log(
+    "DEBUG - all subcategories:",
+    subcategories.map((s) => ({
+      id: s.id,
+      name: s.name,
+      category_id: s.category_id,
+    })),
+  );
 
   const filteredSubcategories = category.category_id
     ? subcategories.filter(
-      (sub) => String(sub.category_id) === String(category.category_id),
-    )
+        (sub) => String(sub.category_id) === String(category.category_id),
+      )
     : [];
 
   const filteredGroups = category.subcategory_id
     ? groups.filter(
-      (grp) => String(grp.subcategory_id) === String(category.subcategory_id),
-    )
+        (grp) => String(grp.subcategory_id) === String(category.subcategory_id),
+      )
     : [];
 
   console.log("CategorySection render:", {
