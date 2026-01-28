@@ -115,7 +115,7 @@ const UnifiedOrders = () => {
     };
 
     const getPaymentMethodBadge = (paymentMethod) => {
-        if (paymentMethod === 'cod') {
+        if (paymentMethod?.toLowerCase() === 'cod') {
             return (
                 <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold">
                     <FaMoneyBillWave /> COD
@@ -124,7 +124,7 @@ const UnifiedOrders = () => {
         }
         return (
             <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                <FaCreditCard /> Prepaid
+                <FaCreditCard /> Prepaid ({paymentMethod || 'Online'})
             </span>
         );
     };
@@ -332,6 +332,7 @@ const UnifiedOrders = () => {
                                             status={order.status}
                                             adminnotes={order.adminnotes}
                                             paymentMethod={order.payment_method}
+                                            order={order}
                                         />
                                     )}
                                 </div>
@@ -364,30 +365,41 @@ const UnifiedOrders = () => {
     );
 };
 
-const OrderDetails = ({ orderId, onUpdate, status, adminnotes, paymentMethod }) => {
-    const [items, setItems] = useState([]);
+const OrderDetails = ({ orderId, onUpdate, status, adminnotes, paymentMethod, order }) => {
+    // Start with items from prop if available, otherwise empty (will be fetched if we kept that logic, but we are shifting to prop)
+    const [items, setItems] = useState(order?.order_items || []);
     const [form, setForm] = useState({ status, adminnotes });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!order?.order_items); // Loading only if no items in prop
 
     useEffect(() => {
-        const fetchItems = async () => {
-            try {
-                const res = await axios.get(`${API_BASE_URL}/orderItems/order/${orderId}`);
-                setItems(res.data.items || []);
-            } catch (err) {
-                console.error('Error fetching order items:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchItems();
-    }, [orderId]);
+        // Only fetch if items are not provided in prop (backward compatibility or deep link)
+        if (!order?.order_items) {
+            const fetchItems = async () => {
+                try {
+                    const res = await axios.get(`${API_BASE_URL}/orderItems/order/${orderId}`);
+                    setItems(res.data.items || []);
+                } catch (err) {
+                    console.error('Error fetching order items:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchItems();
+        } else {
+            setItems(order.order_items);
+            setLoading(false);
+        }
+    }, [orderId, order]);
 
     const handleChange = (e) =>
         setForm({ ...form, [e.target.name]: e.target.value });
 
-    const handleSubmit = () => {
-        onUpdate(orderId, form.status, form.adminnotes);
+    const [saving, setSaving] = useState(false);
+
+    const handleSubmit = async () => {
+        setSaving(true);
+        await onUpdate(orderId, form.status, form.adminnotes);
+        setSaving(false);
     };
 
     return (
@@ -410,66 +422,106 @@ const OrderDetails = ({ orderId, onUpdate, status, adminnotes, paymentMethod }) 
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-2">Admin Notes</label>
+                    <label className="block text-sm font-medium mb-2">Admin Notes (Not Saved)</label>
                     <textarea
                         name="adminnotes"
                         value={form.adminnotes ?? ""}
                         onChange={handleChange}
-                        className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
+                        disabled={true}
+                        className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed"
                         rows="2"
-                        placeholder="Add notes about this order..."
+                        placeholder="Admin notes are currently disabled"
                     />
                 </div>
             </div>
 
             <button
                 onClick={handleSubmit}
-                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-semibold transition-colors"
+                disabled={saving}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-                💾 Save Changes
+                {saving ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Saving...
+                    </>
+                ) : (
+                    "💾 Save Changes"
+                )}
             </button>
 
             <div className="mt-6">
                 <h4 className="font-semibold text-gray-800 mb-3">📦 Order Items:</h4>
+                {/* Derived items from order object directly */}
                 {loading ? (
                     <p className="text-gray-600">Loading items...</p>
                 ) : items.length === 0 ? (
                     <p className="text-gray-600">No items found for this order</p>
                 ) : (
                     <div className="space-y-2">
-                        {items.map((item) => (
-                            <div key={item.id} className="border rounded-lg p-4 bg-gray-50 flex items-center gap-4">
-                                {item.products?.image && (
-                                    <img
-                                        src={item.products.image}
-                                        alt="product"
-                                        className="w-16 h-16 object-cover rounded"
-                                    />
-                                )}
-                                <div className="flex-1">
-                                    <p className="font-medium">{item.products?.name || "Unknown Product"}</p>
-                                    <p className="text-sm text-gray-600">Quantity: {item.quantity} × ₹{item.price}</p>
-                                    {item.is_bulk_order && (
-                                        <div className="mt-2 space-y-1">
-                                            <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                                <FaBoxes /> Bulk Order: {item.bulk_range}
-                                            </span>
-                                            {item.original_price && item.original_price > item.price && (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-gray-500 line-through">₹{item.original_price}</span>
-                                                    <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                                        <FaTag /> Saved ₹{(item.original_price - item.price).toFixed(2)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
+                        {items.map((item) => {
+                            // Helper to get product details from nested structure
+                            const product = item.variant?.product || item.products;
+
+                            // Get image: Variant Specific -> Product Specific -> Global/Legacy
+                            const variantMedia = item.variant?.media || [];
+                            const productMedia = product?.media || [];
+
+                            // 1. Check variant media (specific color/style)
+                            let finalImage = Array.isArray(variantMedia) && variantMedia.length > 0
+                                ? (variantMedia.find(m => m.is_primary)?.url || variantMedia[0]?.url)
+                                : null;
+
+                            // 2. Fallback to product media
+                            if (!finalImage) {
+                                finalImage = Array.isArray(productMedia) && productMedia.length > 0
+                                    ? (productMedia.find(m => m.is_primary)?.url || productMedia[0]?.url)
+                                    : (product?.image || null);
+                            }
+
+                            const productName = product?.name || "Unknown Product";
+                            const variantTitle = item.variant?.title || "";
+                            const variantSku = item.variant?.sku || "";
+
+                            return (
+                                <div key={item.id} className="border rounded-lg p-4 bg-gray-50 flex items-center gap-4">
+                                    {finalImage && (
+                                        <img
+                                            src={finalImage}
+                                            alt={productName}
+                                            className="w-16 h-16 object-cover rounded"
+                                        />
                                     )}
+                                    <div className="flex-1">
+                                        <p className="font-medium">{productName}</p>
+                                        {(variantTitle || variantSku) && (
+                                            <p className="text-xs text-gray-500 mb-1">
+                                                {variantTitle} {variantSku && `(${variantSku})`}
+                                            </p>
+                                        )}
+                                        <p className="text-sm text-gray-600">Quantity: {item.quantity} × ₹{item.price}</p>
+                                        {item.is_bulk_order && (
+                                            <div className="mt-2 space-y-1">
+                                                <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                                    <FaBoxes /> Bulk Order: {item.bulk_range}
+                                                </span>
+                                                {item.original_price && item.original_price > item.price && (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-gray-500 line-through">₹{item.original_price}</span>
+                                                        <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                            <FaTag /> Saved ₹{(item.original_price - item.price).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-lg">₹{(item.quantity * item.price).toFixed(2)}</p>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-lg">₹{(item.quantity * item.price).toFixed(2)}</p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
