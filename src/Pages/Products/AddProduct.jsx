@@ -32,13 +32,12 @@ const AddProduct = () => {
   const [groups, setGroups] = useState([]);
   const [brandOptions, setBrandOptions] = useState([]);
   const [storeOptions, setStoreOptions] = useState([]);
-  const [warehouseOptions, setWarehouseOptions] = useState([]);
 
   // Fetch Options
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [catsRes, brandsRes, storesRes, warehousesRes] =
+        const [catsRes, brandsRes, storesRes] =
           await Promise.all([
             axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/categories/hierarchy`,
@@ -47,7 +46,6 @@ const AddProduct = () => {
             axios.get(
               `${import.meta.env.VITE_API_BASE_URL}/recommended-stores/list`,
             ),
-            axios.get(`${import.meta.env.VITE_API_BASE_URL}/warehouses`),
           ]);
 
         // Process Categories with hierarchy
@@ -126,18 +124,6 @@ const AddProduct = () => {
           setStoreOptions(formattedStores);
         } else {
           console.error("Failed to fetch stores:", storesRes.data.message);
-        }
-
-        // Process Warehouses
-        if (warehousesRes.data.success) {
-          setWarehouseOptions(
-            formatOptions(warehousesRes.data.data, "warehouse_name", "id"),
-          );
-        } else {
-          console.error(
-            "Failed to fetch warehouses:",
-            warehousesRes.data.message,
-          );
         }
       } catch (error) {
         console.error("Error fetching options:", error);
@@ -445,13 +431,33 @@ const AddProduct = () => {
         status: status, // active or draft
       };
 
-      console.log("Submitting payload:", {
-        ...payload,
-        brand_id: payload.brand_id,
-        stock: payload.stock,
-        faq: payload.faq,
-        media_count: payload.media?.length,
+      console.log("=== FRONTEND: Full Payload Being Sent ===");
+      console.log("Product Data:", {
+        name: payload.name,
+        description: payload.description,
+        vertical: payload.vertical,
+        hsn_or_sac_code: payload.hsn_or_sac_code,
+        gst_rate: payload.gst_rate,
+        cess_rate: payload.cess_rate,
+        return_applicable: payload.return_applicable,
+        return_days: payload.return_days,
+        active: payload.active,
       });
+      console.log("Category Data:", {
+        category_id: payload.category_id,
+        subcategory_id: payload.subcategory_id,
+        group_id: payload.group_id,
+        store_id: payload.store_id,
+        brand_id: payload.brand_id,
+      });
+      console.log("Variants Count:", payload.product_variants?.length);
+      console.log("Variants Data:", payload.product_variants);
+      console.log("Media Count:", payload.media?.length);
+      console.log("Media Data:", payload.media);
+      console.log("FAQ Count:", payload.faq?.length);
+      console.log("FAQ Data:", payload.faq);
+      console.log("Full Payload:", JSON.stringify(payload, null, 2));
+      console.log("=== END FRONTEND PAYLOAD ===");
 
       // API Call
       let response;
@@ -537,7 +543,6 @@ const AddProduct = () => {
     groupsCount: groups.length,
     brandsCount: brandOptions.length,
     storesCount: storeOptions.length,
-    warehousesCount: warehouseOptions.length,
   });
 
   return (
@@ -553,7 +558,6 @@ const AddProduct = () => {
         groups={groups}
         brands={brandOptions}
         stores={storeOptions}
-        warehouses={warehouseOptions}
         onClose={() => navigate("/products")}
         isLoading={loading}
       />

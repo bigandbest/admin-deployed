@@ -1,12 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useMantineColorScheme } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
-import { Link } from "react-router-dom";
+
 import {
 
   ActionIcon,
-  useMantineTheme,
   Menu,
   UnstyledButton,
   Group,
@@ -29,44 +28,15 @@ import {
   FaArrowUp,
   FaArrowDown,
 } from "react-icons/fa";
-import { notifications } from "@mantine/notifications";
 
-const userNotifications = [
-  {
-    id: 1,
-    title: "New order received",
-    message: "Order #12345 has been placed",
-    time: "5 minutes ago",
-    read: false,
-  },
-  {
-    id: 2,
-    title: "Payment successful",
-    message: "Payment for order #12340 was successful",
-    time: "2 hours ago",
-    read: false,
-  },
-  {
-    id: 3,
-    title: "New user registered",
-    message: "Arjun Sharma has registered",
-    time: "Yesterday",
-    read: true,
-  },
-  {
-    id: 4,
-    title: "Inventory alert",
-    message: "Product X is running low on stock",
-    time: "2 days ago",
-    read: true,
-  },
-];
+
+
 
 const Header = ({ toggleSidebar, sidebarOpen }) => {
   const { currentUser, logout } = useAdminAuth();
   const navigate = useNavigate();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
-  const theme = useMantineTheme();
+
   const [walletBalance] = useState(12500.50); // Mock wallet balance
 
 
@@ -90,7 +60,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
           radius="md"
           variant="light"
           onClick={toggleSidebar}
-          className="flex-shrink-0"
+          className="shrink-0"
         >
           <FaBars size={18} />
         </ActionIcon>
@@ -111,7 +81,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
           radius="md"
           variant="light"
           onClick={() => spotlight.open()}
-          className="sm:hidden flex-shrink-0"
+          className="sm:hidden shrink-0"
         >
           <FaSearch size={16} />
         </ActionIcon>
@@ -126,7 +96,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
           shadow="xl"
         >
           <Menu.Target>
-            <UnstyledButton className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95">
+            <UnstyledButton className="flex items-center gap-2 bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95">
               <FaWallet size={16} className="sm:w-[18px] sm:h-[18px]" />
               <div className="hidden sm:block">
                 <Text size="xs" className="opacity-90 leading-none">Wallet</Text>
@@ -139,7 +109,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
           </Menu.Target>
           <Menu.Dropdown className="p-0">
             {/* Wallet Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 text-white">
+            <div className="bg-linear-to-r from-blue-500 to-indigo-600 p-4 text-white">
               <div className="flex items-center justify-between mb-2">
                 <Text size="sm" className="opacity-90">Total Balance</Text>
                 <FaWallet size={20} className="opacity-75" />
@@ -233,7 +203,7 @@ const Header = ({ toggleSidebar, sidebarOpen }) => {
           size="lg"
           color={colorScheme === "dark" ? "yellow" : "blue"}
           onClick={toggleColorScheme}
-          className="md:hidden flex-shrink-0"
+          className="md:hidden shrink-0"
           title="Toggle color scheme"
         >
           {colorScheme === "dark" ? <FaSun size={18} /> : <FaMoon size={18} />}

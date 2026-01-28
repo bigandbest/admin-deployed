@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../UI/button";
 import { Input } from "../UI/input";
 import { Label } from "../UI/label";
 import { Switch } from "../UI/switch";
 import { ChevronDown, Trash2, Radio } from "lucide-react";
 import AttributeEditor from "./attribute-editor";
-import InventoryEditor from "./inventory-editor";
 
 interface VariantEditorProps {
   variant: any;
@@ -30,16 +29,62 @@ export default function VariantEditor({
   onSetDefault,
   isDefault,
 }: VariantEditorProps) {
+  const [priceError, setPriceError] = useState<string>("");
+
+  // Auto-calculate discount percentage when price or old_price changes
+  useEffect(() => {
+    if (variant.old_price && variant.price) {
+      const oldPrice = Number(variant.old_price);
+      const currentPrice = Number(variant.price);
+      
+      if (oldPrice > 0 && currentPrice > 0) {
+        if (oldPrice < currentPrice) {
+          setPriceError("Old price cannot be less than current price");
+        } else {
+          setPriceError("");
+          const discountPercent = ((oldPrice - currentPrice) / oldPrice) * 100;
+          const roundedDiscount = Math.round(discountPercent * 100) / 100; // Round to 2 decimal places
+          
+          // Only update if the calculated value is different
+          if (variant.discount_percentage !== roundedDiscount) {
+            onUpdate({
+              ...variant,
+              discount_percentage: roundedDiscount,
+            });
+          }
+        }
+      } else if (oldPrice === 0 || !oldPrice) {
+        setPriceError("");
+        // Reset discount if old_price is cleared
+        if (variant.discount_percentage !== 0) {
+          onUpdate({
+            ...variant,
+            discount_percentage: 0,
+          });
+        }
+      }
+    }
+  }, [variant.price, variant.old_price]);
+
   const handleChange = (field: string, value: any) => {
+    // Validate old_price when it changes
+    if (field === "old_price") {
+      const oldPrice = Number(value);
+      const currentPrice = Number(variant.price);
+      
+      if (oldPrice && currentPrice && oldPrice < currentPrice) {
+        setPriceError("Old price cannot be less than current price");
+        return; // Don't update if validation fails
+      } else {
+        setPriceError("");
+      }
+    }
+
     onUpdate({ ...variant, [field]: value });
   };
 
   const handleAttributeChange = (attributes: any) => {
     onUpdate({ ...variant, attributes });
-  };
-
-  const handleInventoryChange = (inventory: any) => {
-    onUpdate({ ...variant, inventory });
   };
 
   return (
@@ -105,10 +150,10 @@ export default function VariantEditor({
               </Label>
               <Input
                 id={`sku-${variantIndex}`}
-                placeholder="e.g., SKU-001"
-                value={variant.sku}
-                onChange={(e) => handleChange("sku", e.target.value)}
-                className="bg-card border-input"
+                placeholder="Auto-generated"
+                value={variant.sku || ""}
+                disabled
+                className="bg-muted border-input cursor-not-allowed"
               />
             </div>
             <div className="space-y-2">
@@ -165,25 +210,26 @@ export default function VariantEditor({
                   onChange={(e) =>
                     handleChange("old_price", Number(e.target.value))
                   }
-                  className="bg-card border-input"
+                  className={`bg-card border-input ${priceError ? "border-red-500" : ""}`}
                 />
+                {priceError && (
+                  <p className="text-xs text-red-500 mt-1">{priceError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label
                   htmlFor={`discount-${variantIndex}`}
                   className="text-sm font-medium"
                 >
-                  Discount (%)
+                  Discount (%) - Auto-calculated
                 </Label>
                 <Input
                   id={`discount-${variantIndex}`}
                   type="number"
                   placeholder="0"
-                  value={variant.discount_percentage}
-                  onChange={(e) =>
-                    handleChange("discount_percentage", Number(e.target.value))
-                  }
-                  className="bg-card border-input"
+                  value={variant.discount_percentage || 0}
+                  disabled
+                  className="bg-muted border-input cursor-not-allowed"
                 />
               </div>
             </div>
@@ -315,14 +361,6 @@ export default function VariantEditor({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Inventory */}
-          <div className="border-t border-border pt-4">
-            <InventoryEditor
-              inventory={variant.inventory}
-              onInventoryChange={handleInventoryChange}
-            />
           </div>
         </div>
       )}

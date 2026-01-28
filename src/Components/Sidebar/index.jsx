@@ -101,6 +101,37 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/",
     },
     {
+      title: "Product Manager",
+      icon: <HiArchive />,
+      submenu: [
+        {
+          title: "Products",
+          icon: <HiArchive />,
+          path: "/products",
+        },
+        {
+          title: "Categories",
+          icon: <MdCategory />,
+          path: "/categories",
+        },
+        {
+          title: "Brands",
+          icon: <FaTrademark />,
+          path: "/brands",
+        },
+        {
+          title: "Daily Deals",
+          icon: <FaList />,
+          path: "/daily-deals",
+        },
+        {
+          title: "Shop By Stores",
+          icon: <FaList />,
+          path: "/shop-by-stores",
+        },
+      ],
+    },
+    {
       title: "Delivery Zones",
       icon: <FaList />,
       path: "/delivery-zones",
@@ -149,37 +180,6 @@ const Sidebar = ({ isOpen = true }) => {
     //   badge: enquiryCount,
     // },
     {
-      title: "Product Manager",
-      icon: <HiArchive />,
-      submenu: [
-        {
-          title: "Products",
-          icon: <HiArchive />,
-          path: "/products",
-        },
-        {
-          title: "Categories",
-          icon: <MdCategory />,
-          path: "/categories",
-        },
-        {
-          title: "Brands",
-          icon: <FaTrademark />,
-          path: "/brands",
-        },
-        {
-          title: "Daily Deals",
-          icon: <FaList />,
-          path: "/daily-deals",
-        },
-        {
-          title: "Shop By Stores",
-          icon: <FaList />,
-          path: "/shop-by-stores",
-        },
-      ],
-    },
-    {
       title: "Section Manager",
       icon: <RiSettings4Fill />,
       submenu: [
@@ -194,6 +194,12 @@ const Sidebar = ({ isOpen = true }) => {
           icon: <RiSettings4Fill />,
           path: "/store-section-mapping",
           description: "Map stores to sections and manage product assignments",
+        },
+        {
+          title: "Category Mapping",
+          icon: <MdCategory />,
+          path: "/category-mapping",
+          description: "Control which categories and subcategories appear in frontend sections",
         },
       ],
     },

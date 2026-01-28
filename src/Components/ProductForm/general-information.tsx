@@ -12,17 +12,16 @@ import {
 import { Textarea } from "../UI/textarea";
 import { Switch } from "../UI/switch";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import QuillEditor from "./QuillEditor";
 
 interface GeneralInformationProps {
   product: any;
   setProduct: (product: any) => void;
-  brands: any[];
 }
 
 export default function GeneralInformation({
   product,
   setProduct,
-  brands = [],
 }: GeneralInformationProps) {
   const handleChange = (field: string, value: any) => {
     setProduct({ ...product, [field]: value });
@@ -66,59 +65,32 @@ export default function GeneralInformation({
             <Label htmlFor="description" className="text-sm font-medium">
               Description Product
             </Label>
-            <Textarea
-              id="description"
-              placeholder="Enter product description"
+            <QuillEditor
               value={product.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              className="bg-muted/50 border-input min-h-24 resize-none"
+              onChange={(value) => handleChange("description", value)}
+              placeholder="Enter product description"
             />
           </div>
 
-          {/* Vertical & Brand */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="vertical" className="text-sm font-medium">
-                Vertical
-              </Label>
-              <Select
-                value={product.vertical}
-                onValueChange={(value) => handleChange("vertical", value)}
-              >
-                <SelectTrigger className="bg-muted/50 border-input">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="qwik">Qwik</SelectItem>
-                  <SelectItem value="eato">Eato</SelectItem>
-                  <SelectItem value="bazar">Bazar</SelectItem>
-                  <SelectItem value="star">Star</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="brand" className="text-sm font-medium">
-                Brand
-              </Label>
-              <Select
-                value={product.brand_name}
-                onValueChange={(value) => handleChange("brand_name", value)}
-              >
-                <SelectTrigger className="bg-muted/50 border-input">
-                  <SelectValue placeholder="Select brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  {brands.map((brand) => (
-                    <SelectItem
-                      key={brand.value || brand.id}
-                      value={brand.value || brand.name}
-                    >
-                      {brand.label || brand.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Vertical */}
+          <div className="space-y-2">
+            <Label htmlFor="vertical" className="text-sm font-medium">
+              Vertical
+            </Label>
+            <Select
+              value={product.vertical}
+              onValueChange={(value) => handleChange("vertical", value)}
+            >
+              <SelectTrigger className="bg-muted/50 border-input">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="qwik">Qwik</SelectItem>
+                <SelectItem value="eato">Eato</SelectItem>
+                <SelectItem value="bazar">Bazar</SelectItem>
+                <SelectItem value="star">Star</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* HSN Code & SAC Code */}
@@ -149,19 +121,34 @@ export default function GeneralInformation({
             </div>
           </div>
 
-          {/* GST Rate */}
-          <div className="space-y-2">
-            <Label htmlFor="gst" className="text-sm font-medium">
-              GST Rate (%)
-            </Label>
-            <Input
-              id="gst"
-              type="number"
-              placeholder="18"
-              value={product.gst_rate}
-              onChange={(e) => handleChange("gst_rate", Number(e.target.value))}
-              className="bg-muted/50 border-input"
-            />
+          {/* GST Rate & Cess Rate */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="gst" className="text-sm font-medium">
+                GST Rate (%)
+              </Label>
+              <Input
+                id="gst"
+                type="number"
+                placeholder="18"
+                value={product.gst_rate}
+                onChange={(e) => handleChange("gst_rate", Number(e.target.value))}
+                className="bg-muted/50 border-input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cess" className="text-sm font-medium">
+                Cess Rate (%)
+              </Label>
+              <Input
+                id="cess"
+                type="number"
+                placeholder="0"
+                value={product.cess_rate || 0}
+                onChange={(e) => handleChange("cess_rate", Number(e.target.value))}
+                className="bg-muted/50 border-input"
+              />
+            </div>
           </div>
 
           {/* Return Policy */}
