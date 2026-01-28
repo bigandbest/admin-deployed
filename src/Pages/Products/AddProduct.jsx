@@ -237,7 +237,7 @@ const AddProduct = () => {
         const storeId =
           product.store_id ||
           (product.product_recommended_store &&
-          product.product_recommended_store.length > 0
+            product.product_recommended_store.length > 0
             ? product.product_recommended_store[0].recommended_store_id
             : "") ||
           "";
@@ -255,8 +255,8 @@ const AddProduct = () => {
         setInitialData({
           product: {
             ...product,
-            name: product.name,
-            description: product.description,
+            name: product.name || "",
+            description: product.description || "",
             hsn_or_sac_code:
               product.hsn_or_sac_code ||
               product.hsn_code ||
@@ -290,7 +290,7 @@ const AddProduct = () => {
           media: mediaItems,
           warehouse:
             product.assigned_warehouse_ids &&
-            product.assigned_warehouse_ids.length > 0
+              product.assigned_warehouse_ids.length > 0
               ? product.assigned_warehouse_ids[0]
               : "", // Take first warehouse
           faqs: faqItems,
@@ -400,8 +400,8 @@ const AddProduct = () => {
           // Ensure attributes are properly formatted as {attribute_name, attribute_value} objects
           const formattedAttributes = Array.isArray(v.attributes)
             ? v.attributes.filter(
-                (attr) => attr && (attr.attribute_name || attr.attribute_value),
-              )
+              (attr) => attr && (attr.attribute_name || attr.attribute_value),
+            )
             : [];
 
           return {
@@ -418,6 +418,7 @@ const AddProduct = () => {
             is_default: v.is_default !== undefined ? v.is_default : false,
             active: v.active !== undefined ? v.active : true,
             attributes: formattedAttributes, // Properly formatted attributes array
+            packaging_details: v.packaging_details, // Added to payload
             // Bulk Pricing Payload
             is_bulk_enabled: v.is_bulk_enabled,
             bulk_min_quantity: v.bulk_min_quantity,
@@ -513,7 +514,7 @@ const AddProduct = () => {
       console.error("Error submitting form:", error);
       toast.error(
         error.response?.data?.error ||
-          "An error occurred while saving the product",
+        "An error occurred while saving the product",
       );
     } finally {
       setLoading(false);
@@ -561,6 +562,8 @@ const AddProduct = () => {
         onClose={() => navigate("/products")}
         isLoading={loading}
       />
+      {/* Debug: Check if initialData propagates */}
+      {/* {console.log("AddProduct Render - initialData passed:", initialData)} */}
     </>
   );
 };

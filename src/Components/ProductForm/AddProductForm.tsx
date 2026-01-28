@@ -9,6 +9,7 @@ import FAQSection from "./faq-section";
 import { Plus, X } from "lucide-react";
 
 interface ProductData {
+  id?: string; // Added to fix TS error
   name: string;
   description: string;
   vertical: string;
@@ -16,6 +17,7 @@ interface ProductData {
   hsn_code: string;
   sac_code: string;
   gst_rate: number;
+  cess_rate: number; // Added to fix TS error
   return_applicable: boolean;
   return_days: number;
   price: number;
@@ -90,37 +92,46 @@ export default function AddProductForm({
   onClose,
   isLoading = false,
 }: AddProductFormProps) {
-  const [product, setProduct] = useState<ProductData>({
-    name: "",
-    description: "",
-    vertical: "qwik",
-    // brand_name removed
-    hsn_code: "",
-    sac_code: "",
-    gst_rate: 18,
-    cess_rate: 0,
-    return_applicable: false,
-    return_days: 7,
-    price: 0,
-    old_price: 0,
-    discount: 0,
-    stock: 0,
-    shipping_amount: 0,
-    active: true,
-    in_stock: true,
-    enable_bulk_pricing: false,
-    bulk_min_quantity: 50,
-    bulk_discount_percentage: 0,
-    quick_delivery: false,
-    video: "",
-    portion: "",
-    quantity: "",
-    uom: "",
-    uom_value: "",
-    uom_unit: "",
+  const [product, setProduct] = useState<ProductData>(() => {
+    if (initialData?.product) {
+      return {
+        ...initialData.product,
+        // Ensure fallbacks for critical fields if strictly necessary, 
+        // though AddProduct.jsx currently handles this.
+      };
+    }
+    return {
+      name: "",
+      description: "",
+      vertical: "qwik",
+      // brand_name removed
+      hsn_code: "",
+      sac_code: "",
+      gst_rate: 18,
+      cess_rate: 0,
+      return_applicable: false,
+      return_days: 7,
+      price: 0,
+      old_price: 0,
+      discount: 0,
+      stock: 0,
+      shipping_amount: 0,
+      active: true,
+      in_stock: true,
+      enable_bulk_pricing: false,
+      bulk_min_quantity: 50,
+      bulk_discount_percentage: 0,
+      quick_delivery: false,
+      video: "",
+      portion: "",
+      quantity: "",
+      uom: "",
+      uom_value: "",
+      uom_unit: "",
+    }
   });
 
-  const [variants, setVariants] = useState<VariantData[]>([
+  const [variants, setVariants] = useState<VariantData[]>(() => initialData?.variants || [
     {
       sku: "",
       title: "",
@@ -137,43 +148,49 @@ export default function AddProductForm({
     },
   ]);
 
-  const [media, setMedia] = useState<MediaItem[]>([]);
-  const [category, setCategory] = useState({
-    category_id: "",
-    subcategory_id: "",
-    group_id: "",
-    store_id: "",
-    brand_id: "",
+  const [media, setMedia] = useState<MediaItem[]>(() => initialData?.media || []);
+  const [category, setCategory] = useState(() => {
+    if (initialData?.category) {
+      return {
+        category_id: initialData.category.category_id || "",
+        subcategory_id: initialData.category.subcategory_id || "",
+        group_id: initialData.category.group_id || "",
+        store_id: initialData.category.store_id || "",
+        brand_id: initialData.category.brand_id || "",
+      };
+    }
+    return {
+      category_id: "",
+      subcategory_id: "",
+      group_id: "",
+      store_id: "",
+      brand_id: "",
+    };
   });
 
-  const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(
-    [{ question: "", answer: "" }],
+  const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(() =>
+    initialData?.faqs || [{ question: "", answer: "" }]
   );
 
-  const [warehouse, setWarehouse] = useState("");
+  const [warehouse, setWarehouse] = useState(() => initialData?.warehouse || "");
 
-  // Load initial data
+  // Load initial data - REMOVED (Handled by useState lazy init)
+  // We still keep the prop change listener if initialData updates LATER (e.g. refetch), but 
+  // key-based remounting in parent handles most cases.
+  // However, keeping a lightweight sync might be safer if key doesn't change but data does.
+  // Actually, parent sets key={initialData?.product?.id} so it forces remount.
+  // But let's keep a reduced version just in case, but prevent overwriting if we've started editing?
+  // No, if initialData changes, we generally want to respect it.
+
   useEffect(() => {
-    if (initialData) {
-      if (initialData.product) {
-        setProduct((prev) => ({
-          ...initialData.product,
-          // brand_name removed as it's not in schema
-        }));
-      }
-      if (initialData.variants) setVariants(initialData.variants);
-      if (initialData.media) setMedia(initialData.media);
-      if (initialData.category) {
-        setCategory((prev) => ({
-          ...prev,
-          ...initialData.category,
-          brand_id: initialData.category.brand_id || prev.brand_id,
-        }));
-      }
-      if (initialData.warehouse) setWarehouse(initialData.warehouse);
-      if (initialData.faqs) setFaqs(initialData.faqs);
+    if (initialData?.product && initialData.product.id !== product.id) {
+      // Only update if it seems like a different product loaded and we didn't remount?
+      // For now, let's rely on the Key remounting in Parent.
     }
   }, [initialData]);
+
+  // Debug: Log current product state on every render
+  // console.log("AddProductForm Render: Current product state:", product);
 
   // Sync brand_id from Category to Product.brand_name removed
   // useEffect(() => {

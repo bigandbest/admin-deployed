@@ -8,82 +8,73 @@ interface QuillEditorProps {
   placeholder?: string;
 }
 
-let quillInstance: Quill | null = null;
-
 export default function QuillEditor({
   value,
   onChange,
   placeholder = "Enter description...",
 }: QuillEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const initializedRef = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const quillInstanceRef = useRef<Quill | null>(null);
 
   useEffect(() => {
-    if (initializedRef.current || !containerRef.current) return;
-    
-    // Prevent double initialization in React StrictMode
-    initializedRef.current = true;
+    if (!wrapperRef.current || quillInstanceRef.current) return;
 
-    // Clean up any existing instance
-    if (quillInstance) {
-      try {
-        quillInstance.off("text-change");
-        quillInstance = null;
-      } catch (e) {
-        // Ignore cleanup errors
-      }
+    // Create a new container div inside the wrapper
+    const container = document.createElement('div');
+    wrapperRef.current.appendChild(container);
+
+    const quill = new Quill(container, {
+      theme: "snow",
+      placeholder,
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ["bold", "italic", "underline", "strike"],
+          [{ list: "ordered" }, { list: "bullet" }],
+          [{ color: [] }, { background: [] }],
+          [{ align: [] }],
+          ["link"],
+          ["clean"],
+        ],
+      },
+    });
+
+    quillInstanceRef.current = quill;
+
+    if (value) {
+      quill.clipboard.dangerouslyPasteHTML(value);
     }
 
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      if (!containerRef.current) return;
-
-      const quill = new Quill(containerRef.current, {
-        theme: "snow",
-        placeholder,
-        modules: {
-          toolbar: [
-            [{ header: [1, 2, 3, false] }],
-            ["bold", "italic", "underline", "strike"],
-            [{ list: "ordered" }, { list: "bullet" }],
-            [{ color: [] }, { background: [] }],
-            [{ align: [] }],
-            ["link"],
-            ["clean"],
-          ],
-        },
-      });
-
-      quillInstance = quill;
-
-      if (value) {
-        quill.clipboard.dangerouslyPasteHTML(value);
-      }
-
-      quill.on("text-change", () => {
-        const html = quill.root.innerHTML;
-        onChange(html === "<p><br></p>" ? "" : html);
-      });
-    }, 50);
+    quill.on("text-change", () => {
+      const html = quill.root.innerHTML;
+      onChange(html === "<p><br></p>" ? "" : html);
+    });
 
     return () => {
-      clearTimeout(timer);
-      initializedRef.current = false;
-      if (quillInstance) {
-        quillInstance.off("text-change");
-        quillInstance = null;
+      quill.off("text-change");
+      quillInstanceRef.current = null;
+      if (wrapperRef.current) {
+        wrapperRef.current.innerHTML = "";
       }
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
+  // Update editor content when value prop changes externally
   useEffect(() => {
-    if (!quillInstance || !value) return;
+    const quill = quillInstanceRef.current;
+    // Check if quill is ready. Handle null/undefined value as empty string.
+    const val = value || "";
 
-    const currentContent = quillInstance.root.innerHTML;
-    if (currentContent !== value && value !== currentContent) {
-      quillInstance.clipboard.dangerouslyPasteHTML(value);
+    if (!quill) return;
+
+    const currentContent = quill.root.innerHTML;
+
+    // Only update if content is different to avoid cursor jumps
+    if (currentContent !== val) {
+      quill.clipboard.dangerouslyPasteHTML(val);
     }
   }, [value]);
 
-  return <div ref={containerRef} style={{ minHeight: "200px" }} />;
+  return <div ref={wrapperRef} style={{ minHeight: "200px" }} />;
 }
