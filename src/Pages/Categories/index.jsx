@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import  { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Title,
@@ -11,7 +11,6 @@ import {
   Modal,
   Badge,
   Switch,
-  Textarea,
   Image,
   LoadingOverlay,
   Tabs,
@@ -21,7 +20,6 @@ import {
   Tooltip,
   Loader,
   Center,
-  Divider,
 
 } from "@mantine/core";
 import {
