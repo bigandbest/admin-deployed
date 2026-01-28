@@ -17,8 +17,10 @@ import {
   Textarea,
   Skeleton,
   CloseButton,
+  Menu,
+  Checkbox,
 } from "@mantine/core";
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload, FaChevronDown, FaFilter, FaLayerGroup } from "react-icons/fa";
 
 // Small inline placeholder SVG for missing product images
 const PRODUCT_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160' viewBox='0 0 240 160'><rect width='100%' height='100%' fill='%23f8fafc'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23cbd5e1' font-family='sans-serif' font-size='14'>No Image</text></svg>`;
@@ -70,6 +72,15 @@ const ProductRowSkeleton = () => (
     </td>
     <td style={{ padding: "8px" }}>
       <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="60%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="70%" />
+    </td>
+    <td style={{ padding: "8px" }}>
+      <Skeleton height={14} width="60%" />
     </td>
     <td style={{ textAlign: "center", padding: "8px" }}>
       <Skeleton height={20} width={40} mx="auto" radius="sm" />
@@ -287,6 +298,84 @@ import {
   getAllGroups,
 } from "../../utils/supabaseApi";
 
+// TableHeader component with dropdown filter and click-to-navigate
+const TableHeader = ({ 
+  label, 
+  hasFilter = false, 
+  filterContent = null, 
+  navigateTo = null,
+  icon = null,
+  activeFilterCount = 0
+}) => {
+  const navigate = useNavigate();
+
+  const handleHeaderClick = () => {
+    if (navigateTo) {
+      navigate(navigateTo);
+    }
+  };
+
+  if (!hasFilter) {
+    return (
+      <th 
+        className={`px-4 py-3 text-gray-500 font-medium whitespace-nowrap ${navigateTo ? 'product-table-header-clickable' : ''}`}
+        onClick={handleHeaderClick}
+        title={navigateTo ? `Click to navigate to ${label}` : ''}
+      >
+        <div className="flex items-center gap-2">
+          {icon}
+          <span>{label}</span>
+        </div>
+      </th>
+    );
+  }
+
+  return (
+    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap group">
+      <div className="flex items-center gap-2 justify-between">
+        <div 
+          className={`flex items-center gap-2 ${navigateTo ? 'product-table-header-clickable flex-1' : ''}`}
+          onClick={handleHeaderClick}
+          title={navigateTo ? `Click to navigate to ${label}` : ''}
+        >
+          {icon}
+          <span>{label}</span>
+          {activeFilterCount > 0 && (
+            <Badge 
+              size="xs" 
+              color="blue" 
+              variant="filled" 
+              className="ml-1 filter-badge-enter"
+              style={{ minWidth: '18px', height: '18px', padding: '0 4px' }}
+            >
+              {activeFilterCount}
+            </Badge>
+          )}
+        </div>
+        <Menu position="bottom-end" shadow="md" width={250} withArrow>
+          <Menu.Target>
+            <ActionIcon 
+              variant="subtle" 
+              size="sm"
+              className={`hover:bg-blue-100 hover:text-blue-600 transition-all opacity-70 group-hover:opacity-100 ${activeFilterCount > 0 ? 'text-blue-600' : ''}`}
+              title="Click to filter"
+            >
+              <FaFilter size={10} className="mr-0.5" />
+              <FaChevronDown size={10} />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown className="product-table-filter-dropdown">
+            <div className="px-2 py-1 bg-gray-50 border-b border-gray-200 font-semibold text-xs text-gray-700 sticky top-0 z-10">
+              Filter by {label}
+            </div>
+            {filterContent}
+          </Menu.Dropdown>
+        </Menu>
+      </div>
+    </th>
+  );
+};
+
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -305,6 +394,13 @@ const ProductsPage = () => {
   const [displayedItems, setDisplayedItems] = useState(10);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const itemsPerLoad = 10;
+
+  // Column-specific filters
+  const [brandFilter, setBrandFilter] = useState([]);
+  const [storeFilter, setStoreFilter] = useState([]);
+  const [verticalFilter, setVerticalFilter] = useState([]);
+  const [returnPolicyFilter, setReturnPolicyFilter] = useState(null);
+  const [stockFilter, setStockFilter] = useState(null);
 
   useEffect(() => {
     const fetchSetting = async () => {
@@ -378,14 +474,23 @@ const ProductsPage = () => {
     fetchGroups();
   }, [navigate]);
 
-  // Fetch products from backend API
+  // Fetch products from backend API with pagination
   const fetchProducts = async () => {
     setLoading(true);
     setError("");
 
     try {
+      // Build query params for filtering and pagination
+      const params = new URLSearchParams();
+      params.append('page', '1');
+      params.append('limit', '100'); // Fetch 100 at a time instead of 1000
+      
+      if (categoryFilter) params.append('category_id', categoryFilter);
+      if (searchQuery) params.append('search', searchQuery);
+      if (activeFilter) params.append('active', activeFilter);
+
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
+        `${import.meta.env.VITE_API_BASE_URL}/admin/products?${params.toString()}`,
       );
       const result = await response.json();
 
@@ -507,12 +612,41 @@ const ProductsPage = () => {
     const matchesActive =
       !activeFilter || String(product.active) === String(activeFilter);
 
+    // Brand filtering
+    const matchesBrand = 
+      brandFilter.length === 0 || brandFilter.includes(product.brand_name);
+
+    // Store filtering
+    const matchesStore = 
+      storeFilter.length === 0 || storeFilter.includes(product.store_name);
+
+    // Vertical filtering
+    const matchesVertical = 
+      verticalFilter.length === 0 || verticalFilter.includes(product.vertical);
+
+    // Return policy filtering
+    const matchesReturnPolicy = 
+      !returnPolicyFilter || 
+      (returnPolicyFilter === "applicable" && product.return_applicable) ||
+      (returnPolicyFilter === "not_applicable" && !product.return_applicable);
+
+    // Stock filtering
+    const matchesStock = 
+      !stockFilter ||
+      (stockFilter === "in_stock" && isProductInStock(product)) ||
+      (stockFilter === "out_of_stock" && !isProductInStock(product));
+
     return (
       matchesSearch &&
       matchesCategory &&
       matchesSubcategory &&
       matchesGroup &&
-      matchesActive
+      matchesActive &&
+      matchesBrand &&
+      matchesStore &&
+      matchesVertical &&
+      matchesReturnPolicy &&
+      matchesStock
     );
   });
 
@@ -563,6 +697,11 @@ const ProductsPage = () => {
     subcategoryFilter,
     groupFilter,
     activeFilter,
+    brandFilter,
+    storeFilter,
+    verticalFilter,
+    returnPolicyFilter,
+    stockFilter,
     itemsPerLoad,
   ]);
 
@@ -626,6 +765,11 @@ const ProductsPage = () => {
     navigate(`/products/edit/${product.id}`);
   };
 
+  // Get unique values for filters
+  const uniqueBrands = [...new Set(products.map(p => p.brand_name).filter(Boolean))];
+  const uniqueStores = [...new Set(products.map(p => p.store_name).filter(Boolean))];
+  const uniqueVerticals = [...new Set(products.map(p => p.vertical).filter(Boolean))];
+
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 p-6">
       <Modal
@@ -662,7 +806,12 @@ const ProductsPage = () => {
                 categoryFilter ||
                 subcategoryFilter ||
                 groupFilter ||
-                activeFilter) &&
+                activeFilter ||
+                brandFilter.length > 0 ||
+                storeFilter.length > 0 ||
+                verticalFilter.length > 0 ||
+                returnPolicyFilter ||
+                stockFilter) &&
                 " (filtered)"}
             </p>
           </div>
@@ -723,6 +872,11 @@ const ProductsPage = () => {
             setSubcategoryFilter(null);
             setGroupFilter(null);
             setStatusFilter(null);
+            setBrandFilter([]);
+            setStoreFilter([]);
+            setVerticalFilter([]);
+            setReturnPolicyFilter(null);
+            setStockFilter(null);
           }}
         />
 
@@ -802,7 +956,12 @@ const ProductsPage = () => {
             categoryFilter ||
             subcategoryFilter ||
             groupFilter ||
-            activeFilter) && (
+            activeFilter ||
+            brandFilter.length > 0 ||
+            storeFilter.length > 0 ||
+            verticalFilter.length > 0 ||
+            returnPolicyFilter ||
+            stockFilter) && (
             <Button
               variant="light"
               color="gray"
@@ -812,6 +971,11 @@ const ProductsPage = () => {
                 setSubcategoryFilter(null);
                 setGroupFilter(null);
                 setStatusFilter(null);
+                setBrandFilter([]);
+                setStoreFilter([]);
+                setVerticalFilter([]);
+                setReturnPolicyFilter(null);
+                setStockFilter(null);
               }}
               className="lg:w-auto w-full"
             >
@@ -839,54 +1003,258 @@ const ProductsPage = () => {
               >
                 <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="w-20 px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Image
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Product Name
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Description
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Category / Subcategory
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Group
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Brand / Store
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      HSN/SAC
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      GST / CESS
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Vertical
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Return Policy
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Rating
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Price & Stock
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Variant Details
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap">
-                      Bulk Pricing
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium text-center whitespace-nowrap">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-gray-500 font-medium text-right whitespace-nowrap">
-                      Actions
-                    </th>
+                    <TableHeader label="Image" />
+                    
+                    <TableHeader 
+                      label="Product Name" 
+                      hasFilter={true}
+                      navigateTo="/products"
+                      activeFilterCount={searchQuery ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <TextInput
+                            placeholder="Search by name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            leftSection={<FaSearch size={12} />}
+                            size="xs"
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader 
+                      label="Variant Details" 
+                      navigateTo="/products/variants"
+                    />
+                    
+                    <TableHeader 
+                      label="Category" 
+                      icon={<FaLayerGroup />}
+                      hasFilter={true}
+                      navigateTo="/categories"
+                      activeFilterCount={categoryFilter ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <Select
+                            placeholder="Filter by Category"
+                            clearable
+                            size="xs"
+                            data={categories.map((cat) => ({
+                              value: cat.id,
+                              label: cat.name,
+                            }))}
+                            value={categoryFilter}
+                            onChange={setCategoryFilter}
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader 
+                      label="Subcategory" 
+                      icon={<FaLayerGroup />}
+                      hasFilter={true}
+                      navigateTo="/categories"
+                      activeFilterCount={subcategoryFilter ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <Select
+                            placeholder="Filter by Subcategory"
+                            clearable
+                            size="xs"
+                            data={subcategories
+                              .filter((sub) => !categoryFilter || sub.category_id === categoryFilter)
+                              .map((sub) => ({ value: sub.id, label: sub.name }))}
+                            value={subcategoryFilter}
+                            onChange={setSubcategoryFilter}
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader 
+                      label="Group" 
+                      icon={<FaLayerGroup />}
+                      hasFilter={true}
+                      activeFilterCount={groupFilter ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <Select
+                            placeholder="Filter by Group"
+                            clearable
+                            size="xs"
+                            data={groups
+                              .filter((group) => !subcategoryFilter || group.subcategory_id === subcategoryFilter)
+                              .map((group) => ({ value: group.id, label: group.name }))}
+                            value={groupFilter}
+                            onChange={setGroupFilter}
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader 
+                      label="Brand" 
+                      icon={<FaLayerGroup />}
+                      hasFilter={true}
+                      navigateTo="/brands"
+                      activeFilterCount={brandFilter.length}
+                      filterContent={
+                        <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
+                          {uniqueBrands.map((brand) => (
+                            <Checkbox
+                              key={brand}
+                              label={brand}
+                              size="xs"
+                              checked={brandFilter.includes(brand)}
+                              onChange={(e) => {
+                                if (e.currentTarget.checked) {
+                                  setBrandFilter([...brandFilter, brand]);
+                                } else {
+                                  setBrandFilter(brandFilter.filter(b => b !== brand));
+                                }
+                              }}
+                            />
+                          ))}
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader 
+                      label="Store" 
+                      icon={<FaLayerGroup />}
+                      hasFilter={true}
+                      navigateTo="/shop-by-stores"
+                      activeFilterCount={storeFilter.length}
+                      filterContent={
+                        <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
+                          {uniqueStores.map((store) => (
+                            <Checkbox
+                              key={store}
+                              label={store}
+                              size="xs"
+                              checked={storeFilter.includes(store)}
+                              onChange={(e) => {
+                                if (e.currentTarget.checked) {
+                                  setStoreFilter([...storeFilter, store]);
+                                } else {
+                                  setStoreFilter(storeFilter.filter(s => s !== store));
+                                }
+                              }}
+                            />
+                          ))}
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader label="HSN/SAC" />
+                    
+                    <TableHeader label="GST" />
+                    
+                    <TableHeader label="CESS" />
+                    
+                    <TableHeader 
+                      label="Vertical" 
+                      hasFilter={true}
+                      activeFilterCount={verticalFilter.length}
+                      filterContent={
+                        <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
+                          {uniqueVerticals.map((vertical) => (
+                            <Checkbox
+                              key={vertical}
+                              label={vertical}
+                              size="xs"
+                              checked={verticalFilter.includes(vertical)}
+                              onChange={(e) => {
+                                if (e.currentTarget.checked) {
+                                  setVerticalFilter([...verticalFilter, vertical]);
+                                } else {
+                                  setVerticalFilter(verticalFilter.filter(v => v !== vertical));
+                                }
+                              }}
+                            />
+                          ))}
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader 
+                      label="Return Policy" 
+                      hasFilter={true}
+                      activeFilterCount={returnPolicyFilter ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <Select
+                            placeholder="Filter by return policy"
+                            clearable
+                            size="xs"
+                            data={[
+                              { value: "applicable", label: "Applicable" },
+                              { value: "not_applicable", label: "Not Applicable" },
+                            ]}
+                            value={returnPolicyFilter}
+                            onChange={setReturnPolicyFilter}
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader label="Rating" />
+                    
+                    <TableHeader label="Price" />
+                    
+                    <TableHeader 
+                      label="Stock" 
+                      hasFilter={true}
+                      activeFilterCount={stockFilter ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <Select
+                            placeholder="Filter by stock"
+                            clearable
+                            size="xs"
+                            data={[
+                              { value: "in_stock", label: "In Stock" },
+                              { value: "out_of_stock", label: "Out of Stock" },
+                            ]}
+                            value={stockFilter}
+                            onChange={setStockFilter}
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader label="Bulk Pricing" />
+                    
+                    <TableHeader label="FAQ" />
+                    
+                    <TableHeader label="Media" />
+                    
+                    <TableHeader label="Description" />
+                    
+                    <TableHeader 
+                      label="Status" 
+                      hasFilter={true}
+                      activeFilterCount={activeFilter ? 1 : 0}
+                      filterContent={
+                        <div className="p-2">
+                          <Select
+                            placeholder="Filter by Status"
+                            clearable
+                            size="xs"
+                            data={[
+                              { value: "true", label: "Active" },
+                              { value: "false", label: "Inactive" },
+                            ]}
+                            value={activeFilter}
+                            onChange={setStatusFilter}
+                          />
+                        </div>
+                      }
+                    />
+                    
+                    <TableHeader label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
@@ -944,31 +1312,58 @@ const ProductsPage = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div
-                            className="text-sm text-gray-600 line-clamp-3 w-48"
-                            title={product.description}
-                          >
-                            {product.description || "-"}
+                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-40">
+                            {defaultVariant ? (
+                              <>
+                                <div
+                                  className="font-medium text-gray-700 truncate"
+                                  title={defaultVariant.title}
+                                >
+                                  {defaultVariant.title}
+                                </div>
+                                <div>SKU: {defaultVariant.sku}</div>
+                                {defaultVariant.packaging_details && (
+                                  <div
+                                    className="text-gray-500 truncate"
+                                    title={defaultVariant.packaging_details}
+                                  >
+                                    {defaultVariant.packaging_details}
+                                  </div>
+                                )}
+                                {product.has_variants &&
+                                  product.variants?.length > 1 && (
+                                    <Badge
+                                      size="sm"
+                                      color="grape"
+                                      variant="light"
+                                    >
+                                      +{product.variants.length - 1} more
+                                    </Badge>
+                                  )}
+                              </>
+                            ) : (
+                              <span className="text-gray-400">No variants</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm w-32">
-                            <Badge
-                              size="sm"
-                              variant="outline"
-                              color="blue"
-                              className="font-normal w-fit"
-                            >
-                              {categories.find(
-                                (c) => c.id === product.category_id,
-                              )?.name || "N/A"}
-                            </Badge>
-                            <span className="text-gray-600">
-                              {subcategories.find(
-                                (s) => s.id === product.subcategory_id,
-                              )?.name || "-"}
-                            </span>
-                          </div>
+                          <Badge
+                            size="sm"
+                            variant="outline"
+                            color="blue"
+                            className="font-normal w-fit"
+                          >
+                            {categories.find(
+                              (c) => c.id === product.category_id,
+                            )?.name || "N/A"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-600">
+                            {subcategories.find(
+                              (s) => s.id === product.subcategory_id,
+                            )?.name || "-"}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm text-gray-600 w-24">
@@ -977,19 +1372,19 @@ const ProductsPage = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-32">
-                            <div
-                              className="truncate"
-                              title={product.brand_name}
-                            >
-                              Brand: {product.brand_name || "-"}
-                            </div>
-                            <div
-                              className="truncate"
-                              title={product.store_name}
-                            >
-                              Store: {product.store_name || "-"}
-                            </div>
+                          <div
+                            className="text-sm text-gray-600 truncate w-28"
+                            title={product.brand_name}
+                          >
+                            {product.brand_name || "-"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div
+                            className="text-sm text-gray-600 truncate w-28"
+                            title={product.store_name}
+                          >
+                            {product.store_name || "-"}
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -998,9 +1393,13 @@ const ProductsPage = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-24">
-                            <div>GST: {product.gst_rate}%</div>
-                            <div>CESS: {product.cess_rate}%</div>
+                          <div className="text-sm text-gray-600 w-20">
+                            {product.gst_rate}%
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-600 w-20">
+                            {product.cess_rate}%
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -1044,7 +1443,7 @@ const ProductsPage = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 w-32">
+                          <div className="flex flex-col gap-1 w-28">
                             <div className="font-bold text-gray-900 border border-green-100 bg-green-50 px-2 py-0.5 rounded-md w-fit text-sm">
                               {formatIndianPrice(getProductPrice(product))}
                             </div>
@@ -1058,59 +1457,18 @@ const ProductsPage = () => {
                                 {defaultVariant.discount_percentage}% OFF
                               </Badge>
                             )}
-                            <div>
-                              {isProductInStock(product) ? (
-                                <Badge size="sm" color="teal" variant="dot">
-                                  In Stock
-                                </Badge>
-                              ) : (
-                                <Badge size="sm" color="red" variant="dot">
-                                  Out of Stock
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Ship:{" "}
-                              {formatIndianPrice(
-                                product.shipping_amount ||
-                                  defaultVariant?.shipping_amount ||
-                                  0,
-                              )}
-                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-40">
-                            {defaultVariant ? (
-                              <>
-                                <div
-                                  className="font-medium text-gray-700 truncate"
-                                  title={defaultVariant.title}
-                                >
-                                  {defaultVariant.title}
-                                </div>
-                                <div>SKU: {defaultVariant.sku}</div>
-                                {defaultVariant.packaging_details && (
-                                  <div
-                                    className="text-gray-500 truncate"
-                                    title={defaultVariant.packaging_details}
-                                  >
-                                    {defaultVariant.packaging_details}
-                                  </div>
-                                )}
-                                {product.has_variants &&
-                                  product.variants?.length > 1 && (
-                                    <Badge
-                                      size="sm"
-                                      color="grape"
-                                      variant="light"
-                                    >
-                                      +{product.variants.length - 1} more
-                                    </Badge>
-                                  )}
-                              </>
+                          <div>
+                            {isProductInStock(product) ? (
+                              <Badge size="sm" color="teal" variant="dot">
+                                In Stock
+                              </Badge>
                             ) : (
-                              <span className="text-gray-400">No variants</span>
+                              <Badge size="sm" color="red" variant="dot">
+                                Out of Stock
+                              </Badge>
                             )}
                           </div>
                         </td>
@@ -1137,6 +1495,60 @@ const ProductsPage = () => {
                             ) : (
                               <span className="text-gray-400">Not enabled</span>
                             )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm w-32">
+                            {product.faq && Array.isArray(product.faq) && product.faq.length > 0 ? (
+                              <>
+                                <Badge size="sm" color="blue" variant="light">
+                                  {product.faq.length} FAQ{product.faq.length > 1 ? 's' : ''}
+                                </Badge>
+                                <div className="text-gray-600 text-xs max-h-20 overflow-y-auto">
+                                  {product.faq.map((faqItem, idx) => (
+                                    <div key={idx} className="mb-2">
+                                      <div className="font-medium text-gray-700 truncate" title={faqItem.question}>
+                                        Q: {faqItem.question}
+                                      </div>
+                                      <div className="text-gray-500 truncate" title={faqItem.answer}>
+                                        A: {faqItem.answer}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">No FAQ</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1 text-sm w-24">
+                            {product.media && product.media.length > 0 ? (
+                              <>
+                                <Badge size="sm" color="violet" variant="light">
+                                  {product.media.length} file{product.media.length > 1 ? 's' : ''}
+                                </Badge>
+                                <div className="text-gray-600 text-xs">
+                                  {product.media.filter(m => m.media_type === 'image').length} image{product.media.filter(m => m.media_type === 'image').length !== 1 ? 's' : ''}
+                                </div>
+                                {product.media.some(m => m.media_type === 'video') && (
+                                  <div className="text-gray-600 text-xs">
+                                    {product.media.filter(m => m.media_type === 'video').length} video{product.media.filter(m => m.media_type === 'video').length !== 1 ? 's' : ''}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-gray-400">No media</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div
+                            className="text-sm text-gray-600 line-clamp-3 w-48"
+                            title={product.description}
+                          >
+                            {product.description || "-"}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -1204,7 +1616,12 @@ const ProductsPage = () => {
                   categoryFilter ||
                   subcategoryFilter ||
                   groupFilter ||
-                  activeFilter
+                  activeFilter ||
+                  brandFilter.length > 0 ||
+                  storeFilter.length > 0 ||
+                  verticalFilter.length > 0 ||
+                  returnPolicyFilter ||
+                  stockFilter
                     ? "No products match your current filters. Try adjusting your search criteria or clearing some filters."
                     : "Get started by adding your first product to the inventory."}
                 </Text>
@@ -1221,7 +1638,12 @@ const ProductsPage = () => {
                     categoryFilter ||
                     subcategoryFilter ||
                     groupFilter ||
-                    activeFilter) && (
+                    activeFilter ||
+                    brandFilter.length > 0 ||
+                    storeFilter.length > 0 ||
+                    verticalFilter.length > 0 ||
+                    returnPolicyFilter ||
+                    stockFilter) && (
                     <Button
                       variant="light"
                       color="gray"
@@ -1232,6 +1654,11 @@ const ProductsPage = () => {
                         setSubcategoryFilter(null);
                         setGroupFilter(null);
                         setStatusFilter(null);
+                        setBrandFilter([]);
+                        setStoreFilter([]);
+                        setVerticalFilter([]);
+                        setReturnPolicyFilter(null);
+                        setStockFilter(null);
                       }}
                     >
                       Clear All Filters
@@ -1252,7 +1679,12 @@ const ProductsPage = () => {
                   categoryFilter ||
                   subcategoryFilter ||
                   groupFilter ||
-                  activeFilter) &&
+                  activeFilter ||
+                  brandFilter.length > 0 ||
+                  storeFilter.length > 0 ||
+                  verticalFilter.length > 0 ||
+                  returnPolicyFilter ||
+                  stockFilter) &&
                   " (filtered)"}
               </Text>
 

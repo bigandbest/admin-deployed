@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import  { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Title,
@@ -11,7 +11,6 @@ import {
   Modal,
   Badge,
   Switch,
-  Textarea,
   Image,
   LoadingOverlay,
   Tabs,
@@ -21,7 +20,6 @@ import {
   Tooltip,
   Loader,
   Center,
-  Divider,
 
 } from "@mantine/core";
 import {
@@ -58,7 +56,6 @@ import {
   getProductCountByCategory,
   checkCategoryHasProducts,
 } from "../../utils/supabaseApi";
-import SectionMappingManager from "../../Components/SectionMappingManager";
 
 const styles = `
   .categories-table {
@@ -1019,9 +1016,6 @@ const CategoriesPage = () => {
             <Tabs.Tab value="hierarchy" leftSection={<FaLayerGroup />}>
               Category Hierarchy
             </Tabs.Tab>
-            <Tabs.Tab value="section-mappings" leftSection={<FaLayerGroup />}>
-              Section Mappings
-            </Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="categories" pt="xs">
@@ -1039,22 +1033,10 @@ const CategoriesPage = () => {
                   <thead className="dark:bg-gray-800">
                     <tr>
                       <th
-                        style={{ width: "60px", textAlign: "center" }}
-                        className="dark:text-gray-200"
-                      >
-                        Icon
-                      </th>
-                      <th
                         style={{ width: "150px" }}
                         className="dark:text-gray-200"
                       >
                         Name
-                      </th>
-                      <th
-                        style={{ width: "250px" }}
-                        className="dark:text-gray-200"
-                      >
-                        Description
                       </th>
                       <th
                         style={{ width: "100px", textAlign: "center" }}
@@ -1100,9 +1082,6 @@ const CategoriesPage = () => {
                         key={category.id}
                         className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        <td style={{ textAlign: "center", width: "60px" }}>
-                          <span className="text-2xl">{category.icon}</span>
-                        </td>
                         <td style={{ width: "150px" }}>
                           <Tooltip
                             label={category.name}
@@ -1115,24 +1094,6 @@ const CategoriesPage = () => {
                               className="dark:text-gray-200"
                             >
                               {category.name}
-                            </Text>
-                          </Tooltip>
-                        </td>
-                        <td style={{ width: "250px" }}>
-                          <Tooltip
-                            label={category.description}
-                            disabled={
-                              !category.description ||
-                              category.description.length <= 50
-                            }
-                          >
-                            <Text
-                              size="sm"
-                              color="dimmed"
-                              truncate
-                              className="dark:text-gray-400"
-                            >
-                              {truncateText(category.description, 50)}
                             </Text>
                           </Tooltip>
                         </td>
@@ -1251,7 +1212,7 @@ const CategoriesPage = () => {
                 )}
                 {loadingMore.categories && (
                   <tr>
-                    <td colSpan="9" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       <Center>
                         <Loader size="sm" />
                         <Text size="sm" color="dimmed" ml={10}>
@@ -1263,7 +1224,7 @@ const CategoriesPage = () => {
                 )}
                 {!loadingMore.categories && remainingCategories > 0 && (
                   <tr>
-                    <td colSpan="9" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       <Button
                         variant="subtle"
                         onClick={loadMoreCategories}
@@ -1310,12 +1271,6 @@ const CategoriesPage = () => {
                         className="dark:text-gray-200"
                       >
                         Category
-                      </th>
-                      <th
-                        style={{ width: "200px" }}
-                        className="dark:text-gray-200"
-                      >
-                        Description
                       </th>
                       <th
                         style={{ width: "80px", textAlign: "center" }}
@@ -1402,24 +1357,7 @@ const CategoriesPage = () => {
                             </Tooltip>
                           </Badge>
                         </td>
-                        <td style={{ width: "200px" }}>
-                          <Tooltip
-                            label={subcategory.description}
-                            disabled={
-                              !subcategory.description ||
-                              subcategory.description.length <= 40
-                            }
-                          >
-                            <Text
-                              size="sm"
-                              color="dimmed"
-                              truncate
-                              className="dark:text-gray-400"
-                            >
-                              {truncateText(subcategory.description, 40)}
-                            </Text>
-                          </Tooltip>
-                        </td>
+
                         <td style={{ textAlign: "center", width: "80px" }}>
                           <Text size="sm" className="dark:text-gray-300">
                             {subcategory.sort_order}
@@ -1484,7 +1422,7 @@ const CategoriesPage = () => {
                 )}
                 {loadingMore.subcategories && (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       <Center>
                         <Loader size="sm" />
                         <Text size="sm" color="dimmed" ml={10}>
@@ -1496,7 +1434,7 @@ const CategoriesPage = () => {
                 )}
                 {!loadingMore.subcategories && remainingSubcategories > 0 && (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       <Button
                         variant="subtle"
                         onClick={loadMoreSubcategories}
@@ -1547,12 +1485,6 @@ const CategoriesPage = () => {
                         className="dark:text-gray-200"
                       >
                         Subcategory
-                      </th>
-                      <th
-                        style={{ width: "200px" }}
-                        className="dark:text-gray-200"
-                      >
-                        Description
                       </th>
                       <th
                         style={{ width: "80px", textAlign: "center" }}
@@ -1631,24 +1563,7 @@ const CategoriesPage = () => {
                             </Tooltip>
                           </Badge>
                         </td>
-                        <td style={{ width: "200px" }}>
-                          <Tooltip
-                            label={group.description}
-                            disabled={
-                              !group.description ||
-                              group.description.length <= 40
-                            }
-                          >
-                            <Text
-                              size="sm"
-                              color="dimmed"
-                              truncate
-                              className="dark:text-gray-400"
-                            >
-                              {truncateText(group.description, 40)}
-                            </Text>
-                          </Tooltip>
-                        </td>
+
                         <td style={{ textAlign: "center", width: "80px" }}>
                           <Text size="sm" className="dark:text-gray-300">
                             {group.sort_order}
@@ -1709,7 +1624,7 @@ const CategoriesPage = () => {
                 )}
                 {loadingMore.groups && (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       <Center>
                         <Loader size="sm" />
                         <Text size="sm" color="dimmed" ml={10}>
@@ -1721,7 +1636,7 @@ const CategoriesPage = () => {
                 )}
                 {!loadingMore.groups && remainingGroups > 0 && (
                   <tr>
-                    <td colSpan="8" className="text-center py-4">
+                    <td colSpan="7" className="text-center py-4">
                       <Button variant="subtle" onClick={loadMoreGroups} size="compact-sm">
                         Load {Math.min(batchSize, remainingGroups)} more (
                         {remainingGroups} remaining)
@@ -1963,93 +1878,6 @@ const CategoriesPage = () => {
             </ScrollArea>
           </Tabs.Panel>
 
-          {/* Section Mappings Tab */}
-          <Tabs.Panel value="section-mappings" pt="xs">
-            <div className="space-y-6">
-              <Card>
-                <Title order={2}>Manage Section Mappings</Title>
-                <Text size="sm" color="dimmed" mb="md">
-                  Control which categories and subcategories appear in PriceZone and ShopByCategory sections
-                </Text>
-
-                {/* PriceZone Section */}
-                <SectionMappingManager
-                  sectionKey="price_zone"
-                  sectionName="Price Zone"
-                  mappingType="subcategory"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-
-                <Divider my="xl" />
-
-                {/* ShopByCategory Section */}
-                <SectionMappingManager
-                  sectionKey="shop_by_category"
-                  sectionName="Shop By Category"
-                  mappingType="both"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-
-                <Divider my="xl" />
-
-                {/* Dual Deals - Left Section */}
-                <SectionMappingManager
-                  sectionKey="dual_deals_left"
-                  sectionName="Dual Deals - Best Selling (Left)"
-                  mappingType="category"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-
-                <Divider my="xl" />
-
-                {/* Dual Deals - Right Section */}
-                <SectionMappingManager
-                  sectionKey="dual_deals_right"
-                  sectionName="Dual Deals - Trending (Right)"
-                  mappingType="category"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-
-                <Divider my="xl" />
-
-                {/* Discount Corner - Left Section */}
-                <SectionMappingManager
-                  sectionKey="discount_corner_left"
-                  sectionName="Discount Corner - Left Panel"
-                  mappingType="category"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-
-                <Divider my="xl" />
-
-                {/* Discount Corner - Right Section */}
-                <SectionMappingManager
-                  sectionKey="discount_corner_right"
-                  sectionName="Discount Corner - Right Panel"
-                  mappingType="category"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-
-                <Divider my="xl" />
-
-                {/* Mega Monsoon Section */}
-                <SectionMappingManager
-                  sectionKey="mega_monsoon"
-                  sectionName="Mega Monsoon Sale"
-                  mappingType="both"
-                  categories={categories}
-                  subcategories={subcategories}
-                />
-              </Card>
-            </div>
-          </Tabs.Panel>
-
         </Tabs>
       </Card>
 
@@ -2071,15 +1899,6 @@ const CategoriesPage = () => {
             }
           />
 
-          <TextInput
-            label="Category Icon (Emoji)"
-            placeholder="Enter emoji (e.g., 📱, 👕, 🏠)"
-            value={newCategory.icon}
-            onChange={(e) =>
-              setNewCategory({ ...newCategory, icon: e.target.value })
-            }
-            description="Enter a single emoji to represent this category"
-          />
 
           <FileInput
             label="Category Image"
@@ -2104,15 +1923,6 @@ const CategoriesPage = () => {
             </div>
           )}
 
-          <Textarea
-            label="Description"
-            placeholder="Enter category description"
-            minRows={3}
-            value={newCategory.description || ""}
-            onChange={(e) =>
-              setNewCategory({ ...newCategory, description: e.target.value })
-            }
-          />
 
           <div className="flex items-center mb-2">
             <Switch
@@ -2182,16 +1992,6 @@ const CategoriesPage = () => {
             }
           />
 
-          <TextInput
-            label="Subcategory Icon (Emoji)"
-            placeholder="Enter emoji (e.g., 📱, 👕, 🏠)"
-            value={newSubcategory.icon}
-            onChange={(e) =>
-              setNewSubcategory({ ...newSubcategory, icon: e.target.value })
-            }
-            description="Enter a single emoji to represent this subcategory"
-          />
-
           <FileInput
             label="Upload Subcategory Image"
             placeholder="Upload image"
@@ -2201,18 +2001,6 @@ const CategoriesPage = () => {
             clearable
           />
 
-          <Textarea
-            label="Description"
-            placeholder="Enter subcategory description"
-            minRows={2}
-            value={newSubcategory.description || ""}
-            onChange={(e) =>
-              setNewSubcategory({
-                ...newSubcategory,
-                description: e.target.value,
-              })
-            }
-          />
 
           <TextInput
             label="Sort Order"
@@ -2300,13 +2088,6 @@ const CategoriesPage = () => {
             }
           />
 
-          <TextInput
-            label="Group Icon (Emoji)"
-            placeholder="Enter emoji (e.g., 📱, 👕, 🏠)"
-            value={newGroup.icon}
-            onChange={(e) => setNewGroup({ ...newGroup, icon: e.target.value })}
-            description="Enter a single emoji to represent this group"
-          />
 
           <FileInput
             label="Group Image"
@@ -2326,15 +2107,6 @@ const CategoriesPage = () => {
             />
           )}
 
-          <Textarea
-            label="Description"
-            placeholder="Enter group description"
-            minRows={2}
-            value={newGroup.description || ""}
-            onChange={(e) =>
-              setNewGroup({ ...newGroup, description: e.target.value })
-            }
-          />
 
           <TextInput
             label="Sort Order"

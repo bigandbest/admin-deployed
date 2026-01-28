@@ -38,6 +38,7 @@ import Dashboard from "./Pages/Dashboard";
 import ProductsPage from "./Pages/Products";
 import AddProduct from "./Pages/Products/AddProduct";
 import CategoriesPage from "./Pages/Categories";
+import CategoryMapping from "./Pages/CategoryMapping";
 import AddCategory from "./Pages/Categories/AddCategory";
 import BannersPage from "./Pages/Banners";
 import AdsBannersPage from "./Pages/AdsBanners"; // Import AdsBannersPage
@@ -275,6 +276,10 @@ function App() {
         {
           path: "/categories",
           element: <CategoriesPage />,
+        },
+        {
+          path: "/category-mapping",
+          element: <CategoryMapping />,
         },
         {
           path: "/categories/add",

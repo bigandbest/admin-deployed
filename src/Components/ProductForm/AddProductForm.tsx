@@ -5,9 +5,8 @@ import GeneralInformation from "./general-information";
 import VariantsSection from "./variants-section";
 import MediaUploader from "./media-uploader";
 import CategorySection from "./category-section";
-import WarehouseSection from "./warehouse-section";
 import FAQSection from "./faq-section";
-import { Save, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 interface ProductData {
   name: string;
@@ -75,7 +74,6 @@ interface AddProductFormProps {
   groups: any[];
   brands: any[];
   stores: any[];
-  warehouses: any[];
   onClose?: () => void;
   isLoading?: boolean;
 }
@@ -89,7 +87,6 @@ export default function AddProductForm({
   groups = [],
   brands = [],
   stores = [],
-  warehouses = [],
   onClose,
   isLoading = false,
 }: AddProductFormProps) {
@@ -101,6 +98,7 @@ export default function AddProductForm({
     hsn_code: "",
     sac_code: "",
     gst_rate: 18,
+    cess_rate: 0,
     return_applicable: false,
     return_days: 7,
     price: 0,
@@ -148,11 +146,11 @@ export default function AddProductForm({
     brand_id: "",
   });
 
-  const [warehouse, setWarehouse] = useState("");
-
   const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(
     [{ question: "", answer: "" }],
   );
+
+  const [warehouse, setWarehouse] = useState("");
 
   // Load initial data
   useEffect(() => {
@@ -184,20 +182,16 @@ export default function AddProductForm({
   //   }
   // }, [category.brand_id]);
 
-  const handleSaveDraft = () => {
-    const formData = {
-      product,
-      variants,
-      media,
-      category,
-      warehouse,
-      faqs,
-      status: "draft",
-    };
-    onSubmit(formData);
-  };
+  const handleSubmitProduct = () => {
+    console.log("\n=== FRONTEND FORM: Current State Before Submit ===");
+    console.log("Product State:", product);
+    console.log("Category State:", category);
+    console.log("Variants State:", variants);
+    console.log("Media State:", media);
+    console.log("FAQ State:", faqs);
+    console.log("Warehouse State:", warehouse);
+    console.log("=== END Current State ===");
 
-  const handleAddProduct = () => {
     const formData = {
       product,
       variants,
@@ -207,6 +201,11 @@ export default function AddProductForm({
       faqs,
       status: "active",
     };
+
+    console.log("\n=== FRONTEND FORM: Form Data Being Passed to onSubmit ===");
+    console.log(JSON.stringify(formData, null, 2));
+    console.log("=== END Form Data ===");
+
     onSubmit(formData);
   };
 
@@ -223,18 +222,8 @@ export default function AddProductForm({
             </div>
             <div className="flex items-center gap-3">
               <Button
-                variant="outline"
                 size="sm"
-                onClick={handleSaveDraft}
-                disabled={isLoading}
-                className="gap-2 bg-transparent"
-              >
-                <Save className="w-4 h-4" />
-                Save Draft
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAddProduct}
+                onClick={handleSubmitProduct}
                 disabled={isLoading}
                 className="gap-2 bg-green-500 hover:bg-green-600 text-white"
               >
@@ -269,7 +258,6 @@ export default function AddProductForm({
               <GeneralInformation
                 product={product}
                 setProduct={setProduct}
-                brands={brands}
               />
               <VariantsSection variants={variants} setVariants={setVariants} />
             </div>
@@ -285,11 +273,6 @@ export default function AddProductForm({
                 groups={groups}
                 stores={stores}
                 brands={brands}
-              />
-              <WarehouseSection
-                warehouse={warehouse}
-                setWarehouse={setWarehouse}
-                warehouses={warehouses}
               />
               <FAQSection faqs={faqs} setFaqs={setFaqs} />
             </div>
