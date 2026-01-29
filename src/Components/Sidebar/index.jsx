@@ -43,7 +43,7 @@ const menuAnimation = {
   exit: { opacity: 0, height: 0, transition: { duration: 0.3 } },
 };
 
-const Sidebar = ({ isOpen = true }) => {
+const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
   const { logout } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,7 +101,7 @@ const Sidebar = ({ isOpen = true }) => {
       path: "/",
     },
     {
-      title: "Product Manager",
+      title: "Product Master",
       icon: <HiArchive />,
       submenu: [
         {
@@ -138,28 +138,40 @@ const Sidebar = ({ isOpen = true }) => {
       description: "Manage delivery zones and pincodes for product delivery",
     },
     {
-      title: "Delivery Charges",
-      icon: <FaRupeeSign />,
-      path: "/delivery-charges",
-      description: "Manage delivery charge milestones based on order value",
-    },
-    {
-      title: "Charge Settings",
+      title: "Charges Manager",
       icon: <FaMoneyBillWave />,
-      path: "/charge-settings",
-      description: "Configure handling, surge, and platform charges",
+      submenu: [
+        {
+          title: "Delivery Charges",
+          icon: <FaRupeeSign />,
+          path: "/delivery-charges",
+          description: "Manage delivery charge milestones based on order value",
+        },
+        {
+          title: "Charge Settings",
+          icon: <FaMoneyBillWave />,
+          path: "/charge-settings",
+          description: "Configure handling, surge, and platform charges",
+        },
+      ],
     },
     {
-      title: "About Page Setup",
+      title: "Page Manager",
       icon: <RiQuestionnaireFill />,
-      path: "/about-content-setup",
-      description: "Manage About Us page banner and text",
-    },
-    {
-      title: "Team Members",
-      icon: <FaUsers />,
-      path: "/team-members",
-      description: "Manage team members",
+      submenu: [
+        {
+          title: "About Page Setup",
+          icon: <RiQuestionnaireFill />,
+          path: "/about-content-setup",
+          description: "Manage About Us page banner and text",
+        },
+        {
+          title: "Team Members",
+          icon: <FaUsers />,
+          path: "/team-members",
+          description: "Manage team members",
+        },
+      ],
     },
     {
       title: "Contact Queries",
@@ -415,6 +427,8 @@ const Sidebar = ({ isOpen = true }) => {
         width: isOpen ? "240px" : "70px",
         transition: { duration: 0.3, type: "spring", stiffness: 120 },
       }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <div className="flex flex-col h-full">
         {/* Logo section */}
@@ -618,6 +632,8 @@ const Sidebar = ({ isOpen = true }) => {
 
 Sidebar.propTypes = {
   isOpen: PropTypes.bool,
+  onMouseEnter: PropTypes.func,
+  onMouseLeave: PropTypes.func,
 };
 
 export default Sidebar;

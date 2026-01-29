@@ -1,4 +1,4 @@
-import  { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Card,
   Title,
@@ -20,7 +20,6 @@ import {
   Tooltip,
   Loader,
   Center,
-
 } from "@mantine/core";
 import {
   FaEdit,
@@ -31,7 +30,7 @@ import {
   FaLayerGroup,
   FaChevronDown,
   FaChevronRight,
-
+  FaImage,
 } from "react-icons/fa";
 import { showNotification } from "@mantine/notifications";
 
@@ -187,7 +186,7 @@ const CategoriesPage = () => {
       const category = categories.find((c) => c.id === categoryId);
       return category ? category.name : "Unknown";
     },
-    [categories]
+    [categories],
   );
 
   const getSubcategoryName = useCallback(
@@ -195,7 +194,7 @@ const CategoriesPage = () => {
       const subcategory = subcategories.find((s) => s.id === subcategoryId);
       return subcategory ? subcategory.name : "Unknown";
     },
-    [subcategories]
+    [subcategories],
   );
 
   const getCategoryForSubcategory = useCallback(
@@ -204,13 +203,13 @@ const CategoriesPage = () => {
       if (!subcategory) return "Unknown Category";
       return getCategoryName(subcategory.category_id);
     },
-    [subcategories, getCategoryName]
+    [subcategories, getCategoryName],
   );
 
   // Filtering functions - defined before any useEffect that uses them
   const getFilteredCategories = useCallback(() => {
     return categories.filter((category) =>
-      category.name.toLowerCase().includes(searchQuery.toLowerCase())
+      category.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [categories, searchQuery]);
 
@@ -312,7 +311,7 @@ const CategoriesPage = () => {
           if (result.success) {
             counts[category.id] = result.count;
           }
-        })
+        }),
       );
       setProductCounts(counts);
     } catch (error) {
@@ -354,7 +353,7 @@ const CategoriesPage = () => {
 
           // Initialize visible subcategories for infinite scroll
           setVisibleSubcategories(
-            subcategories.slice(0, subcategoriesBatchSize)
+            subcategories.slice(0, subcategoriesBatchSize),
           );
         } else {
           showNotification({
@@ -426,7 +425,7 @@ const CategoriesPage = () => {
       if (currentLength < filtered.length) {
         const nextBatch = filtered.slice(
           currentLength,
-          currentLength + batchSize
+          currentLength + batchSize,
         );
         setVisibleCategories((prev) => [...prev, ...nextBatch]);
       }
@@ -445,7 +444,7 @@ const CategoriesPage = () => {
       if (currentLength < filtered.length) {
         const nextBatch = filtered.slice(
           currentLength,
-          currentLength + subcategoriesBatchSize
+          currentLength + subcategoriesBatchSize,
         );
         setVisibleSubcategories((prev) => [...prev, ...nextBatch]);
       }
@@ -464,7 +463,7 @@ const CategoriesPage = () => {
       if (currentLength < filtered.length) {
         const nextBatch = filtered.slice(
           currentLength,
-          currentLength + batchSize
+          currentLength + batchSize,
         );
         setVisibleGroups((prev) => [...prev, ...nextBatch]);
       }
@@ -483,7 +482,7 @@ const CategoriesPage = () => {
       if (currentLength < filtered.length) {
         const nextBatch = filtered.slice(
           currentLength,
-          currentLength + batchSize
+          currentLength + batchSize,
         );
         setVisibleHierarchy((prev) => [...prev, ...nextBatch]);
       }
@@ -533,7 +532,7 @@ const CategoriesPage = () => {
       loadMoreSubcategories,
       loadMoreGroups,
       loadMoreHierarchy,
-    ]
+    ],
   );
 
   // Track remaining items for each tab
@@ -623,7 +622,7 @@ const CategoriesPage = () => {
         result = await updateCategory(
           currentCategory.id,
           newCategory,
-          categoryImageFile
+          categoryImageFile,
         );
       } else {
         result = await addCategory(newCategory, categoryImageFile);
@@ -660,7 +659,7 @@ const CategoriesPage = () => {
         result = await updateSubcategory(
           currentSubcategory.id,
           newSubcategory,
-          subcategoryImageFile
+          subcategoryImageFile,
         );
       } else {
         result = await addSubcategory(newSubcategory, subcategoryImageFile);
@@ -772,7 +771,7 @@ const CategoriesPage = () => {
 
       const result = await deleteCategory(
         categoryToDelete.id,
-        deleteOptionsForApi
+        deleteOptionsForApi,
       );
 
       if (result.success) {
@@ -894,7 +893,9 @@ const CategoriesPage = () => {
       const result = await updateCategory(id, { featured: newFeat });
       if (result.success) {
         setCategories(
-          categories.map((c) => (c.id === id ? { ...c, featured: newFeat } : c))
+          categories.map((c) =>
+            c.id === id ? { ...c, featured: newFeat } : c,
+          ),
         );
       } else {
         showNotification({ message: result.error, color: "red" });
@@ -913,7 +914,7 @@ const CategoriesPage = () => {
       const result = await toggleCategoryStatus(id, active);
       if (result.success) {
         setCategories(
-          categories.map((cat) => (cat.id === id ? { ...cat, active } : cat))
+          categories.map((cat) => (cat.id === id ? { ...cat, active } : cat)),
         );
       } else {
         showNotification({ message: result.error, color: "red" });
@@ -1135,7 +1136,7 @@ const CategoriesPage = () => {
                             onClick={() => {
                               // Could navigate to products view filtered by this category
                               console.log(
-                                `View products for category ${category.id}`
+                                `View products for category ${category.id}`,
                               );
                             }}
                           >
@@ -1255,7 +1256,7 @@ const CategoriesPage = () => {
                   <thead className="dark:bg-gray-800">
                     <tr>
                       <th
-                        style={{ width: "60px", textAlign: "center" }}
+                        style={{ width: "100px", textAlign: "center" }}
                         className="dark:text-gray-200"
                       >
                         Image
@@ -1304,14 +1305,14 @@ const CategoriesPage = () => {
                         key={subcategory.id}
                         className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        <td style={{ textAlign: "center", width: "60px" }}>
+                        <td style={{ textAlign: "center", width: "100px" }}>
                           {subcategory.image_url ? (
                             <img
                               src={subcategory.image_url}
-                              className="h-10 w-20 cursor-pointer rounded"
+                              className="h-10 w-20 cursor-pointer rounded object-cover"
                               onClick={() => {
                                 setPreviewSubcategoryImage(
-                                  subcategory.image_url
+                                  subcategory.image_url,
                                 );
                                 setSubcategoryImageModalOpen(true);
                               }}
@@ -1351,7 +1352,7 @@ const CategoriesPage = () => {
                               <span>
                                 {truncateText(
                                   getCategoryName(subcategory.category_id),
-                                  15
+                                  15,
                                 )}
                               </span>
                             </Tooltip>
@@ -1443,7 +1444,7 @@ const CategoriesPage = () => {
                         Load{" "}
                         {Math.min(
                           subcategoriesBatchSize,
-                          remainingSubcategories
+                          remainingSubcategories,
                         )}{" "}
                         more ({remainingSubcategories} remaining)
                       </Button>
@@ -1469,7 +1470,7 @@ const CategoriesPage = () => {
                   <thead className="dark:bg-gray-800">
                     <tr>
                       <th
-                        style={{ width: "60px", textAlign: "center" }}
+                        style={{ width: "100px", textAlign: "center" }}
                         className="dark:text-gray-200"
                       >
                         Image
@@ -1518,16 +1519,22 @@ const CategoriesPage = () => {
                         key={group.id}
                         className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        <td style={{ textAlign: "center", width: "60px" }}>
-                          <img
-                            src={group.image_url}
-                            alt="Group"
-                            className="h-10 w-20 cursor-pointer rounded"
-                            onClick={() => {
-                              setPreviewImageUrl(group.image_url);
-                              setImageModalOpen(true);
-                            }}
-                          />
+                        <td style={{ textAlign: "center", width: "100px" }}>
+                          {group.image_url ? (
+                            <img
+                              src={group.image_url}
+                              alt="Group"
+                              className="h-10 w-20 cursor-pointer rounded object-cover"
+                              onClick={() => {
+                                setPreviewImageUrl(group.image_url);
+                                setImageModalOpen(true);
+                              }}
+                            />
+                          ) : (
+                            <div className="h-10 w-20 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mx-auto text-gray-400">
+                              <FaImage size={16} />
+                            </div>
+                          )}
                         </td>
 
                         <td style={{ width: "150px" }}>
@@ -1557,7 +1564,7 @@ const CategoriesPage = () => {
                               <span>
                                 {truncateText(
                                   getSubcategoryName(group.subcategory_id),
-                                  15
+                                  15,
                                 )}
                               </span>
                             </Tooltip>
@@ -1637,7 +1644,11 @@ const CategoriesPage = () => {
                 {!loadingMore.groups && remainingGroups > 0 && (
                   <tr>
                     <td colSpan="7" className="text-center py-4">
-                      <Button variant="subtle" onClick={loadMoreGroups} size="compact-sm">
+                      <Button
+                        variant="subtle"
+                        onClick={loadMoreGroups}
+                        size="compact-sm"
+                      >
                         Load {Math.min(batchSize, remainingGroups)} more (
                         {remainingGroups} remaining)
                       </Button>
@@ -1661,7 +1672,7 @@ const CategoriesPage = () => {
               <div className="space-y-4">
                 {visibleHierarchy.map((category) => {
                   const categorySubcategories = getSubcategoriesForCategory(
-                    category.id
+                    category.id,
                   );
                   const isExpanded = expandedCategories.has(category.id);
 
@@ -1764,7 +1775,7 @@ const CategoriesPage = () => {
                                             color="blue"
                                             onClick={() =>
                                               openEditSubcategoryModal(
-                                                subcategory
+                                                subcategory,
                                               )
                                             }
                                           >
@@ -1775,7 +1786,7 @@ const CategoriesPage = () => {
                                             color="red"
                                             onClick={() =>
                                               handleDeleteSubcategory(
-                                                subcategory.id
+                                                subcategory.id,
                                               )
                                             }
                                           >
@@ -1829,7 +1840,7 @@ const CategoriesPage = () => {
                                                     color="red"
                                                     onClick={() =>
                                                       handleDeleteGroup(
-                                                        group.id
+                                                        group.id,
                                                       )
                                                     }
                                                   >
@@ -1877,7 +1888,6 @@ const CategoriesPage = () => {
               </div>
             </ScrollArea>
           </Tabs.Panel>
-
         </Tabs>
       </Card>
 
@@ -1898,7 +1908,6 @@ const CategoriesPage = () => {
               setNewCategory({ ...newCategory, name: e.target.value })
             }
           />
-
 
           <FileInput
             label="Category Image"
@@ -1922,7 +1931,6 @@ const CategoriesPage = () => {
               />
             </div>
           )}
-
 
           <div className="flex items-center mb-2">
             <Switch
@@ -2001,6 +2009,19 @@ const CategoriesPage = () => {
             clearable
           />
 
+          {newSubcategory.image_url && !subcategoryImageFile && (
+            <div>
+              <Text size="sm" color="dimmed" mb={5}>
+                Current Image:
+              </Text>
+              <Image
+                src={newSubcategory.image_url}
+                alt={newSubcategory.name}
+                style={{ width: 100, height: 60, objectFit: "cover" }}
+                radius="sm"
+              />
+            </div>
+          )}
 
           <TextInput
             label="Sort Order"
@@ -2088,7 +2109,6 @@ const CategoriesPage = () => {
             }
           />
 
-
           <FileInput
             label="Group Image"
             placeholder="Upload group image"
@@ -2106,7 +2126,6 @@ const CategoriesPage = () => {
               className="mt-2"
             />
           )}
-
 
           <TextInput
             label="Sort Order"

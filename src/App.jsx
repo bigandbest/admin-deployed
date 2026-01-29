@@ -115,18 +115,29 @@ import SellerEarnings from "./Pages/Seller/Earnings";
 import SellerNotifications from "./Pages/Seller/Notifications";
 
 const MainLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const handleSidebarHover = (isHovered) => {
+    if (!sidebarOpen) {
+      setSidebarHovered(isHovered);
+    }
+  };
+
   return (
     <div className="flex h-screen mantine-bg">
-      <Sidebar isOpen={sidebarOpen} />
+      <Sidebar 
+        isOpen={sidebarOpen || sidebarHovered} 
+        onMouseEnter={() => handleSidebarHover(true)}
+        onMouseLeave={() => handleSidebarHover(false)}
+      />
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? "ml-60" : "ml-[70px]"
+          sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
         }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
