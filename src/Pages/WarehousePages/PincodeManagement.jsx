@@ -138,7 +138,7 @@ const PincodeManagement = () => {
         // Add logic
         await axios.post(
           `${API_BASE_URL}/warehouses/${selectedWarehouse}/pincodes`,
-          [pincodeForm],
+          { pincodes: [pincodeForm] },
           {
             headers: { Authorization: `Bearer ${token}` },
           }
