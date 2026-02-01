@@ -110,8 +110,8 @@ const DeliveryZones = () => {
   const loadStatistics = useCallback(async () => {
     try {
       const response = await getZoneStatistics();
-      if (response.success && response.statistics) {
-        setStatistics(response.statistics);
+      if (response.success && (response.statistics || response.results)) {
+        setStatistics(response.statistics || response.results);
       } else {
         // Set default statistics if API call fails
         setStatistics({
@@ -202,23 +202,9 @@ const DeliveryZones = () => {
     openDetailsModal();
   };
 
-  // Handle edit zone
-  const handleEditZone = (zone) => {
-    setSelectedZone(zone);
-    openFormModal();
-  };
-
-  // Handle successful operations
-  const handleOperationSuccess = () => {
-    loadZones(pagination.page);
-    loadStatistics();
-    closeUploadModal();
-    closeFormModal();
-    setSelectedZone(null);
-  };
-
   // Handle toggle zone active status
   const [togglingZoneId, setTogglingZoneId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const handleToggleActive = async (zone) => {
     // Prevent toggling nationwide zone
@@ -263,6 +249,50 @@ const DeliveryZones = () => {
     }
   };
 
+  // Handle edit zone
+  const handleEditZone = async (zone) => {
+    try {
+      setEditingId(zone.id);
+      const response = await fetchZoneById(zone.id);
+      if (response.success) {
+        const completeZone = response.zone || response.data;
+        // Normalize pincodes structure (handle zone_pincodes vs pincodes)
+        if (completeZone.zone_pincodes && !completeZone.pincodes) {
+          completeZone.pincodes = completeZone.zone_pincodes;
+        }
+        setSelectedZone(completeZone);
+        openFormModal();
+      } else {
+        notifications.show({
+          title: "Error",
+          message: "Failed to fetch zone details for editing",
+          color: "red",
+          icon: <IconX />,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch zone details:', error);
+      notifications.show({
+        title: "Error",
+        message: "Failed to load zone details",
+        color: "red",
+        icon: <IconX />,
+      });
+    } finally {
+      setEditingId(null);
+    }
+  };
+
+  // Handle operation success (refresh data and close modals)
+  const handleOperationSuccess = useCallback(() => {
+    loadZones(pagination.page);
+    loadStatistics();
+    closeUploadModal();
+    closeFormModal();
+    setSelectedZone(null);
+  }, [loadZones, pagination.page, loadStatistics, closeUploadModal, closeFormModal]);
+
+
   // Statistics cards - Add PropTypes validation
   const StatCard = ({ title, value, icon, color = "blue" }) => (
     <Card shadow="sm" padding="md" radius="md" withBorder>
@@ -305,13 +335,6 @@ const DeliveryZones = () => {
             </Text>
           </div>
           <Group>
-            <Button
-              leftSection={<IconDownload size={16} />}
-              variant="light"
-              onClick={() => window.open("/api/zones/sample-csv", "_blank")}
-            >
-              Sample Excel
-            </Button>
             <Button
               leftSection={<IconUpload size={16} />}
               onClick={openUploadModal}

@@ -257,7 +257,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
       centered
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack spacing="md">
+        <Stack gap="md">
           {/* Zone Name */}
           <TextInput
             label="Zone Name"
@@ -326,6 +326,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
                 </Text>
                 <Button
                   size="xs"
+                  type="button"
                   leftSection={<IconPlus size={14} />}
                   onClick={() => setShowPincodeForm(!showPincodeForm)}
                   variant="light"
@@ -336,7 +337,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
 
               {/* Pincode Entry Form */}
               <Collapse in={showPincodeForm}>
-                <Paper withBorder p="md" bg="gray.0">
+                <Paper withBorder p="md">
                   <Stack spacing="sm">
                     <Text size="sm" weight={500}>
                       {editingPincodeIndex !== null ? "Edit Pincode" : "Add New Pincode"}
@@ -395,15 +396,16 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
                       color="green"
                     />
 
-                    <Group justify="flex-end" spacing="sm">
+                    <Group justify="flex-end" gap="sm">
                       <Button
                         variant="subtle"
                         size="xs"
+                        type="button"
                         onClick={handleCancelPincode}
                       >
                         Cancel
                       </Button>
-                      <Button size="xs" onClick={handleAddPincode}>
+                      <Button size="xs" type="button" onClick={handleAddPincode}>
                         {editingPincodeIndex !== null ? "Update" : "Add"} Pincode
                       </Button>
                     </Group>
@@ -509,12 +511,12 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
           </div>
 
           {/* Action Buttons */}
-          <Group justify="flex-end" spacing="sm">
-            <Button variant="subtle" onClick={handleClose} disabled={loading}>
+          <Group justify="flex-end" gap="sm">
+            <Button variant="subtle" type="button" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" loading={loading}>
-              {isEdit ? "Update Zone" : "Create Zone"}
+            <Button type="submit" loading={loading} disabled={loading}>
+              {isEdit ? (loading ? "Updating..." : "Update Zone") : (loading ? "Creating..." : "Create Zone")}
             </Button>
           </Group>
         </Stack>

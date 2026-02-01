@@ -1416,20 +1416,27 @@ export async function addProductToWarehouse(
   productId,
   stockQuantity = 0,
   minimumThreshold = 10,
-  costPerUnit = 0
+  costPerUnit = 0,
+  variantId = null
 ) {
   try {
+    const payload = {
+      product_id: productId,
+      stock_quantity: parseInt(stockQuantity) || 0,
+      minimum_threshold: parseInt(minimumThreshold) || 10,
+      cost_per_unit: parseFloat(costPerUnit) || 0,
+    };
+
+    if (variantId) {
+      payload.variant_id = variantId;
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/warehouses/${warehouseId}/products`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: productId,
-          stock_quantity: parseInt(stockQuantity) || 0,
-          minimum_threshold: parseInt(minimumThreshold) || 10,
-          cost_per_unit: parseFloat(costPerUnit) || 0,
-        }),
+        body: JSON.stringify(payload),
       }
     );
     return await handleResponse(response);

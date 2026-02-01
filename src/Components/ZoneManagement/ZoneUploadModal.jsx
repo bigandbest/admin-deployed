@@ -169,7 +169,7 @@ const ZoneUploadModal = ({ opened, onClose, onSuccess }) => {
         </Alert>
 
         {/* Sample Excel Download */}
-        <Paper withBorder p="md" bg="gray.0">
+        <Paper withBorder p="md">
           <Group justify="space-between">
             <div>
               <Text weight={500} size="sm">
@@ -221,7 +221,7 @@ const ZoneUploadModal = ({ opened, onClose, onSuccess }) => {
           <Paper
             withBorder
             p="md"
-            bg={uploadResult.success ? "green.0" : "red.0"}
+            className={uploadResult.success ? "bg-green-50" : "bg-red-50"}
           >
             <Group align="flex-start" spacing="sm">
               {uploadResult.success ? (

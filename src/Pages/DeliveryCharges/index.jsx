@@ -150,6 +150,21 @@ const DeliveryCharges = () => {
         }
     };
 
+    const handleConfirmEdit = (milestone) => {
+        modals.openConfirmModal({
+            title: "Confirm Edit",
+            children: (
+                <Text size="sm">
+                    Are you sure you want to edit the milestone for orders ≥ ₹
+                    {milestone.min_order_value}?
+                </Text>
+            ),
+            labels: { confirm: "Edit", cancel: "Cancel" },
+            confirmProps: { color: "blue" },
+            onConfirm: () => handleOpenModal(milestone),
+        });
+    };
+
     const handleDelete = (milestone) => {
         modals.openConfirmModal({
             title: "Delete Milestone",
@@ -353,7 +368,7 @@ const DeliveryCharges = () => {
                                             <ActionIcon
                                                 variant="light"
                                                 color="blue"
-                                                onClick={() => handleOpenModal(milestone)}
+                                                onClick={() => handleConfirmEdit(milestone)}
                                                 title="Edit milestone"
                                             >
                                                 <FaEdit />

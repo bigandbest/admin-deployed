@@ -244,9 +244,7 @@ const SchedulingManagement = () => {
                         <FaClock className="text-blue-600" />
                         Scheduling Management
                     </h1>
-                    <p className="text-gray-600 mt-2">
-                        Configure 2-hour scheduling slots and manage warehouse slot assignments
-                    </p>
+
                 </div>
 
                 {/* Tabs */}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import {
@@ -10,60 +10,51 @@ import {
   addProductToWarehouse,
 } from "../../utils/supabaseApi";
 
-// ProductRow Component for better organization
-const ProductRow = ({
-  item,
+// ProductVariantRow Component for individual variant stock management
+const ProductVariantRow = ({
+  variant,
+  productId,
   onUpdateStock,
-  onRemove,
   getStockStatusColor,
   getStockStatusText,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editStock, setEditStock] = useState(item.stock_quantity);
+  const [editStock, setEditStock] = useState(variant.stock_quantity);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleSave = async () => {
+    if (editStock < 0) return; // Prevent negative stock save
     setIsUpdating(true);
-    await onUpdateStock(item.product_id, editStock);
+    await onUpdateStock(productId, editStock, variant.variant_id);
     setIsEditing(false);
     setIsUpdating(false);
   };
 
   const handleCancel = () => {
-    setEditStock(item.stock_quantity);
+    setEditStock(variant.stock_quantity);
     setIsEditing(false);
   };
 
   const handleQuickAdjust = async (adjustment) => {
-    const newStock = Math.max(0, item.stock_quantity + adjustment);
-    await onUpdateStock(item.product_id, newStock);
+    const newStock = Math.max(0, variant.stock_quantity + adjustment);
+    await onUpdateStock(productId, newStock, variant.variant_id);
   };
 
   return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div>
-          <div className="text-sm font-medium text-gray-900">
-            {item.product_name}
-          </div>
-          {item.delivery_type && (
-            <div className="text-xs text-gray-500">
-              <span
-                className={`inline-flex px-2 py-1 text-xs rounded-full ${item.delivery_type === "nationwide"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-green-100 text-green-800"
-                  }`}
-              >
-                {item.delivery_type}
-              </span>
-            </div>
-          )}
-        </div>
+    <tr className="bg-gray-50/50">
+      <td className="px-6 py-3 pl-10 whitespace-nowrap text-sm text-gray-700 flex items-center">
+        <span className="text-gray-400 mr-2">↳</span>
+        <span className="font-medium">{variant.variant_name}</span>
+        {variant.is_default && (
+          <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+            Default
+          </span>
+        )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        ₹{item.product_price}
+      <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+        ₹{variant.variant_price}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-6 py-3 whitespace-nowrap">
         {isEditing ? (
           <div className="flex items-center space-x-2">
             <input
@@ -90,7 +81,7 @@ const ProductRow = ({
         ) : (
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-gray-900">
-              {item.stock_quantity}
+              {variant.stock_quantity}
             </span>
             <button
               onClick={() => setIsEditing(true)}
@@ -101,20 +92,20 @@ const ProductRow = ({
           </div>
         )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-6 py-3 whitespace-nowrap">
         <span
           className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStockStatusColor(
-            item.stock_quantity
+            variant.stock_quantity
           )}`}
         >
-          {getStockStatusText(item.stock_quantity)}
+          {getStockStatusText(variant.stock_quantity)}
         </span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm">
+      <td className="px-6 py-3 whitespace-nowrap text-sm">
         <div className="flex space-x-1">
           <button
             onClick={() => handleQuickAdjust(-1)}
-            disabled={item.stock_quantity <= 0}
+            disabled={variant.stock_quantity <= 0}
             className="px-2 py-1 bg-red-100 text-red-600 rounded text-xs hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             -1
@@ -133,15 +124,127 @@ const ProductRow = ({
           </button>
         </div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        <button
-          onClick={() => onRemove(item.product_id)}
-          className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1 rounded transition-colors"
-        >
-          Remove
-        </button>
+      <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
+        {/* Actions for variant if needed, or keep empty */}
       </td>
     </tr>
+  );
+};
+
+ProductVariantRow.propTypes = {
+  variant: PropTypes.shape({
+    variant_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+      .isRequired,
+    variant_name: PropTypes.string,
+    variant_price: PropTypes.number,
+    stock_quantity: PropTypes.number.isRequired,
+    is_default: PropTypes.bool,
+  }).isRequired,
+  productId: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+    .isRequired,
+  onUpdateStock: PropTypes.func.isRequired,
+  getStockStatusColor: PropTypes.func.isRequired,
+  getStockStatusText: PropTypes.func.isRequired,
+};
+
+// ProductRow Component for better organization
+const ProductRow = ({
+  item,
+  onUpdateStock,
+  onRemove,
+  getStockStatusColor,
+  getStockStatusText,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Calculate total stock from variants if available, else use item stock
+  const totalStock = item.variants?.reduce((sum, v) => sum + (v.stock_quantity || 0), 0) ?? item.stock_quantity;
+  const hasVariants = item.variants && item.variants.length > 0;
+
+  return (
+    <>
+      <tr className="hover:bg-gray-50">
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center">
+            {hasVariants && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="mr-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+                {isExpanded ? "▼" : "▶"}
+              </button>
+            )}
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {item.product_name}
+              </div>
+              {item.delivery_type && (
+                <div className="text-xs text-gray-500">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs rounded-full ${item.delivery_type === "nationwide"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-green-100 text-green-800"
+                      }`}
+                  >
+                    {item.delivery_type}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          ₹{item.product_price}
+          {hasVariants && <span className="text-xs text-gray-500 ml-1">(Base)</span>}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-gray-900">
+              {totalStock}
+            </span>
+            <span className="text-xs text-gray-500">(Total)</span>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <span
+            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStockStatusColor(
+              totalStock
+            )}`}
+          >
+            {getStockStatusText(totalStock)}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm">
+          {/* Quick actions on parent row only relevant if no variants or acting as aggregate?? 
+               Ideally, quick actions should be on specific variants. 
+               Disabling for parent row if variants exist to avoid ambiguity. */}
+          {!hasVariants && (
+            <span className="text-xs text-gray-400">Use generic update</span>
+          )}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+          <button
+            onClick={() => onRemove(item.product_id)}
+            className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1 rounded transition-colors"
+          >
+            Remove
+          </button>
+        </td>
+      </tr>
+      {/* Expanded Variants Rows */}
+      {isExpanded && hasVariants &&
+        item.variants.map((variant) => (
+          <ProductVariantRow
+            key={variant.variant_id}
+            variant={variant}
+            productId={item.product_id}
+            onUpdateStock={onUpdateStock}
+            getStockStatusColor={getStockStatusColor}
+            getStockStatusText={getStockStatusText}
+          />
+        ))
+      }
+    </>
   );
 };
 
@@ -155,6 +258,7 @@ ProductRow.propTypes = {
       .isRequired,
     stock_quantity: PropTypes.number.isRequired,
     delivery_type: PropTypes.string,
+    variants: PropTypes.array,
   }).isRequired,
   onUpdateStock: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
@@ -248,16 +352,30 @@ const WarehouseProducts = () => {
     }
   };
 
-  const handleUpdateStock = async (productId, newStock) => {
+  const handleUpdateStock = async (productId, newStock, variantId = null) => {
     if (newStock < 0) {
       setError("Stock quantity cannot be negative");
       return;
     }
 
     try {
-      const result = await updateWarehouseProduct(id, productId, {
+      const updateData = {
         stock_quantity: parseInt(newStock),
-      });
+      };
+      // If variantId is present, we must include it in the payload.
+      // NOTE: backend updateWarehouseProduct accepts body, strings it, and calls backend.
+      // The backendController usually needs variant_id in body for updateProductStock if it's strict,
+      // OR if the endpoint is variant-specific?
+      // Actually `updateWarehouseProduct` calls `PUT /warehouses/:id/products/:productId`.
+      // The payload must contain `variant_id` if we are hitting a specific variant.
+
+      if (variantId) {
+        updateData.variant_id = variantId;
+      }
+
+      console.log(`Updating stock for Product ${productId} ${variantId ? `Variant ${variantId}` : ''}: ${newStock}`);
+
+      const result = await updateWarehouseProduct(id, productId, updateData);
       if (result.success) {
         setError("");
         await fetchWarehouseProducts();
@@ -355,8 +473,8 @@ const WarehouseProducts = () => {
                 <span className="flex items-center">
                   <span
                     className={`inline-block w-3 h-3 rounded-full mr-2 ${warehouse?.type === "zonal"
-                        ? "bg-green-500"
-                        : "bg-purple-500"
+                      ? "bg-green-500"
+                      : "bg-purple-500"
                       }`}
                   ></span>
                   {warehouse?.type === "zonal"
@@ -422,17 +540,6 @@ const WarehouseProducts = () => {
           </h3>
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                console.log("🔍 Debug Info:");
-                console.log("allProducts.length:", allProducts.length);
-                console.log("products.length:", products.length);
-                console.log("Sample allProducts:", allProducts.slice(0, 2));
-              }}
-              className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-            >
-              🔍 Debug
-            </button>
-            <button
               onClick={fetchAllProducts}
               className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
             >
@@ -476,11 +583,6 @@ const WarehouseProducts = () => {
                   </option>
                 ))}
             </select>
-            {allProducts.length === 0 && (
-              <p className="text-xs text-red-600 mt-1">
-                ⚠️ No products found. Check API connection or refresh.
-              </p>
-            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -513,6 +615,9 @@ const WarehouseProducts = () => {
           <h3 className="text-lg font-semibold text-gray-900">
             📦 Warehouse Inventory ({products.length} products)
           </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Expand products to manage stock for individual variants.
+          </p>
         </div>
 
         {products.length === 0 ? (
@@ -537,7 +642,7 @@ const WarehouseProducts = () => {
                     Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Current Stock
+                    Total Stock
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status

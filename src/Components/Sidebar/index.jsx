@@ -376,12 +376,7 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/warehouse-management",
           description: "Manage warehouses, products, and stock inventory",
         },
-        {
-          title: "Stock Management",
-          icon: <FaBoxOpen />,
-          path: "/stock-management",
-          description: "Manage inventory levels across warehouses",
-        },
+
         {
           title: "Scheduling Management",
           icon: <FaClock />,

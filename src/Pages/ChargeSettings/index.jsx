@@ -12,14 +12,18 @@ import {
     NumberInput,
     Stack,
     Group,
+    Modal,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 import {
     FaRupeeSign,
     FaHandHoldingUsd,
     FaBolt,
     FaLayerGroup,
     FaSave,
+    FaEdit,
 } from "react-icons/fa";
 import {
     getChargeSettings,
@@ -34,6 +38,7 @@ const ChargeSettings = () => {
     });
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [opened, { open, close }] = useDisclosure(false);
 
     // Fetch settings on component mount
     useEffect(() => {
@@ -58,6 +63,21 @@ const ChargeSettings = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleConfirmEdit = () => {
+        modals.openConfirmModal({
+            title: "Confirm Edit",
+            children: (
+                <Text size="sm">
+                    Are you sure you want to edit the charge settings? These changes will
+                    affect all new orders immediately.
+                </Text>
+            ),
+            labels: { confirm: "Edit", cancel: "Cancel" },
+            confirmProps: { color: "blue" },
+            onConfirm: open,
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -99,6 +119,7 @@ const ChargeSettings = () => {
                 message: "Charge settings updated successfully",
                 color: "green",
             });
+            close();
             fetchSettings();
         } catch (error) {
             notifications.show({
@@ -159,12 +180,21 @@ const ChargeSettings = () => {
     return (
         <Container size="xl" py="xl">
             <Paper shadow="xs" p="md" mb="xl">
-                <div>
-                    <Title order={2}>Charge Settings</Title>
-                    <Text size="sm" color="dimmed" mt="xs">
-                        Configure global charges applied to orders
-                    </Text>
-                </div>
+                <Group justify="space-between" mb="md">
+                    <div>
+                        <Title order={2}>Charge Settings</Title>
+                        <Text size="sm" color="dimmed" mt="xs">
+                            Configure global charges applied to orders
+                        </Text>
+                    </div>
+                    <Button
+                        leftSection={<FaEdit />}
+                        onClick={handleConfirmEdit}
+                        color="blue"
+                    >
+                        Edit Settings
+                    </Button>
+                </Group>
 
                 {/* Info Alert */}
                 <Alert color="blue" mb="xl" mt="md" title="About These Charges">
@@ -202,67 +232,71 @@ const ChargeSettings = () => {
                         />
                     </Grid.Col>
                 </Grid>
-
-                {/* Settings Form */}
-                <Paper shadow="xs" p="md" withBorder>
-                    <Title order={4} mb="md">
-                        Update Charges
-                    </Title>
-                    <form onSubmit={handleSubmit}>
-                        <Stack gap="md">
-                            <NumberInput
-                                label="Handling Charge (₹)"
-                                placeholder="Enter handling charge"
-                                required
-                                min={0}
-                                value={settings.handling_charge}
-                                onChange={(value) =>
-                                    setSettings({ ...settings, handling_charge: value || 0 })
-                                }
-                                leftSection={<FaRupeeSign />}
-                                description="Fee charged for order processing and handling"
-                            />
-
-                            <NumberInput
-                                label="Surge Charge (₹)"
-                                placeholder="Enter surge charge"
-                                required
-                                min={0}
-                                value={settings.surge_charge}
-                                onChange={(value) =>
-                                    setSettings({ ...settings, surge_charge: value || 0 })
-                                }
-                                leftSection={<FaRupeeSign />}
-                                description="Additional fee during peak demand periods"
-                            />
-
-                            <NumberInput
-                                label="Platform Charge (₹)"
-                                placeholder="Enter platform charge"
-                                required
-                                min={0}
-                                value={settings.platform_charge}
-                                onChange={(value) =>
-                                    setSettings({ ...settings, platform_charge: value || 0 })
-                                }
-                                leftSection={<FaRupeeSign />}
-                                description="Platform usage and service fee"
-                            />
-
-                            <Group justify="flex-end" mt="md">
-                                <Button
-                                    type="submit"
-                                    loading={submitting}
-                                    leftSection={<FaSave />}
-                                    size="md"
-                                >
-                                    Save Settings
-                                </Button>
-                            </Group>
-                        </Stack>
-                    </form>
-                </Paper>
             </Paper>
+
+            {/* Edit Modal */}
+            <Modal
+                opened={opened}
+                onClose={close}
+                title="Update Charge Settings"
+                size="md"
+            >
+                <form onSubmit={handleSubmit}>
+                    <Stack gap="md">
+                        <NumberInput
+                            label="Handling Charge (₹)"
+                            placeholder="Enter handling charge"
+                            required
+                            min={0}
+                            value={settings.handling_charge}
+                            onChange={(value) =>
+                                setSettings({ ...settings, handling_charge: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                            description="Fee charged for order processing and handling"
+                        />
+
+                        <NumberInput
+                            label="Surge Charge (₹)"
+                            placeholder="Enter surge charge"
+                            required
+                            min={0}
+                            value={settings.surge_charge}
+                            onChange={(value) =>
+                                setSettings({ ...settings, surge_charge: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                            description="Additional fee during peak demand periods"
+                        />
+
+                        <NumberInput
+                            label="Platform Charge (₹)"
+                            placeholder="Enter platform charge"
+                            required
+                            min={0}
+                            value={settings.platform_charge}
+                            onChange={(value) =>
+                                setSettings({ ...settings, platform_charge: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                            description="Platform usage and service fee"
+                        />
+
+                        <Group justify="flex-end" mt="md">
+                            <Button variant="subtle" onClick={close} disabled={submitting}>
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                loading={submitting}
+                                leftSection={<FaSave />}
+                            >
+                                Save Changes
+                            </Button>
+                        </Group>
+                    </Stack>
+                </form>
+            </Modal>
         </Container>
     );
 };

@@ -73,12 +73,12 @@ const ZoneDetailsModal = ({ opened, onClose, zone }) => {
   console.log('Available pincodes:', pincodes); // Debug log
   const filteredPincodes = pincodes.filter(
     (pincode) =>
-      pincode.pincode.includes(pincodeSearch) ||
-      pincode.city?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
-      pincode.state?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
-      pincode.district?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
-      pincode.location_name?.toLowerCase().includes(pincodeSearch.toLowerCase()) ||
-      pincode.village?.toLowerCase().includes(pincodeSearch.toLowerCase())
+      String(pincode.pincode || "").includes(pincodeSearch) ||
+      (pincode.city || "").toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      (pincode.state || "").toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      (pincode.district || "").toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      (pincode.location_name || "").toLowerCase().includes(pincodeSearch.toLowerCase()) ||
+      (pincode.village || "").toLowerCase().includes(pincodeSearch.toLowerCase())
   );
 
   // Paginate pincodes

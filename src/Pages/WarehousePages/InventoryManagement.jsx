@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import PropTypes from "prop-types";
 import {
   Card,
   Button,
@@ -29,6 +30,9 @@ import {
   AlertTriangle,
   TrendingUp,
   Package,
+  Search,
+  Download,
+  Truck,
 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
@@ -47,6 +51,7 @@ const InventoryManagement = () => {
   const [showStockModal, setShowStockModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingStock, setEditingStock] = useState(null);
 
   // Form states
@@ -56,6 +61,15 @@ const InventoryManagement = () => {
     stock_quantity: "",
     minimum_threshold: "",
     cost_per_unit: "",
+  });
+
+  const [transferForm, setTransferForm] = useState({
+    product_id: "",
+    variant_id: "",
+    from_warehouse_id: "",
+    to_warehouse_id: "",
+    quantity: "",
+    reason: "",
   });
 
   const [showMultiWarehouseModal, setShowMultiWarehouseModal] = useState(false);
@@ -104,6 +118,8 @@ const InventoryManagement = () => {
   const [csvFile, setCsvFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const [movements, setMovements] = useState([]);
+
   // Fetch warehouses
   useEffect(() => {
     fetchWarehouses();
@@ -119,6 +135,7 @@ const InventoryManagement = () => {
           fetchInventory(),
           fetchAnalytics(),
           fetchLowStockItems(),
+          fetchMovements(),
         ]);
       } catch (error) {
         console.error("Error fetching warehouse data:", error);
@@ -180,6 +197,17 @@ const InventoryManagement = () => {
     }
   };
 
+  const fetchMovements = async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/movements`
+      );
+      setMovements(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching movements:", error);
+    }
+  };
+
   const handleUpdateStock = async (e) => {
     e.preventDefault();
 
@@ -211,6 +239,51 @@ const InventoryManagement = () => {
     } catch (error) {
       console.error("Error updating stock:", error);
       alert("Failed to update stock");
+    }
+  };
+
+
+  const handleStockTransfer = async (e) => {
+    e.preventDefault();
+
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.post(
+        `${API_BASE_URL}/stock/transfer`,
+        {
+          product_id: transferForm.product_id,
+          variant_id: transferForm.variant_id || null,
+          from_warehouse_id: transferForm.from_warehouse_id,
+          to_warehouse_id: transferForm.to_warehouse_id,
+          quantity: parseInt(transferForm.quantity),
+          reason: transferForm.reason,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setShowTransferModal(false);
+      setTransferForm({
+        product_id: "",
+        variant_id: "",
+        from_warehouse_id: "",
+        to_warehouse_id: "",
+        quantity: "",
+        reason: "",
+      });
+
+      alert("Stock transferred successfully");
+
+      // Refresh data
+      await Promise.all([
+        fetchInventory(),
+        fetchAnalytics(),
+        fetchMovements()
+      ]);
+    } catch (error) {
+      console.error("Error transferring stock:", error);
+      alert(error.response?.data?.message || "Failed to transfer stock");
     }
   };
 
@@ -343,14 +416,14 @@ const InventoryManagement = () => {
           </h1>
           <Group>
             <Button
-              leftIcon={<Upload size={16} />}
+              leftSection={<Upload size={16} />}
               onClick={() => setShowBulkUploadModal(true)}
               variant="light"
             >
               Bulk Upload
             </Button>
             <Button
-              leftIcon={<TrendingUp size={16} />}
+              leftSection={<TrendingUp size={16} />}
               onClick={() => setShowMultiWarehouseModal(true)}
               variant="light"
               color="violet"
@@ -358,10 +431,17 @@ const InventoryManagement = () => {
               Multi-Warehouse Stock
             </Button>
             <Button
-              leftIcon={<Plus size={16} />}
+              leftSection={<Plus size={16} />}
               onClick={() => setShowStockModal(true)}
             >
               Add Stock
+            </Button>
+            <Button
+              color="orange"
+              leftSection={<TrendingUp size={16} />}
+              onClick={() => setShowTransferModal(true)}
+            >
+              Transfer Stock
             </Button>
           </Group>
         </div>
@@ -463,13 +543,14 @@ const InventoryManagement = () => {
           )}
 
           {/* Tabs */}
-          <Tabs value={activeTab} onTabChange={setActiveTab}>
+          <Tabs value={activeTab} onChange={setActiveTab}>
             <Tabs.List>
               <Tabs.Tab value="overview">Inventory Overview</Tabs.Tab>
               <Tabs.Tab value="lowstock">Low Stock Items</Tabs.Tab>
               <Tabs.Tab value="allocation">
                 Allocate to Zonal
               </Tabs.Tab>
+              <Tabs.Tab value="movements">Stock Movements</Tabs.Tab>
             </Tabs.List>
 
             {/* Inventory Overview Tab */}
@@ -637,53 +718,140 @@ const InventoryManagement = () => {
               <Card withBorder radius="md">
                 <Card.Section inheritPadding py="md">
                   <Text weight={500} mb="md">
-                    Allocate Stock from {warehouse.type === "division" ? "Division" : "Zonal"} to Zonal
+                    Allocate Stock from {warehouse?.type === "division" ? "Division" : "Zonal"} to Zonal
                     Warehouses
                   </Text>
                   <Stack>
-                    <TextInput
-                      label="Product ID"
-                      placeholder="Select product"
+                    {/* Product Selection */}
+                    <Select
+                      label="Select Product"
+                      placeholder="Choose a product to allocate"
                       value={allocationForm.product_id}
-                      onChange={(e) =>
+                      onChange={(value) => {
+                        const selectedProduct = inventory.find(item => item.product_id === value);
                         setAllocationForm({
                           ...allocationForm,
-                          product_id: e.currentTarget.value,
-                        })
-                      }
+                          product_id: value,
+                          variant_id: selectedProduct?.variant_id || "",
+                        });
+                      }}
+                      data={(() => {
+                        // Create unique product list by grouping variants
+                        const uniqueProducts = new Map();
+                        inventory.forEach(item => {
+                          if (!uniqueProducts.has(item.product_id)) {
+                            uniqueProducts.set(item.product_id, {
+                              value: item.product_id,
+                              label: `${item.product_name} (Total Stock: ${inventory
+                                  .filter(i => i.product_id === item.product_id)
+                                  .reduce((sum, i) => sum + (i.stock_quantity || 0), 0)
+                                })`,
+                            });
+                          }
+                        });
+                        return Array.from(uniqueProducts.values());
+                      })()}
+                      searchable
+                      required
                     />
 
+                    {/* Variant Selection - show if product has multiple variants */}
+                    {allocationForm.product_id && (() => {
+                      const productVariants = inventory.filter(item => item.product_id === allocationForm.product_id);
+                      if (productVariants.length > 1) {
+                        return (
+                          <Select
+                            label="Select Variant"
+                            placeholder="Choose a variant"
+                            value={allocationForm.variant_id}
+                            onChange={(value) => {
+                              setAllocationForm({
+                                ...allocationForm,
+                                variant_id: value,
+                              });
+                            }}
+                            data={productVariants.map(item => ({
+                              value: item.variant_id || item.product_id,
+                              label: `${item.variant_name || 'Default'} (Stock: ${item.stock_quantity || 0})`,
+                            }))}
+                            searchable
+                            required
+                          />
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Show current stock for selected product/variant */}
+                    {allocationForm.product_id && (() => {
+                      const selectedItem = allocationForm.variant_id
+                        ? inventory.find(item => item.product_id === allocationForm.product_id && item.variant_id === allocationForm.variant_id)
+                        : inventory.find(item => item.product_id === allocationForm.product_id);
+                      return selectedItem ? (
+                        <Alert icon={<Package size={16} />} color="blue" variant="light">
+                          <Text size="sm">
+                            <strong>Current Stock:</strong> {selectedItem.stock_quantity || 0} units
+                            {selectedItem.variant_name && ` (${selectedItem.variant_name})`}
+                          </Text>
+                        </Alert>
+                      ) : null;
+                    })()}
+
+                    {/* Zonal Warehouse Allocations */}
+                    <Text size="sm" weight={500} mt="md">Allocate to Zonal Warehouses:</Text>
                     {allocationForm.zonal_allocations.map((allocation, index) => (
-                      <Group key={index} grow>
-                        <TextInput
-                          label="Zonal Warehouse ID"
-                          value={allocation.zonal_warehouse_id}
-                          onChange={(e) => {
-                            const newAllocations = [
-                              ...allocationForm.zonal_allocations,
-                            ];
-                            newAllocations[index].zonal_warehouse_id =
-                              e.currentTarget.value;
+                      <Group key={index} grow align="flex-end">
+                        <Select
+                          label={`Zonal Warehouse ${index + 1}`}
+                          placeholder="Select zonal warehouse"
+                          value={allocation.zonal_warehouse_id?.toString()}
+                          onChange={(value) => {
+                            const newAllocations = [...allocationForm.zonal_allocations];
+                            newAllocations[index].zonal_warehouse_id = parseInt(value);
                             setAllocationForm({
                               ...allocationForm,
                               zonal_allocations: newAllocations,
                             });
                           }}
+                          data={warehouses
+                            .filter(w => w.type === "zonal")
+                            .map(w => ({
+                              value: w.id.toString(),
+                              label: `${w.name} ${w.pincode ? `(${w.pincode})` : ''}`,
+                            }))}
+                          searchable
+                          required
                         />
                         <NumberInput
                           label="Quantity"
+                          placeholder="Enter quantity"
                           value={allocation.quantity}
                           onChange={(val) => {
-                            const newAllocations = [
-                              ...allocationForm.zonal_allocations,
-                            ];
+                            const newAllocations = [...allocationForm.zonal_allocations];
                             newAllocations[index].quantity = val;
                             setAllocationForm({
                               ...allocationForm,
                               zonal_allocations: newAllocations,
                             });
                           }}
+                          min={1}
+                          required
                         />
+                        {allocationForm.zonal_allocations.length > 1 && (
+                          <Button
+                            color="red"
+                            variant="light"
+                            onClick={() => {
+                              const newAllocations = allocationForm.zonal_allocations.filter((_, i) => i !== index);
+                              setAllocationForm({
+                                ...allocationForm,
+                                zonal_allocations: newAllocations,
+                              });
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        )}
                       </Group>
                     ))}
 
@@ -698,14 +866,69 @@ const InventoryManagement = () => {
                         })
                       }
                       variant="light"
+                      leftIcon={<Plus size={16} />}
                     >
-                      Add Allocation
+                      Add Another Warehouse
                     </Button>
 
-                    <Button onClick={handleAllocateToZonal}>
-                      Allocate Stock
-                    </Button>
+                    <Group position="right" mt="md">
+                      <Button
+                        onClick={handleAllocateToZonal}
+                        disabled={!allocationForm.product_id || allocationForm.zonal_allocations.some(a => !a.zonal_warehouse_id || !a.quantity)}
+                        leftIcon={<Truck size={16} />}
+                      >
+                        Allocate Stock
+                      </Button>
+                    </Group>
                   </Stack>
+                </Card.Section>
+              </Card>
+            </Tabs.Panel>
+
+            {/* Movements Tab */}
+            <Tabs.Panel value="movements" pt="xl">
+              <Card withBorder radius="md">
+                <Card.Section inheritPadding py="md">
+                  {movements.length === 0 ? (
+                    <Text color="dimmed">No stock movements found</Text>
+                  ) : (
+                    <Table striped highlightOnHover>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Product</th>
+                          <th>Type</th>
+                          <th>Quantity</th>
+                          <th>Reason</th>
+                          <th>User</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {movements.map((m) => (
+                          <tr key={m.id}>
+                            <td>{new Date(m.created_at).toLocaleString()}</td>
+                            <td>{m.product_name}</td>
+                            <td>
+                              <Badge
+                                color={
+                                  m.movement_type === "add"
+                                    ? "green"
+                                    : m.movement_type === "remove"
+                                      ? "red"
+                                      : "blue"
+                                }
+                              >
+                                {m.movement_type}
+                              </Badge>
+                            </td>
+                            <td>{m.quantity}</td>
+                            <td>{m.reason || "-"}</td>
+                            <td>{m.performed_by || "System"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
                 </Card.Section>
               </Card>
             </Tabs.Panel>
@@ -788,6 +1011,77 @@ const InventoryManagement = () => {
         </Stack>
       </Modal>
 
+      <Modal
+        opened={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        title="Transfer Stock"
+        size="lg"
+      >
+        <form onSubmit={handleStockTransfer}>
+          <Stack>
+            <TextInput
+              label="Product ID"
+              placeholder="Enter Product ID"
+              required
+              value={transferForm.product_id}
+              onChange={(e) =>
+                setTransferForm({ ...transferForm, product_id: e.currentTarget.value })
+              }
+            />
+            <TextInput
+              label="Variant ID (Optional)"
+              placeholder="Enter Variant ID"
+              value={transferForm.variant_id}
+              onChange={(e) =>
+                setTransferForm({ ...transferForm, variant_id: e.currentTarget.value })
+              }
+            />
+            <Select
+              label="From Warehouse"
+              placeholder="Select Source Warehouse"
+              data={warehouses.map((w) => ({
+                value: w.id.toString(),
+                label: `${w.name} (${w.type})`,
+              }))}
+              required
+              value={transferForm.from_warehouse_id}
+              onChange={(val) => setTransferForm({ ...transferForm, from_warehouse_id: val })}
+            />
+            <Select
+              label="To Warehouse"
+              placeholder="Select Destination Warehouse"
+              data={warehouses.map((w) => ({
+                value: w.id.toString(),
+                label: `${w.name} (${w.type})`,
+              }))}
+              required
+              value={transferForm.to_warehouse_id}
+              onChange={(val) => setTransferForm({ ...transferForm, to_warehouse_id: val })}
+            />
+            <NumberInput
+              label="Quantity"
+              placeholder="Enter Quantity"
+              required
+              min={1}
+              value={transferForm.quantity}
+              onChange={(val) => setTransferForm({ ...transferForm, quantity: val })}
+            />
+            <TextInput
+              label="Reason"
+              placeholder="Reason for transfer"
+              required
+              value={transferForm.reason}
+              onChange={(e) =>
+                setTransferForm({ ...transferForm, reason: e.currentTarget.value })
+              }
+            />
+            <Button type="submit" mt="md">
+              Transfer Stock
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
       {/* Stock Modal */}
       <Modal
         opened={showStockModal}
@@ -812,14 +1106,13 @@ const InventoryManagement = () => {
               required
             />
 
-            <TextInput
-              label="Variant ID (Optional)"
-              placeholder="Enter variant ID"
+            <VariantSelector
+              productId={stockForm.product_id}
               value={stockForm.variant_id}
-              onChange={(e) =>
+              onChange={(val) =>
                 setStockForm({
                   ...stockForm,
-                  variant_id: e.currentTarget.value,
+                  variant_id: val,
                 })
               }
             />
@@ -912,3 +1205,66 @@ const InventoryManagement = () => {
 };
 
 export default InventoryManagement;
+
+// Helper component for Variant Selection
+const VariantSelector = ({ productId, value, onChange }) => {
+  const [variants, setVariants] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!productId) {
+      setVariants([]);
+      return;
+    }
+
+    const fetchVariants = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`${API_BASE_URL}/products/${productId}`);
+        const product = response.data.product || response.data;
+        if (product.has_variants && product.variants?.length > 0) {
+          setVariants(product.variants);
+        } else {
+          setVariants([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch variants:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVariants();
+  }, [productId]);
+
+  if (loading) return <div className="text-sm text-gray-500">Loading variants...</div>;
+  if (variants.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Variant
+      </label>
+      <select
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">Select Variant</option>
+        {variants.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.active === false ? "[Inactive] " : ""}
+            {v.title || v.size || v.color || v.weight || v.sku || `Variant ${v.id.substring(0, 6)}`}
+            {v.price ? ` - ₹${v.price}` : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+VariantSelector.propTypes = {
+  productId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  value: PropTypes.string,
+  onChange: PropTypes.func.isRequired,
+};

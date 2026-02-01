@@ -53,7 +53,6 @@ import StorageDetailsPage from "./Pages/Storage";
 import BusinessUsersList from "./Pages/BusinessWork/BusinessData.jsx";
 import EnhancedStoragePage from "./Pages/Storage/enhanced";
 import WarehouseManagement from "./Pages/WarehousePages/WarehouseManagement.jsx";
-import StockManagement from "./Pages/WarehousePages/StockManagement.jsx";
 import WarehouseProducts from "./Pages/WarehousePages/WarehouseProducts.jsx";
 import InventoryManagement from "./Pages/WarehousePages/InventoryManagement.jsx";
 import PincodeManagement from "./Pages/WarehousePages/PincodeManagement.jsx";
@@ -130,15 +129,14 @@ const MainLayout = () => {
 
   return (
     <div className="flex h-screen mantine-bg">
-      <Sidebar 
-        isOpen={sidebarOpen || sidebarHovered} 
+      <Sidebar
+        isOpen={sidebarOpen || sidebarHovered}
         onMouseEnter={() => handleSidebarHover(true)}
         onMouseLeave={() => handleSidebarHover(false)}
       />
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
+          }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
@@ -362,7 +360,7 @@ function App() {
         },
         {
           path: "/stock-management",
-          element: <StockManagement />,
+          element: <Navigate to="/warehouses/inventory" replace />,
         },
         {
           path: "/warehouseproducts/:id/products",

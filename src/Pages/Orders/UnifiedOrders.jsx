@@ -270,6 +270,13 @@ const UnifiedOrders = () => {
                                                             minute: '2-digit'
                                                         })}
                                                     </p>
+                                                    {order.estimated_delivery && (
+                                                        <p className="text-xs text-green-600 mt-1 font-medium">
+                                                            Est: {new Date(order.estimated_delivery).toLocaleDateString('en-IN', {
+                                                                day: 'numeric', month: 'short'
+                                                            })}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -278,6 +285,16 @@ const UnifiedOrders = () => {
                                                     <p className="text-sm text-gray-600">Customer</p>
                                                     <p className="font-semibold">{order.user_name || order.users?.name || 'N/A'}</p>
                                                     <p className="text-sm text-gray-600">{order.user_email || order.users?.email || 'N/A'}</p>
+                                                    {order.company_name && (
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            <span className="font-semibold">Co:</span> {order.company_name}
+                                                        </p>
+                                                    )}
+                                                    {order.gst_number && (
+                                                        <p className="text-xs text-gray-500">
+                                                            <span className="font-semibold">GST:</span> {order.gst_number}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-gray-600">Total Amount</p>
@@ -285,13 +302,23 @@ const UnifiedOrders = () => {
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-gray-600 mb-1">Payment & Status</p>
-                                                    <div className="flex flex-wrap gap-2">
+                                                    <div className="flex flex-wrap gap-2 mb-2">
                                                         {getPaymentMethodBadge(order.payment_method)}
                                                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                                                             {order.status || 'Pending'}
                                                         </span>
                                                         {getBulkOrderBadge(order)}
                                                     </div>
+                                                    {(order.razorpay_payment_id || order.razorpay_order_id) && (
+                                                        <p className="text-xs text-gray-500">
+                                                            <span className="font-semibold">Ref:</span> {order.razorpay_payment_id || order.razorpay_order_id}
+                                                        </p>
+                                                    )}
+                                                    {order.tracking_number && (
+                                                        <p className="text-xs text-blue-600 mt-1">
+                                                            <FaTruck className="inline mr-1" /> {order.tracking_number}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -300,11 +327,38 @@ const UnifiedOrders = () => {
                                                 <div className="mt-3 text-sm text-gray-700 bg-gray-50 p-3 rounded border">
                                                     <p className="font-semibold mb-1">📦 Delivery Address</p>
                                                     <p>{order.address}</p>
+                                                    {order.pincode && (
+                                                        <p className="text-xs text-gray-500 mt-1 font-semibold">Pincode: {order.pincode}</p>
+                                                    )}
                                                     {order.shipping_gps_address && (
                                                         <p className="text-xs text-gray-500 mt-1">GPS: {order.shipping_gps_address}</p>
                                                     )}
                                                 </div>
                                             )}
+
+                                            {/* Charge Breakdown */}
+                                            <div className="mt-3 grid grid-cols-3 md:grid-cols-5 gap-2 text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                                                <div className="text-center">
+                                                    <p className="text-gray-500">Subtotal</p>
+                                                    <p className="font-semibold">₹{parseFloat(order.subtotal || 0).toFixed(0)}</p>
+                                                </div>
+                                                <div className="text-center border-l border-gray-200">
+                                                    <p className="text-gray-500">Shipping</p>
+                                                    <p className="font-semibold">₹{parseFloat(order.shipping || 0).toFixed(0)}</p>
+                                                </div>
+                                                <div className="text-center border-l border-gray-200">
+                                                    <p className="text-gray-500">Handling</p>
+                                                    <p className="font-semibold">₹{parseFloat(order.handling_charge || 0).toFixed(0)}</p>
+                                                </div>
+                                                <div className="text-center border-l border-gray-200">
+                                                    <p className="text-gray-500">Surge</p>
+                                                    <p className="font-semibold">₹{parseFloat(order.surge_charge || 0).toFixed(0)}</p>
+                                                </div>
+                                                <div className="text-center border-l border-gray-200">
+                                                    <p className="text-gray-500">Platform</p>
+                                                    <p className="font-semibold">₹{parseFloat(order.platform_charge || 0).toFixed(0)}</p>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <div className="flex flex-col gap-2 ml-4">

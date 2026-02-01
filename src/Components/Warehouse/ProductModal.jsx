@@ -174,21 +174,11 @@ const ProductModal = ({
         return;
       }
 
-      // Check if we already have variants in availableProducts
-      const currentProduct = data.availableProducts?.find(p => p.id === data.selectedProductId);
-      if (currentProduct?.variants && currentProduct.variants.length > 0) {
-        setProductVariants(currentProduct.variants);
-        const initialConfig = {};
-        currentProduct.variants.forEach(variant => {
-          initialConfig[variant.id] = {
-            enabled: true,
-            stock_quantity: variant.stock_qty || 0
-          };
-        });
-        setVariantStockConfig(initialConfig);
-        return;
-      }
+      // NOTE: We used to check currentProduct.variants here, but getAllProducts often returns
+      // only IsDefault variants or a subset. To ensure we see ALL variants (including inactive ones if needed),
+      // or simply the full list, we MUST fetch from the dedicated variants endpoint.
 
+      // Force fetch variants to ensure we have the complete list
       setLoadingVariants(true);
       try {
         const response = await axios.get(
