@@ -188,7 +188,7 @@ const ProductVariantsManager = ({ product }) => {
     <div className="space-y-4">
       <div className="flex items-center gap-3 mb-4">
         <img
-          src={product.image || '/prod1.png'}
+          src={product.image || ''}
           alt={product.name}
           className="w-16 h-16 object-contain rounded border"
         />
@@ -352,8 +352,8 @@ const ProductVariantsManager = ({ product }) => {
                 <button
                   onClick={() => handleSetDefault(variant.id)}
                   className={`px-3 py-1 text-xs rounded ${variant.is_default
-                      ? 'bg-blue-500 text-white cursor-default'
-                      : 'bg-gray-200 text-gray-700 hover:bg-blue-100'
+                    ? 'bg-blue-500 text-white cursor-default'
+                    : 'bg-gray-200 text-gray-700 hover:bg-blue-100'
                     }`}
                   disabled={variant.is_default}
                 >
