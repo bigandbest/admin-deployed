@@ -49,6 +49,7 @@ const DeliveryCharges = () => {
     const [formData, setFormData] = useState({
         min_order_value: 0,
         delivery_charge: 0,
+        discount: 0,
         description: "",
         is_active: true,
     });
@@ -81,6 +82,7 @@ const DeliveryCharges = () => {
             setFormData({
                 min_order_value: milestone.min_order_value,
                 delivery_charge: milestone.delivery_charge,
+                discount: milestone.discount || 0,
                 description: milestone.description || "",
                 is_active: milestone.is_active,
             });
@@ -89,6 +91,7 @@ const DeliveryCharges = () => {
             setFormData({
                 min_order_value: 0,
                 delivery_charge: 0,
+                discount: 0,
                 description: "",
                 is_active: true,
             });
@@ -313,6 +316,7 @@ const DeliveryCharges = () => {
                             <Table.Tr>
                                 <Table.Th>Min Order Value</Table.Th>
                                 <Table.Th>Delivery Charge</Table.Th>
+                                <Table.Th>Discount</Table.Th>
                                 <Table.Th>Description</Table.Th>
                                 <Table.Th>Status</Table.Th>
                                 <Table.Th>Actions</Table.Th>
@@ -335,6 +339,12 @@ const DeliveryCharges = () => {
                                                     ? "Free"
                                                     : milestone.delivery_charge}
                                             </Text>
+                                        </Group>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Group gap="xs">
+                                            <FaRupeeSign size={12} />
+                                            <Text weight={500}>{milestone.discount || 0}</Text>
                                         </Group>
                                     </Table.Td>
                                     <Table.Td>
@@ -419,6 +429,17 @@ const DeliveryCharges = () => {
                             value={formData.delivery_charge}
                             onChange={(value) =>
                                 setFormData({ ...formData, delivery_charge: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                        />
+
+                        <NumberInput
+                            label="Discount (₹)"
+                            placeholder="Enter discount amount"
+                            min={0}
+                            value={formData.discount}
+                            onChange={(value) =>
+                                setFormData({ ...formData, discount: value || 0 })
                             }
                             leftSection={<FaRupeeSign />}
                         />
