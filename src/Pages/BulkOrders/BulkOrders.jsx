@@ -38,7 +38,7 @@ const BulkOrders = () => {
         `)
         .eq('active', true)
         .order('created_at', { ascending: false });
-      
+
       if (productsError) {
         console.error('Products fetch error:', productsError);
         throw productsError;
@@ -48,17 +48,17 @@ const BulkOrders = () => {
       const { data: bulkData, error: bulkError } = await supabase
         .from('bulk_product_settings')
         .select('*');
-      
+
       if (bulkError) {
         console.error('Bulk settings fetch error:', bulkError);
       }
-      
+
       const productsWithBulkSettings = (productsData || []).map(product => ({
         ...product,
         bulk_product_settings: (bulkData || []).filter(setting => setting.product_id === product.id),
         hasVariants: product.product_variants?.length > 0
       }));
-      
+
       console.log('Fetched products with bulk settings:', productsWithBulkSettings);
       setProducts(productsWithBulkSettings);
     } catch (error) {
@@ -73,14 +73,14 @@ const BulkOrders = () => {
     setSelectedProduct(product);
     setSelectedVariant(variant);
     setActiveTab(variant ? variant.id : 'main');
-    
+
     // Load existing bulk settings for product or variant
-    const existingSettings = variant 
+    const existingSettings = variant
       ? product.bulk_product_settings?.find(s => s.variant_id === variant.id)
       : product.bulk_product_settings?.find(s => !s.variant_id);
-    
+
     const basePrice = variant ? variant.variant_price : product.price;
-    
+
     setBulkSettings({
       min_quantity: existingSettings?.min_quantity || 50,
       max_quantity: existingSettings?.max_quantity || null,
@@ -100,7 +100,7 @@ const BulkOrders = () => {
   };
 
   const getBulkSettingsForItem = (product, variant = null) => {
-    return variant 
+    return variant
       ? product.bulk_product_settings?.find(s => s.variant_id === variant.id)
       : product.bulk_product_settings?.find(s => !s.variant_id);
   };
@@ -117,13 +117,13 @@ const BulkOrders = () => {
         .from('bulk_product_settings')
         .select('id')
         .eq('product_id', selectedProduct.id);
-      
+
       if (selectedVariant) {
         existingQuery = existingQuery.eq('variant_id', selectedVariant.id);
       } else {
         existingQuery = existingQuery.is('variant_id', null);
       }
-      
+
       const { data: existing } = await existingQuery.single();
 
       const settingsData = {
@@ -162,7 +162,7 @@ const BulkOrders = () => {
 
       const itemType = selectedVariant ? `variant (${selectedVariant.variant_weight} ${selectedVariant.variant_unit})` : 'product';
       alert(`Bulk settings saved successfully for ${itemType}!`);
-      
+
       setSelectedProduct(null);
       setSelectedVariant(null);
       fetchProducts();
@@ -202,27 +202,27 @@ const BulkOrders = () => {
           Total Products: {products.length}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => {
           const mainBulkSettings = getBulkSettingsForItem(product);
-          const variantBulkCount = product.product_variants?.filter(v => 
+          const variantBulkCount = product.product_variants?.filter(v =>
             getBulkSettingsForItem(product, v)
           ).length || 0;
-          
+
           return (
             <div key={product.id} className="bg-white rounded-lg shadow-md p-4 border">
-              <img 
-                src={product.image || '/placeholder.png'} 
+              <img
+                src={product.image || ''}
                 alt={product.name}
                 className="w-full h-48 object-cover rounded-lg mb-4"
                 onError={(e) => {
-                  e.currentTarget.src = '/placeholder.png';
+                  e.currentTarget.src = '';
                 }}
               />
               <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
               <p className="text-gray-600 mb-2">₹{product.price}</p>
-              
+
               {/* Variants Info */}
               {product.hasVariants && (
                 <div className="mb-3">
@@ -231,15 +231,14 @@ const BulkOrders = () => {
                   </span>
                 </div>
               )}
-              
+
               {/* Bulk Status Display */}
               <div className="space-y-2 mb-4">
                 {/* Main Product Bulk Status */}
-                <div className={`border rounded p-2 ${
-                  mainBulkSettings?.is_bulk_enabled 
-                    ? 'bg-green-50 border-green-200' 
+                <div className={`border rounded p-2 ${mainBulkSettings?.is_bulk_enabled
+                    ? 'bg-green-50 border-green-200'
                     : 'bg-gray-50 border-gray-200'
-                }`}>
+                  }`}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Main Product</span>
                     {mainBulkSettings?.is_bulk_enabled ? (
@@ -254,18 +253,17 @@ const BulkOrders = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Variants Bulk Status */}
                 {product.hasVariants && (
-                  <div className={`border rounded p-2 ${
-                    variantBulkCount > 0 
-                      ? 'bg-purple-50 border-purple-200' 
+                  <div className={`border rounded p-2 ${variantBulkCount > 0
+                      ? 'bg-purple-50 border-purple-200'
                       : 'bg-gray-50 border-gray-200'
-                  }`}>
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Variants</span>
                       <span className="text-xs font-medium">
-                        {variantBulkCount > 0 
+                        {variantBulkCount > 0
                           ? `✅ ${variantBulkCount}/${product.product_variants?.length} Enabled`
                           : '⚪ No Bulk'
                         }
@@ -274,28 +272,26 @@ const BulkOrders = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Action Buttons */}
               <div className="space-y-2">
                 <button
                   onClick={() => openBulkModal(product)}
-                  className={`w-full py-2 px-4 rounded text-sm font-medium ${
-                    mainBulkSettings?.is_bulk_enabled
+                  className={`w-full py-2 px-4 rounded text-sm font-medium ${mainBulkSettings?.is_bulk_enabled
                       ? 'bg-green-500 hover:bg-green-600 text-white'
                       : 'bg-blue-500 hover:bg-blue-600 text-white'
-                  }`}
+                    }`}
                 >
                   {mainBulkSettings?.is_bulk_enabled ? 'Edit Main Bulk' : 'Setup Main Bulk'}
                 </button>
-                
+
                 {product.hasVariants && (
                   <button
                     onClick={() => openBulkModal(product, product.product_variants[0])}
-                    className={`w-full py-2 px-4 rounded text-sm font-medium ${
-                      variantBulkCount > 0
+                    className={`w-full py-2 px-4 rounded text-sm font-medium ${variantBulkCount > 0
                         ? 'bg-purple-500 hover:bg-purple-600 text-white'
                         : 'bg-gray-500 hover:bg-gray-600 text-white'
-                    }`}
+                      }`}
                   >
                     {variantBulkCount > 0 ? 'Manage Variant Bulk' : 'Setup Variant Bulk'}
                   </button>
@@ -307,7 +303,7 @@ const BulkOrders = () => {
       </div>
 
       {selectedProduct && (
-        <div 
+        <div
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{
             backdropFilter: 'blur(10px)',
@@ -324,7 +320,7 @@ const BulkOrders = () => {
                 </span>
               )}
             </h2>
-            
+
             {/* Variant Tabs */}
             {selectedProduct.hasVariants && (
               <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded-lg">
@@ -340,11 +336,10 @@ const BulkOrders = () => {
                       is_bulk_enabled: mainSettings?.is_bulk_enabled ?? true
                     });
                   }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    activeTab === 'main'
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'main'
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                  }`}
+                    }`}
                 >
                   Main Product (₹{selectedProduct.price})
                 </button>
@@ -362,18 +357,17 @@ const BulkOrders = () => {
                         is_bulk_enabled: variantSettings?.is_bulk_enabled ?? true
                       });
                     }}
-                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      activeTab === variant.id
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === variant.id
                         ? 'bg-purple-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                    }`}
+                      }`}
                   >
                     {variant.variant_weight} {variant.variant_unit} (₹{variant.variant_price})
                   </button>
                 ))}
               </div>
             )}
-            
+
             {/* Bulk Settings Form */}
             <div className="space-y-4">
               {/* Enable/Disable Toggle */}
@@ -389,7 +383,7 @@ const BulkOrders = () => {
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
-              
+
               {bulkSettings.is_bulk_enabled && (
                 <>
                   {/* Min Quantity */}
@@ -404,7 +398,7 @@ const BulkOrders = () => {
                       min="1"
                     />
                   </div>
-                  
+
                   {/* Max Quantity */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Maximum Quantity (Optional)</label>
@@ -418,7 +412,7 @@ const BulkOrders = () => {
                     />
                     <p className="text-xs text-gray-500 mt-1">Leave empty for unlimited quantity</p>
                   </div>
-                  
+
                   {/* Bulk Price */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Bulk Price per Unit</label>
@@ -432,7 +426,7 @@ const BulkOrders = () => {
                       min="0"
                     />
                   </div>
-                  
+
                   {/* Discount Percentage */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Discount Percentage</label>
@@ -447,12 +441,12 @@ const BulkOrders = () => {
                       max="100"
                     />
                   </div>
-                  
+
                   {/* Price Calculation Preview */}
                   {bulkSettings.min_quantity && bulkSettings.bulk_price && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <h4 className="font-semibold text-blue-800 mb-3">📊 Bulk Order Preview</h4>
-                      
+
                       <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                         <div>
                           <span className="text-gray-600">Regular Price:</span>
@@ -467,7 +461,7 @@ const BulkOrders = () => {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="border-t border-blue-200 pt-3 space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Quantity Range:</span>
@@ -475,14 +469,14 @@ const BulkOrders = () => {
                             {bulkSettings.min_quantity} - {bulkSettings.max_quantity || '∞'} units
                           </span>
                         </div>
-                        
+
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Total Amount:</span>
                           <span className="font-bold text-xl text-blue-800">
                             ₹{(bulkSettings.bulk_price * bulkSettings.min_quantity).toFixed(2)}
                           </span>
                         </div>
-                        
+
                         <div className="flex justify-between items-center text-green-600">
                           <span className="font-medium">Customer Saves:</span>
                           <span className="font-semibold">
@@ -495,7 +489,7 @@ const BulkOrders = () => {
                 </>
               )}
             </div>
-            
+
             {/* Action Buttons */}
             <div className="flex gap-4 mt-6">
               <button

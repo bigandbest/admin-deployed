@@ -24,7 +24,7 @@ const BulkProductSettings = () => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const bulkSettings = product.bulk_product_settings?.[0];
-    const matchesStatus = statusFilter === 'all' || 
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'enabled' && bulkSettings?.is_bulk_enabled !== false) ||
       (statusFilter === 'disabled' && bulkSettings?.is_bulk_enabled === false);
     return matchesSearch && matchesStatus;
@@ -61,16 +61,16 @@ const BulkProductSettings = () => {
           )
         `)
         .order('name');
-      
+
       if (productsError) throw productsError;
-      
+
       // Get bulk settings for all products and variants
       const { data: bulkSettings, error: bulkError } = await supabase
         .from('bulk_product_settings')
         .select('*');
-      
+
       if (bulkError) throw bulkError;
-      
+
       // Combine the data
       const data = productsData.map(product => ({
         ...product,
@@ -79,14 +79,14 @@ const BulkProductSettings = () => {
       }));
 
       console.log('🔍 Raw data from database:', data);
-      console.log('📊 Products with bulk settings:', 
+      console.log('📊 Products with bulk settings:',
         data?.filter(p => p.bulk_product_settings?.length > 0)
           .map(p => ({
             name: p.name,
             bulk_settings: p.bulk_product_settings[0]
           }))
       );
-      
+
       setProducts(data || []);
       console.log('✅ Products loaded:', data?.length || 0);
     } catch (error) {
@@ -100,14 +100,14 @@ const BulkProductSettings = () => {
   const handleEdit = (product, variant = null) => {
     setEditingProduct(product.id);
     setSelectedVariant(variant);
-    
+
     // Find bulk settings for product or variant
-    const bulkSettings = variant 
+    const bulkSettings = variant
       ? product.bulk_product_settings?.find(s => s.variant_id === variant.id)
       : product.bulk_product_settings?.find(s => !s.variant_id);
-    
+
     const basePrice = variant ? variant.variant_price : product.price;
-    
+
     setFormData({
       min_quantity: bulkSettings?.min_quantity || 50,
       bulk_price: bulkSettings?.bulk_price || basePrice,
@@ -120,9 +120,9 @@ const BulkProductSettings = () => {
   const handleSave = async (productId) => {
     try {
       console.log('Saving data:', formData, 'for product:', productId);
-      
+
       // Update UI immediately
-      setProducts(prevProducts => 
+      setProducts(prevProducts =>
         prevProducts.map(product => {
           if (product.id === productId) {
             return {
@@ -137,21 +137,21 @@ const BulkProductSettings = () => {
           return product;
         })
       );
-      
+
       // Check if bulk settings exist for product or variant
       let existingQuery = supabase
         .from('bulk_product_settings')
         .select('id')
         .eq('product_id', productId);
-      
+
       if (formData.variant_id) {
         existingQuery = existingQuery.eq('variant_id', formData.variant_id);
       } else {
         existingQuery = existingQuery.is('variant_id', null);
       }
-      
+
       const { data: existing, error: checkError } = await existingQuery.maybeSingle();
-      
+
       console.log('🔍 Existing record check:', { existing, checkError });
 
       let result;
@@ -169,7 +169,7 @@ const BulkProductSettings = () => {
           })
           .eq('id', existing.id)
           .select();
-        
+
         result = { data, error };
       } else {
         // Create new
@@ -185,7 +185,7 @@ const BulkProductSettings = () => {
             is_variant_bulk: !!formData.variant_id
           }])
           .select();
-        
+
         result = { data, error };
       }
 
@@ -300,11 +300,11 @@ const BulkProductSettings = () => {
         {paginatedProducts.map((product) => {
           const isEditing = editingProduct === product.id;
           const activeTab = activeTabs[product.id] || 'main';
-          
+
           const setActiveTab = (tab) => {
             setActiveTabs(prev => ({ ...prev, [product.id]: tab }));
           };
-          
+
           // Get current bulk settings based on selected tab
           const getCurrentBulkSettings = () => {
             if (activeTab === 'main') {
@@ -313,9 +313,9 @@ const BulkProductSettings = () => {
               return product.bulk_product_settings?.find(s => s.variant_id === activeTab);
             }
           };
-          
+
           const bulkSettings = getCurrentBulkSettings();
-          
+
           return (
             <div key={product.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200">
               {/* Product Header */}
@@ -324,7 +324,7 @@ const BulkProductSettings = () => {
                   <div className="flex-shrink-0">
                     <img
                       className="h-16 w-16 rounded-lg object-cover border-2 border-gray-200"
-                      src={product.image || '/placeholder.png'}
+                      src={product.image || ''}
                       alt={product.name}
                     />
                   </div>
@@ -347,18 +347,17 @@ const BulkProductSettings = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Variant Tabs */}
               {product.hasVariants && (
                 <div className="px-6 pt-4">
                   <div className="flex flex-wrap gap-2 mb-4">
                     <button
                       onClick={() => setActiveTab('main')}
-                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        activeTab === 'main'
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'main'
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                        }`}
                     >
                       Main Product
                     </button>
@@ -366,17 +365,16 @@ const BulkProductSettings = () => {
                       <button
                         key={variant.id}
                         onClick={() => setActiveTab(variant.id)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          activeTab === variant.id
+                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === variant.id
                             ? 'bg-purple-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         {variant.variant_weight} {variant.variant_unit}
                       </button>
                     ))}
                   </div>
-                  
+
                   {/* Current Selection Info */}
                   <div className="bg-gray-50 rounded-lg p-3 mb-4">
                     {activeTab === 'main' ? (
@@ -415,18 +413,17 @@ const BulkProductSettings = () => {
                     {isEditing ? (
                       <select
                         value={formData.is_bulk_enabled}
-                        onChange={(e) => setFormData({...formData, is_bulk_enabled: e.target.value === 'true'})}
+                        onChange={(e) => setFormData({ ...formData, is_bulk_enabled: e.target.value === 'true' })}
                         className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="true">Enabled</option>
                         <option value="false">Disabled</option>
                       </select>
                     ) : (
-                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                        bulkSettings?.is_bulk_enabled !== false 
-                          ? 'bg-green-100 text-green-800' 
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${bulkSettings?.is_bulk_enabled !== false
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {bulkSettings?.is_bulk_enabled !== false ? 'Enabled' : 'Disabled'}
                       </span>
                     )}
@@ -439,7 +436,7 @@ const BulkProductSettings = () => {
                       <input
                         type="number"
                         value={formData.min_quantity}
-                        onChange={(e) => setFormData({...formData, min_quantity: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, min_quantity: parseInt(e.target.value) })}
                         className="w-24 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         min="1"
                       />
@@ -458,7 +455,7 @@ const BulkProductSettings = () => {
                         type="number"
                         step="0.01"
                         value={formData.bulk_price}
-                        onChange={(e) => setFormData({...formData, bulk_price: parseFloat(e.target.value) || 0})}
+                        onChange={(e) => setFormData({ ...formData, bulk_price: parseFloat(e.target.value) || 0 })}
                         className="w-28 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         min="0"
                       />
@@ -477,7 +474,7 @@ const BulkProductSettings = () => {
                         type="number"
                         step="0.01"
                         value={formData.discount_percentage}
-                        onChange={(e) => setFormData({...formData, discount_percentage: parseFloat(e.target.value) || 0})}
+                        onChange={(e) => setFormData({ ...formData, discount_percentage: parseFloat(e.target.value) || 0 })}
                         className="w-20 px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         min="0"
                         max="100"
@@ -550,24 +547,23 @@ const BulkProductSettings = () => {
           >
             Previous
           </button>
-          
+
           {[...Array(totalPages)].map((_, index) => {
             const page = index + 1;
             return (
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`px-3 py-2 rounded-lg border ${
-                  currentPage === page
+                className={`px-3 py-2 rounded-lg border ${currentPage === page
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {page}
               </button>
             );
           })}
-          
+
           <button
             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
