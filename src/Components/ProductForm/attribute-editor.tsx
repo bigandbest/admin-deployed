@@ -13,11 +13,15 @@ interface Attribute {
 interface AttributeEditorProps {
   attributes: Attribute[];
   onAttributeChange: (attributes: Attribute[]) => void;
+  variantPrice?: number;
+  variantOldPrice?: number;
 }
 
 export default function AttributeEditor({
   attributes,
   onAttributeChange,
+  variantPrice,
+  variantOldPrice,
 }: AttributeEditorProps) {
   const addAttribute = () => {
     onAttributeChange([
@@ -39,7 +43,21 @@ export default function AttributeEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Attributes</Label>
+        <div>
+          <Label className="text-sm font-semibold">Attributes</Label>
+          {variantPrice !== undefined && (
+            <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+              <p>
+                New Price: <span className="font-medium text-foreground">₹{variantPrice}</span>
+              </p>
+              {variantOldPrice !== undefined && variantOldPrice > 0 && (
+                <p>
+                  Old Price: <span className="font-medium text-foreground line-through">₹{variantOldPrice}</span>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
         <Button
           size="sm"
           onClick={addAttribute}

@@ -5,7 +5,8 @@ import { Button } from "../UI/button";
 import { Input } from "../UI/input";
 import { Label } from "../UI/label";
 import { Switch } from "../UI/switch";
-import { ChevronDown, Trash2, Radio } from "lucide-react";
+import { Textarea } from "../UI/textarea";
+import { ChevronDown, Trash2, Radio, Upload, X as XIcon } from "lucide-react";
 import AttributeEditor from "./attribute-editor";
 
 interface VariantEditorProps {
@@ -36,7 +37,7 @@ export default function VariantEditor({
     if (variant.old_price && variant.price) {
       const oldPrice = Number(variant.old_price);
       const currentPrice = Number(variant.price);
-      
+
       if (oldPrice > 0 && currentPrice > 0) {
         if (oldPrice < currentPrice) {
           setPriceError("Old price cannot be less than current price");
@@ -44,7 +45,7 @@ export default function VariantEditor({
           setPriceError("");
           const discountPercent = ((oldPrice - currentPrice) / oldPrice) * 100;
           const roundedDiscount = Math.round(discountPercent * 100) / 100; // Round to 2 decimal places
-          
+
           // Only update if the calculated value is different
           if (variant.discount_percentage !== roundedDiscount) {
             onUpdate({
@@ -71,7 +72,7 @@ export default function VariantEditor({
     if (field === "old_price") {
       const oldPrice = Number(value);
       const currentPrice = Number(variant.price);
-      
+
       if (oldPrice && currentPrice && oldPrice < currentPrice) {
         setPriceError("Old price cannot be less than current price");
         return; // Don't update if validation fails
@@ -96,10 +97,19 @@ export default function VariantEditor({
       >
         <div className="flex items-center gap-3 text-left">
           <ChevronDown
-            className={`w-5 h-5 transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
+            className={`w-5 h-5 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""
+              }`}
           />
+          {/* Variant Photo Thumbnail */}
+          {variant.photo_url && (
+            <div className="w-12 h-12 rounded-md overflow-hidden border border-border flex-shrink-0">
+              <img
+                src={variant.photo_url}
+                alt={variant.title || "Variant"}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
           <div>
             <p className="font-medium text-sm">
               {variant.title || `Variant ${variantIndex + 1}`}
@@ -139,6 +149,49 @@ export default function VariantEditor({
       {/* Expanded Content */}
       {isExpanded && (
         <div className="border-t border-border p-4 space-y-6 bg-muted/20">
+          {/* Variant Photo Upload */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Variant Photo</Label>
+            <div className="flex items-center gap-4">
+              {variant.photo_url && (
+                <div className="relative w-24 h-24 border border-border rounded-lg overflow-hidden">
+                  <img
+                    src={variant.photo_url}
+                    alt="Variant"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    onClick={() => handleChange("photo_url", "")}
+                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                  >
+                    <XIcon className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex-1">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        handleChange("photo_url", reader.result);
+                        handleChange("photo_file", file);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="bg-card border-input"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload a photo specific to this variant
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Basic Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -171,6 +224,26 @@ export default function VariantEditor({
                 className="bg-card border-input"
               />
             </div>
+          </div>
+
+          {/* Net Quantity / Description */}
+          <div className="space-y-2">
+            <Label
+              htmlFor={`net-quantity-${variantIndex}`}
+              className="text-sm font-medium"
+            >
+              Net Quantity / Description
+            </Label>
+            <Textarea
+              id={`net-quantity-${variantIndex}`}
+              placeholder="e.g., Net Qty: 1kg, Contains 10 pieces, etc."
+              value={variant.net_quantity || ""}
+              onChange={(e) => handleChange("net_quantity", e.target.value)}
+              className="bg-card border-input min-h-[80px]"
+            />
+            <p className="text-xs text-muted-foreground">
+              Describe the net quantity or additional details for this variant
+            </p>
           </div>
 
           {/* Pricing */}
@@ -297,6 +370,8 @@ export default function VariantEditor({
             <AttributeEditor
               attributes={variant.attributes}
               onAttributeChange={handleAttributeChange}
+              variantPrice={variant.price}
+              variantOldPrice={variant.old_price}
             />
           </div>
 

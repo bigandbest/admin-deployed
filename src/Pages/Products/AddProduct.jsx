@@ -191,6 +191,8 @@ const AddProduct = () => {
           variant_old_price: v.old_price || v.variant_old_price,
           discount_percentage: v.discount_percentage || v.variant_discount || 0,
           packaging_details: v.packaging_details || "",
+          net_quantity: v.net_quantity || v.description || "",
+          photo_url: v.photo_url || v.image_url || "",
           gst_rate_override: v.gst_rate_override || null,
           cess_rate_override: v.cess_rate_override || null,
           features: v.features || null,
@@ -349,14 +351,58 @@ const AddProduct = () => {
     return results.filter((url) => url !== null);
   };
 
+  // Upload variant photos to Cloudinary
+  const uploadVariantPhotos = async (variants) => {
+    const uploadPromises = variants.map(async (variant) => {
+      // If variant has a photo_file (new upload), upload it
+      if (variant.photo_file) {
+        try {
+          const formData = new FormData();
+          formData.append("image", variant.photo_file);
+          const authToken = localStorage.getItem("admin_token");
+
+          const response = await axios.post(
+            `${import.meta.env.VITE_API_BASE_URL}/upload/image`,
+            formData,
+            {
+              headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+              withCredentials: true,
+            },
+          );
+
+          if (response.data.success) {
+            return {
+              ...variant,
+              photo_url: response.data.imageUrl,
+              photo_file: undefined, // Remove file object
+            };
+          } else {
+            console.error("Variant photo upload failed:", variant.title);
+            return variant;
+          }
+        } catch (error) {
+          console.error("Error uploading variant photo:", error);
+          return variant;
+        }
+      }
+      // If no new file, return variant as is
+      return variant;
+    });
+
+    return await Promise.all(uploadPromises);
+  };
+
   const handleSubmit = async (formData) => {
     setLoading(true);
     try {
-      // 1. Upload Images
+      // 1. Upload Product Images
       const imageUrls = await uploadImages(formData.media);
 
-      // 2. Prepare Payload
-      const { product, variants, category, warehouse, faqs, status } = formData;
+      // 2. Upload Variant Photos
+      const variantsWithPhotos = await uploadVariantPhotos(formData.variants);
+
+      // 3. Prepare Payload
+      const { product, category, warehouse, faqs, status } = formData;
 
       // Prepare media objects with proper structure and detect media type
       const mediaObjects = imageUrls.map((url, index) => {
@@ -396,7 +442,7 @@ const AddProduct = () => {
 
         // Variants (map back to API structure)
         // Stock is handled via variant inventory, not at product level
-        product_variants: variants.map((v) => {
+        product_variants: variantsWithPhotos.map((v) => {
           // Ensure attributes are properly formatted as {attribute_name, attribute_value} objects
           const formattedAttributes = Array.isArray(v.attributes)
             ? v.attributes.filter(
@@ -419,6 +465,8 @@ const AddProduct = () => {
             active: v.active !== undefined ? v.active : true,
             attributes: formattedAttributes, // Properly formatted attributes array
             packaging_details: v.packaging_details, // Added to payload
+            net_quantity: v.net_quantity || "", // Net quantity description
+            photo_url: v.photo_url || "", // Variant-specific photo
             // Bulk Pricing Payload
             is_bulk_enabled: v.is_bulk_enabled,
             bulk_min_quantity: v.bulk_min_quantity,
