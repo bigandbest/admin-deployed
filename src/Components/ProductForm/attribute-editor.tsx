@@ -8,6 +8,8 @@ import { Plus, X } from "lucide-react";
 interface Attribute {
   attribute_name: string;
   attribute_value: string;
+  price?: number;
+  old_price?: number;
 }
 
 interface AttributeEditorProps {
@@ -26,7 +28,7 @@ export default function AttributeEditor({
   const addAttribute = () => {
     onAttributeChange([
       ...attributes,
-      { attribute_name: "", attribute_value: "" },
+      { attribute_name: "", attribute_value: "", price: 0, old_price: 0 },
     ]);
   };
 
@@ -107,6 +109,43 @@ export default function AttributeEditor({
                   value={attr.attribute_value}
                   onChange={(e) =>
                     updateAttribute(index, "attribute_value", e.target.value)
+                  }
+                  className="bg-card border-input text-sm h-8"
+                />
+
+              </div>
+              <div className="w-20 space-y-1">
+                <Label
+                  htmlFor={`attr-price-${index}`}
+                  className="text-xs font-medium"
+                >
+                  Price
+                </Label>
+                <Input
+                  id={`attr-price-${index}`}
+                  type="number"
+                  placeholder="0"
+                  value={attr.price || ""}
+                  onChange={(e) =>
+                    updateAttribute(index, "price", e.target.value)
+                  }
+                  className="bg-card border-input text-sm h-8"
+                />
+              </div>
+              <div className="w-20 space-y-1">
+                <Label
+                  htmlFor={`attr-oldprice-${index}`}
+                  className="text-xs font-medium"
+                >
+                  Old Price
+                </Label>
+                <Input
+                  id={`attr-oldprice-${index}`}
+                  type="number"
+                  placeholder="0"
+                  value={attr.old_price || ""}
+                  onChange={(e) =>
+                    updateAttribute(index, "old_price", e.target.value)
                   }
                   className="bg-card border-input text-sm h-8"
                 />
