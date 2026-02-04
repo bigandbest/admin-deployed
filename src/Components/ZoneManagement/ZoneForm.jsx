@@ -347,7 +347,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
                       <TextInput
                         label="Pincode"
                         placeholder="110001"
-                        required
+                        withAsterisk
                         {...pincodeForm.getInputProps("pincode")}
                       />
                       <TextInput
