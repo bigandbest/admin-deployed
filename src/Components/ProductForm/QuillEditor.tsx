@@ -17,10 +17,16 @@ export default function QuillEditor({
   const quillInstanceRef = useRef<Quill | null>(null);
 
   useEffect(() => {
-    if (!wrapperRef.current || quillInstanceRef.current) return;
+    if (!wrapperRef.current) return;
+
+    // Prevent double initialization
+    if (quillInstanceRef.current) return;
+
+    // Clear any existing content first
+    wrapperRef.current.innerHTML = "";
 
     // Create a new container div inside the wrapper
-    const container = document.createElement('div');
+    const container = document.createElement("div");
     wrapperRef.current.appendChild(container);
 
     const quill = new Quill(container, {
@@ -51,8 +57,12 @@ export default function QuillEditor({
     });
 
     return () => {
-      quill.off("text-change");
-      quillInstanceRef.current = null;
+      // Properly cleanup
+      if (quillInstanceRef.current) {
+        quillInstanceRef.current.off("text-change");
+        quillInstanceRef.current = null;
+      }
+      // Clear the wrapper to remove all Quill-generated DOM
       if (wrapperRef.current) {
         wrapperRef.current.innerHTML = "";
       }
