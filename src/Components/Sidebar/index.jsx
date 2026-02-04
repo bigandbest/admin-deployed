@@ -129,6 +129,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           icon: <FaList />,
           path: "/shop-by-stores",
         },
+        {
+          title: "FAQ Templates",
+          icon: <RiQuestionnaireFill />,
+          path: "/faq-templates",
+          description: "Manage reusable FAQ templates",
+        },
       ],
     },
     {
@@ -211,7 +217,8 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           title: "Category Mapping",
           icon: <MdCategory />,
           path: "/category-mapping",
-          description: "Control which categories and subcategories appear in frontend sections",
+          description:
+            "Control which categories and subcategories appear in frontend sections",
         },
       ],
     },
@@ -381,7 +388,8 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           title: "Scheduling Management",
           icon: <FaClock />,
           path: "/scheduling-management",
-          description: "Configure 2-hour scheduling slots and warehouse mappings",
+          description:
+            "Configure 2-hour scheduling slots and warehouse mappings",
         },
       ],
     },
@@ -462,10 +470,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
                 {item.submenu ? (
                   <div className="mb-1">
                     <div
-                      className={`flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-all duration-200 ${submenuIndex === index
-                        ? "bg-slate-700"
-                        : "hover:bg-slate-700/50"
-                        }`}
+                      className={`flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-all duration-200 ${
+                        submenuIndex === index
+                          ? "bg-slate-700"
+                          : "hover:bg-slate-700/50"
+                      }`}
                       onClick={() => isOpenSubMenu(index)}
                     >
                       <Tooltip
@@ -525,10 +534,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
                               >
                                 <Link
                                   to={submenuItem.path}
-                                  className={`flex items-center p-2 text-sm rounded-md transition-colors ${isActive(submenuItem.path)
-                                    ? "bg-slate-700 text-white"
-                                    : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
-                                    }`}
+                                  className={`flex items-center p-2 text-sm rounded-md transition-colors ${
+                                    isActive(submenuItem.path)
+                                      ? "bg-slate-700 text-white"
+                                      : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
+                                  }`}
                                 >
                                   <span className="text-base mr-3">
                                     {submenuItem.icon}
@@ -561,10 +571,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
                   >
                     <Link
                       to={item.path}
-                      className={`flex items-center p-2.5 text-sm rounded-md transition-colors ${isActive(item.path)
-                        ? "bg-linear-to-r from-red-500 to-pink-500 text-white"
-                        : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
-                        }`}
+                      className={`flex items-center p-2.5 text-sm rounded-md transition-colors ${
+                        isActive(item.path)
+                          ? "bg-linear-to-r from-red-500 to-pink-500 text-white"
+                          : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
+                      }`}
                     >
                       <span className="text-xl mr-3">{item.icon}</span>
                       <AnimatePresence>
