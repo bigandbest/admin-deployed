@@ -607,6 +607,13 @@ const WarehouseManagement = () => {
               pincode: warehouse.pincode || "",
               address: warehouse.address || "",
               zone_ids: warehouse.zones ? warehouse.zones.map((z) => z.id) : [],
+              pincode_assignments: warehouse.pincodes
+                ? warehouse.pincodes.map((p) => ({
+                  pincode: p.pincode,
+                  city: p.city || "",
+                  state: p.state || "",
+                }))
+                : [],
               parent_warehouse_id: warehouse.parent_warehouse_id || null,
             });
             setShowWarehouseModal(true);
@@ -921,15 +928,30 @@ const WarehousesTab = ({
                         )}
                       </div>
                     </td>
+
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {warehouse.pincode && <div>📍 {warehouse.pincode}</div>}
-                        {warehouse.address && (
-                          <div className="text-gray-500">
-                            {warehouse.address}
+                      {warehouse.type === "division" && warehouse.pincodes && warehouse.pincodes.length > 0 ? (
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium text-gray-900">
+                            {warehouse.pincodes.length} Pincodes
                           </div>
-                        )}
-                      </div>
+                          <div className="text-xs text-gray-500">
+                            {Array.from(new Set(warehouse.pincodes.map(p => p.city).filter(Boolean))).join(", ")}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {Array.from(new Set(warehouse.pincodes.map(p => p.state).filter(Boolean))).join(", ")}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-900">
+                          {warehouse.pincode && <div>📍 {warehouse.pincode}</div>}
+                          {warehouse.address && (
+                            <div className="text-gray-500">
+                              {warehouse.address}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex flex-wrap gap-2">
@@ -977,7 +999,7 @@ const WarehousesTab = ({
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 
@@ -1334,6 +1356,7 @@ const WarehouseModal = ({
 }) => {
   const [availablePincodes, setAvailablePincodes] = useState([]);
   const [loadingPincodes, setLoadingPincodes] = useState(false);
+  const [pincodeSearch, setPincodeSearch] = useState("");
 
   // Fetch available pincodes when parent warehouse changes for division warehouses
   useEffect(() => {
@@ -1562,54 +1585,94 @@ const WarehouseModal = ({
                           </div>
                         </div>
 
-                        {/* Pincode dropdown */}
+                        {/* Search Bar */}
+                        <div className="mb-2">
+                          <input
+                            type="text"
+                            className="w-full border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                            placeholder="Search by name, city, pincode..."
+                            value={pincodeSearch}
+                            onChange={(e) =>
+                              setPincodeSearch(e.target.value)
+                            }
+                          />
+                        </div>
+
+                        {/* Pincode dropdown (HIDDEN, kept for structure if needed but replaced by custom UI below) */}
                         <select
                           multiple
                           value={(data.pincode_assignments || []).map((p) => p.pincode)}
-                          onChange={(e) => {
-                            const selectedOptions = Array.from(
-                              e.target.selectedOptions
-                            );
-                            const selectedPincodes = selectedOptions.map(
-                              (option) => {
-                                const pincodeData = availablePincodes.find(
-                                  (p) => p.pincode === option.value
-                                );
-                                return {
-                                  pincode: pincodeData.pincode,
-                                  city: pincodeData.city,
-                                  state: pincodeData.state,
-                                };
-                              }
-                            );
-                            setData({
-                              ...data,
-                              pincode_assignments: selectedPincodes,
-                            });
-                          }}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
+                          onChange={() => { }} // Controlled by custom UI
+                          className="hidden"
                           size="6"
                         >
-                          {availablePincodes.map((pincode) => (
-                            <option
-                              key={pincode.pincode}
-                              value={pincode.pincode}
-                              disabled={!pincode.is_available}
-                              className={
-                                pincode.is_available ? "" : "text-gray-400"
-                              }
-                            >
-                              {pincode.pincode} - {pincode.city},{" "}
-                              {pincode.state}
-                              {!pincode.is_available && " (Already Assigned)"}
-                            </option>
-                          ))}
                         </select>
 
-                        <div className="text-xs text-gray-500 mt-2">
-                          Hold Ctrl/Cmd to select multiple pincodes. Only
-                          available pincodes can be selected.
+                        {/* Filtered List UI */}
+                        <div className="border border-gray-300 rounded-lg max-h-60 overflow-y-auto mb-2">
+                          {availablePincodes
+                            .filter((p) => {
+                              if (!pincodeSearch) return true;
+                              const term = pincodeSearch.toLowerCase();
+                              return (
+                                p.pincode.includes(term) ||
+                                p.city?.toLowerCase().includes(term) ||
+                                p.state?.toLowerCase().includes(term) ||
+                                p.district?.toLowerCase().includes(term) ||
+                                p.district?.toLowerCase().includes(term) ||
+                                p.location_name?.toLowerCase().includes(term) ||
+                                p.village?.toLowerCase().includes(term) ||
+                                p.others?.toLowerCase().includes(term)
+                              );
+                            })
+                            .filter(p => !(data.pincode_assignments || []).some(assigned => assigned.pincode === p.pincode)) // Hide already selected
+                            .map((pincode) => (
+                              <div
+                                key={pincode.pincode}
+                                onClick={() => {
+                                  if (!pincode.is_available) return;
+                                  const currentAssignments = data.pincode_assignments || [];
+                                  setData({
+                                    ...data,
+                                    pincode_assignments: [
+                                      ...currentAssignments,
+                                      {
+                                        pincode: pincode.pincode,
+                                        city: pincode.city,
+                                        state: pincode.state,
+                                      }
+                                    ]
+                                  });
+                                }}
+                                className={`px-3 py-2 border-b last:border-b-0 cursor-pointer hover:bg-blue-50 flex justify-between items-center ${!pincode.is_available ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+                              >
+                                <div>
+                                  <div className="font-medium text-sm">
+                                    {pincode.pincode} - {pincode.city}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {[
+                                      pincode.location_name,
+                                      pincode.village,
+                                      pincode.district,
+                                      pincode.others,
+                                      pincode.state
+                                    ].filter(Boolean).join(", ")}
+                                  </div>
+                                </div>
+                                {!pincode.is_available ? (
+                                  <span className="text-xs text-red-500 font-medium">Assigned</span>
+                                ) : (
+                                  <span className="text-blue-600 text-lg font-bold">+</span>
+                                )}
+                              </div>
+                            ))}
+                          {availablePincodes.length === 0 && (
+                            <div className="p-4 text-center text-gray-500 text-sm">No pincodes found</div>
+                          )}
                         </div>
+
+
 
                         {/* Selected pincodes summary */}
                         <div className="border-t pt-4">

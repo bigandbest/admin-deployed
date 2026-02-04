@@ -23,6 +23,7 @@ const WarehouseList = () => {
     parent_warehouse_id: null,
     pincode_assignments: [],
   });
+  const [pincodeSearch, setPincodeSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -169,8 +170,8 @@ const WarehouseList = () => {
                   <td className="py-2 px-4">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${w.type === "zonal"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-purple-100 text-purple-800"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-purple-100 text-purple-800"
                         }`}
                     >
                       {w.type === "zonal" ? "Zonal" : "Division"}
@@ -232,8 +233,32 @@ const WarehouseList = () => {
                       <span className="text-gray-400 text-xs">No zones</span>
                     )}
                   </td>
-                  <td className="py-2 px-4">{w.pincode}</td>
-                  <td className="py-2 px-4">{w.address}</td>
+                  <td className="py-2 px-4">
+                    {w.type === "division" && w.pincodes && w.pincodes.length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium">{w.pincodes.length} Pincodes</span>
+                        <span className="text-xs text-gray-500">
+                          {Array.from(new Set(w.pincodes.map(p => p.city).filter(Boolean))).join(", ")}
+                        </span>
+                      </div>
+                    ) : (
+                      w.pincode || "-"
+                    )}
+                  </td>
+                  <td className="py-2 px-4">
+                    {w.type === "division" ? (
+                      <div className="text-xs">
+                        {w.address || "-"}
+                        {w.pincodes && w.pincodes.length > 0 && (
+                          <div className="mt-1 text-gray-500">
+                            {Array.from(new Set(w.pincodes.map(p => p.state).filter(Boolean))).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      w.address || "-"
+                    )}
+                  </td>
                   <td className="py-2 px-4 space-x-2">
                     <button
                       className="bg-yellow-500 text-white px-3 py-1 rounded"
@@ -248,9 +273,9 @@ const WarehouseList = () => {
                           parent_warehouse_id: w.parent_warehouse_id || null,
                           pincode_assignments: w.pincodes
                             ? w.pincodes.map((p) => ({
-                              pincode: p,
-                              city: "", // We'll need to get this from the API
-                              state: "",
+                              pincode: p.pincode,
+                              city: p.city || "",
+                              state: p.state || "",
                             }))
                             : [],
                         });
@@ -467,6 +492,19 @@ const WarehouseList = () => {
                               </div>
                             </div>
 
+                            {/* Search Bar */}
+                            <div className="mb-2">
+                              <input
+                                type="text"
+                                className="w-full border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                placeholder="Search by name, city, pincode..."
+                                value={pincodeSearch}
+                                onChange={(e) =>
+                                  setPincodeSearch(e.target.value)
+                                }
+                              />
+                            </div>
+
                             {/* Pincode dropdown */}
                             <select
                               multiple
@@ -491,33 +529,99 @@ const WarehouseList = () => {
                                 );
                                 setForm({
                                   ...form,
-                                  pincode_assignments: selectedPincodes,
+                                  pincode_assignments: [
+                                    ...form.pincode_assignments,
+                                    // Only add ones that aren't already selected to avoid duplicates if select behavior differs
+                                    // But multiple select usually replaces selection.
+                                    // Wait, standard select multiple replaces entire value.
+                                    // To allow searching + accumulating selection, we need custom UI or careful handling.
+                                    // HTML select multiple resets selection to currently clicked options.
+                                    // If we filter options, we can't select "hidden" ones.
+                                    // BETTER UI: Click to add to selected list.
+                                    // Let's stick to standard select but only show filtered options?
+                                    // If I filter options, and user clicks one, the others might be deselected if not in view?
+                                    // No, standard DOM behavior.
+                                    // Actually, standard <select multiple> is hard to use with search filtering because hidden options get deselected on change if not careful.
+                                    // Let's change to a list of checkboxes or specific "Add" buttons for filtered results?
+                                    // Or simplified: Click an option to add it to `pincode_assignments` (which is separately displayed below).
+                                    // Let's change the interaction logic:
+                                    // The select box serves as "Available Pincodes" source. Clicking one adds it.
+                                    // The "Selected Pincodes" section below manages the state.
+                                  ].filter((v, i, a) => a.findIndex(t => t.pincode === v.pincode) === i) // Unique
                                 });
+
+                                // Actually, let's just make it a list of "Add"able items instead of select multiple
+                                // to avoid the "deselection of hidden items" issue.
                               }}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
-                              size="6"
+                              className="hidden" // Hiding the original select, replacing with custom UI below
                             >
-                              {availablePincodes.map((pincode) => (
-                                <option
-                                  key={pincode.pincode}
-                                  value={pincode.pincode}
-                                  disabled={!pincode.is_available}
-                                  className={
-                                    pincode.is_available ? "" : "text-gray-400"
-                                  }
-                                >
-                                  {pincode.pincode} - {pincode.city},{" "}
-                                  {pincode.state}
-                                  {!pincode.is_available &&
-                                    " (Already Assigned)"}
-                                </option>
-                              ))}
                             </select>
 
-                            <div className="text-xs text-gray-500 mt-2">
-                              Hold Ctrl/Cmd to select multiple pincodes. Only
-                              available pincodes can be selected.
+                            {/* Filtered List UI */}
+                            <div className="border border-gray-300 rounded-lg max-h-60 overflow-y-auto mb-2">
+                              {availablePincodes
+                                .filter((p) => {
+                                  if (!pincodeSearch) return true;
+                                  const term = pincodeSearch.toLowerCase();
+                                  return (
+                                    p.pincode.includes(term) ||
+                                    p.city?.toLowerCase().includes(term) ||
+                                    p.state?.toLowerCase().includes(term) ||
+                                    p.district?.toLowerCase().includes(term) ||
+                                    p.location_name?.toLowerCase().includes(term) ||
+                                    p.state?.toLowerCase().includes(term) ||
+                                    p.district?.toLowerCase().includes(term) ||
+                                    p.location_name?.toLowerCase().includes(term) ||
+                                    p.village?.toLowerCase().includes(term) ||
+                                    p.others?.toLowerCase().includes(term)
+                                  );
+                                })
+                                .filter(p => !form.pincode_assignments.some(assigned => assigned.pincode === p.pincode)) // Hide already selected
+                                .map((pincode) => (
+                                  <div
+                                    key={pincode.pincode}
+                                    onClick={() => {
+                                      if (!pincode.is_available) return;
+                                      setForm({
+                                        ...form,
+                                        pincode_assignments: [
+                                          ...form.pincode_assignments,
+                                          {
+                                            pincode: pincode.pincode,
+                                            city: pincode.city,
+                                            state: pincode.state,
+                                          }
+                                        ]
+                                      });
+                                    }}
+                                    className={`px-3 py-2 border-b last:border-b-0 cursor-pointer hover:bg-blue-50 flex justify-between items-center ${!pincode.is_available ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+                                  >
+                                    <div>
+                                      <div className="font-medium text-sm">
+                                        {pincode.pincode} - {pincode.city}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {[
+                                          pincode.location_name,
+                                          pincode.village,
+                                          pincode.district,
+                                          pincode.others,
+                                          pincode.state
+                                        ].filter(Boolean).join(", ")}
+                                      </div>
+                                    </div>
+                                    {!pincode.is_available ? (
+                                      <span className="text-xs text-red-500 font-medium">Assigned</span>
+                                    ) : (
+                                      <span className="text-blue-600 text-lg font-bold">+</span>
+                                    )}
+                                  </div>
+                                ))}
+                              {availablePincodes.length === 0 && (
+                                <div className="p-4 text-center text-gray-500 text-sm">No pincodes found</div>
+                              )}
                             </div>
+
 
                             {/* Selected pincodes display */}
                             {form.pincode_assignments.length > 0 && (

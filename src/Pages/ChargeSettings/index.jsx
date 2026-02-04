@@ -24,6 +24,7 @@ import {
     FaLayerGroup,
     FaSave,
     FaEdit,
+    FaTags,
 } from "react-icons/fa";
 import {
     getChargeSettings,
@@ -35,6 +36,8 @@ const ChargeSettings = () => {
         handling_charge: 0,
         surge_charge: 0,
         platform_charge: 0,
+        discount_charge: 0,
+        delivery_charge: 30,
     });
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -53,6 +56,8 @@ const ChargeSettings = () => {
                 handling_charge: response.data.handling_charge || 0,
                 surge_charge: response.data.surge_charge || 0,
                 platform_charge: response.data.platform_charge || 0,
+                discount_charge: response.data.discount_charge || 0,
+                delivery_charge: response.data.delivery_charge || 30,
             });
         } catch (error) {
             notifications.show({
@@ -106,6 +111,24 @@ const ChargeSettings = () => {
             notifications.show({
                 title: "Validation Error",
                 message: "Platform charge must be greater than or equal to 0",
+                color: "red",
+            });
+            return;
+        }
+
+        if (settings.discount_charge < 0) {
+            notifications.show({
+                title: "Validation Error",
+                message: "Discount charge must be greater than or equal to 0",
+                color: "red",
+            });
+            return;
+        }
+
+        if (settings.delivery_charge < 0) {
+            notifications.show({
+                title: "Validation Error",
+                message: "Delivery charge must be greater than or equal to 0",
                 color: "red",
             });
             return;
@@ -231,6 +254,24 @@ const ChargeSettings = () => {
                             description="Platform usage/service fee"
                         />
                     </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                        <InfoCard
+                            title="Discount"
+                            value={settings.discount_charge}
+                            icon={<FaTags />}
+                            color="grape"
+                            description="Global discount applied to orders"
+                        />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                        <InfoCard
+                            title="Default Delivery"
+                            value={settings.delivery_charge}
+                            icon={<FaRupeeSign />}
+                            color="cyan"
+                            description="Base delivery fee when no milestone met"
+                        />
+                    </Grid.Col>
                 </Grid>
             </Paper>
 
@@ -280,6 +321,32 @@ const ChargeSettings = () => {
                             }
                             leftSection={<FaRupeeSign />}
                             description="Platform usage and service fee"
+                        />
+
+                        <NumberInput
+                            label="Discount (₹)"
+                            placeholder="Enter discount amount"
+                            required
+                            min={0}
+                            value={settings.discount_charge}
+                            onChange={(value) =>
+                                setSettings({ ...settings, discount_charge: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                            description="Global discount to substract from order total"
+                        />
+
+                        <NumberInput
+                            label="Default Delivery Charge (₹)"
+                            placeholder="Enter base delivery charge"
+                            required
+                            min={0}
+                            value={settings.delivery_charge}
+                            onChange={(value) =>
+                                setSettings({ ...settings, delivery_charge: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                            description="Charge applied when order is below all milestones"
                         />
 
                         <Group justify="flex-end" mt="md">

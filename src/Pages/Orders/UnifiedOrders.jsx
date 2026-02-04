@@ -358,6 +358,10 @@ const UnifiedOrders = () => {
                                                     <p className="text-gray-500">Platform</p>
                                                     <p className="font-semibold">₹{parseFloat(order.platform_charge || 0).toFixed(0)}</p>
                                                 </div>
+                                                <div className="text-center border-l border-gray-200">
+                                                    <p className="text-gray-500">Discount</p>
+                                                    <p className="font-semibold text-green-600">-₹{parseFloat(order.discount_charge || 0).toFixed(0)}</p>
+                                                </div>
                                             </div>
                                         </div>
 

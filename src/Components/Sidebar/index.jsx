@@ -131,12 +131,7 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
         },
       ],
     },
-    {
-      title: "Delivery Zones",
-      icon: <FaList />,
-      path: "/delivery-zones",
-      description: "Manage delivery zones and pincodes for product delivery",
-    },
+
     {
       title: "Charges Manager",
       icon: <FaMoneyBillWave />,
@@ -359,6 +354,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
       icon: <FaDatabase />,
       submenu: [
         {
+          title: "Delivery Zones",
+          icon: <FaList />,
+          path: "/delivery-zones",
+          description: "Manage delivery zones and pincodes for product delivery",
+        },
+        {
           title: "Inventory Management",
           icon: <FaBoxOpen />,
           path: "/warehouses/inventory",
@@ -385,12 +386,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
         },
       ],
     },
-    {
-      title: "Storage",
-      icon: <FaDatabase />,
-      path: "/storage/enhanced",
-      description: "Manage storage usage and files",
-    },
+    // {
+    //   title: "Storage",
+    //   icon: <FaDatabase />,
+    //   path: "/storage/enhanced",
+    //   description: "Manage storage usage and files",
+    // },
 
     // {
     //   title: "Section",
