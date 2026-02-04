@@ -103,6 +103,7 @@ import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
 import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
 import Coupons from "./Pages/Coupons/index.jsx";
 import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
+import FaqTemplates from "./Pages/FaqTemplates/FaqTemplates.jsx";
 
 // Seller Pages
 import SellerDashboard from "./Pages/Seller/Dashboard";
@@ -135,8 +136,9 @@ const MainLayout = () => {
         onMouseLeave={() => handleSidebarHover(false)}
       />
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
-          }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${
+          sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
+        }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
@@ -554,6 +556,10 @@ function App() {
         {
           path: "/scheduling-management",
           element: <SchedulingManagement />,
+        },
+        {
+          path: "/faq-templates",
+          element: <FaqTemplates />,
         },
       ],
     },

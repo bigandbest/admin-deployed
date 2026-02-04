@@ -96,13 +96,32 @@ export default function AddProductForm({
     if (initialData?.product) {
       return {
         ...initialData.product,
-        // Ensure fallbacks for critical fields if strictly necessary, 
+        // Ensure fallbacks for critical fields if strictly necessary,
         // though AddProduct.jsx currently handles this.
       };
     }
     return {
       name: "",
-      description: "",
+      description: `<p><strong>Product Type:</strong> Basmati Rice</p><p><br></p>
+<p><strong>Item Form:</strong> Grains</p><p><br></p>
+<p><strong>Key Features:</strong> Premium aged basmati rice, aromatic and flavorful, long-grain basmati, trusted quality assurance</p><p><br></p>
+<p><strong>Dietary Preference:</strong> Veg</p><p><br></p>
+<p><strong>Nutrition Information:</strong> Energy (kcal) 348.0, Carbohydrate (g) 78.0, Sugars (g) 0.0, Protein (g) 8.2, Total Fat (g) 0.5, Saturated Fat (g) 0.1, Trans Fat (g) 0.0, Cholesterol (mg) 0.0, Sodium (mg) 0.75, Dietary fiber (g) 1.9, Calcium (mg) 7.6, Iron (mg) 1.08</p><p><br></p>
+<p><strong>Processing Type:</strong> Naturally Aged</p><p><br></p>
+<p><strong>HSN:</strong> </p><p><br></p>
+<p><strong>Pack of:</strong> 1</p><p><br></p>
+<p><strong>Used For:</strong> Biriyani, Curries, and Everyday Meals</p><p><br></p>
+<p><strong>Ingredients:</strong> Basmati Rice</p><p><br></p>
+<p><strong>Packaging Type:</strong> Bag</p><p><br></p>
+<p><strong>Storage Instruction:</strong> Store in a cool, hygienic, and dry place. Avoid exposure to direct sunlight</p><p><br></p>
+<p><strong>Unit:</strong> 1 pack (5 kg)</p><p><br></p>
+<p><strong>Weight:</strong> 5 kg</p><p><br></p>
+<p><strong>Disclaimer:</strong> While every effort is made to maintain accuracy of all information presented, actual product packaging and materials may contain more and/or different information. It is recommended not to solely rely on the information presented.</p><p><br></p>
+<p><strong>Customer Care Details:</strong> In case of queries call us at +91 7059911480 or email us at bigbestmart@gmail.com</p><p><br></p>
+<p><strong>Manufacturer Name:</strong> </p><p><br></p>
+<p><strong>Manufacturer Address:</strong> </p><p><br></p>
+<p><strong>Country of Origin:</strong> India</p><p><br></p>
+<p><strong>Shelf Life:</strong> </p>`,
       vertical: "qwik",
       // brand_name removed
       hsn_code: "",
@@ -128,27 +147,58 @@ export default function AddProductForm({
       uom: "",
       uom_value: "",
       uom_unit: "",
-    }
+    };
   });
 
-  const [variants, setVariants] = useState<VariantData[]>(() => initialData?.variants || [
-    {
-      sku: "",
-      title: "",
-      price: 0,
-      old_price: 0,
-      discount_percentage: 0,
-      packaging_details: "",
-      is_default: true,
-      active: true,
-      attributes: [],
-      inventory: { stock_quantity: 0, reserved_quantity: 0 },
-      variant_name: "",
-      variant_price: 0,
-    },
-  ]);
+  const [variants, setVariants] = useState<VariantData[]>(
+    () =>
+      initialData?.variants || [
+        {
+          sku: "",
+          title: "",
+          price: 0,
+          old_price: 0,
+          discount_percentage: 0,
+          packaging_details: "",
+          is_default: true,
+          active: true,
+          attributes: [],
+          inventory: { stock_quantity: 0, reserved_quantity: 0 },
+          variant_name: "",
+          variant_price: 0,
+        },
+      ],
+  );
 
-  const [media, setMedia] = useState<MediaItem[]>(() => initialData?.media || []);
+  const [media, setMedia] = useState<MediaItem[]>(
+    () => initialData?.media || [],
+  );
+
+  const [faqTemplates, setFaqTemplates] = useState([]);
+  // Fetch templates
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const token = localStorage.getItem("admin_token"); // Retrieve token
+        if (!token) return;
+
+        const response = await fetch(
+          `${(import.meta as any).env.VITE_API_URL || "http://localhost:8000"}/api/faq-templates`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        const data = await response.json();
+        if (data.success) {
+          setFaqTemplates(data.templates);
+        }
+      } catch (err) {
+        console.error("Failed to fetch FAQ templates", err);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
   const [category, setCategory] = useState(() => {
     if (initialData?.category) {
       return {
@@ -168,14 +218,16 @@ export default function AddProductForm({
     };
   });
 
-  const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(() =>
-    initialData?.faqs || [{ question: "", answer: "" }]
+  const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>(
+    () => initialData?.faqs || [{ question: "", answer: "" }],
   );
 
-  const [warehouse, setWarehouse] = useState(() => initialData?.warehouse || "");
+  const [warehouse, setWarehouse] = useState(
+    () => initialData?.warehouse || "",
+  );
 
   // Load initial data - REMOVED (Handled by useState lazy init)
-  // We still keep the prop change listener if initialData updates LATER (e.g. refetch), but 
+  // We still keep the prop change listener if initialData updates LATER (e.g. refetch), but
   // key-based remounting in parent handles most cases.
   // However, keeping a lightweight sync might be safer if key doesn't change but data does.
   // Actually, parent sets key={initialData?.product?.id} so it forces remount.
@@ -272,10 +324,7 @@ export default function AddProductForm({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Form Sections */}
             <div className="lg:col-span-2 space-y-6">
-              <GeneralInformation
-                product={product}
-                setProduct={setProduct}
-              />
+              <GeneralInformation product={product} setProduct={setProduct} />
               <VariantsSection variants={variants} setVariants={setVariants} />
             </div>
 
@@ -291,7 +340,11 @@ export default function AddProductForm({
                 stores={stores}
                 brands={brands}
               />
-              <FAQSection faqs={faqs} setFaqs={setFaqs} />
+              <FAQSection
+                faqs={faqs}
+                setFaqs={setFaqs}
+                templates={faqTemplates}
+              />
             </div>
           </div>
         </div>

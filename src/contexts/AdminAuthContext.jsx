@@ -223,6 +223,7 @@ export const AdminAuthProvider = ({ children }) => {
     register: registerAdminUser,
     logout: logoutUser,
     resetSessionTimeout,
+    token: localStorage.getItem("admin_token"),
   };
 
   return (

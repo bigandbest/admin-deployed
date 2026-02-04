@@ -7,12 +7,24 @@ import { Label } from "../UI/label";
 import { Textarea } from "../UI/textarea";
 import { Button } from "../UI/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "../UI/dialog";
+import { Checkbox } from "../UI/checkbox";
+import { ScrollArea } from "../UI/scroll-area";
+import { Badge } from "../UI/badge";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "../UI/accordion";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -22,9 +34,60 @@ interface FAQItem {
 interface FAQSectionProps {
   faqs: FAQItem[];
   setFaqs: (faqs: FAQItem[]) => void;
+  templates?: any[]; // Array of templates
 }
 
-export default function FAQSection({ faqs, setFaqs }: FAQSectionProps) {
+export default function FAQSection({
+  faqs,
+  setFaqs,
+  templates = [],
+}: FAQSectionProps) {
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  // Store selected FAQs as strings "templateIndex-faqIndex"
+  const [selectedFoqs, setSelectedFoqs] = useState<Set<string>>(new Set());
+
+  // Reset selection when modal opens
+  const handleOpenLibrary = () => {
+    setSelectedFoqs(new Set());
+    setIsLibraryOpen(true);
+  };
+
+  const toggleFaqSelection = (tIndex: number, fIndex: number) => {
+    const key = `${tIndex}-${fIndex}`;
+    const newSelection = new Set(selectedFoqs);
+    if (newSelection.has(key)) {
+      newSelection.delete(key);
+    } else {
+      newSelection.add(key);
+    }
+    setSelectedFoqs(newSelection);
+  };
+
+  const handleAddSelected = () => {
+    const newFaqsToAdd: FAQItem[] = [];
+    selectedFoqs.forEach((key) => {
+      const [tIndex, fIndex] = key.split("-").map(Number);
+      const template = templates[tIndex];
+      if (template && template.faqs && template.faqs[fIndex]) {
+        newFaqsToAdd.push({ ...template.faqs[fIndex] });
+      }
+    });
+
+    if (newFaqsToAdd.length > 0) {
+      // Filter out empty initial FAQ if it exists and is the only one
+      let currentFaqs = [...faqs];
+      if (
+        currentFaqs.length === 1 &&
+        !currentFaqs[0].question &&
+        !currentFaqs[0].answer
+      ) {
+        currentFaqs = [];
+      }
+      setFaqs([...currentFaqs, ...newFaqsToAdd]);
+    }
+    setIsLibraryOpen(false);
+  };
+
   const handleAddFAQ = () => {
     setFaqs([...faqs, { question: "", answer: "" }]);
   };
@@ -130,13 +193,106 @@ export default function FAQSection({ faqs, setFaqs }: FAQSectionProps) {
             </Accordion>
           ) : null}
 
-          <Button
-            onClick={handleAddFAQ}
-            className="w-full gap-2 bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            <Plus className="w-4 h-4" />
-            Add FAQ
-          </Button>
+          <div className="flex gap-4 items-center justify-between border-t border-border pt-4">
+            <Dialog open={isLibraryOpen} onOpenChange={setIsLibraryOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="secondary"
+                  onClick={handleOpenLibrary}
+                  className="w-full sm:w-auto"
+                >
+                  Add from Library
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>Select FAQs from Library</DialogTitle>
+                  <DialogDescription>
+                    Choose one or more FAQs from your templates to add to this
+                    product.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <ScrollArea className="flex-1 pr-4 mt-4 border rounded-md p-4">
+                  {templates.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      No templates found.
+                    </p>
+                  ) : (
+                    <div className="space-y-6">
+                      {templates.map((template, tIndex) => (
+                        <div key={template.id} className="space-y-3">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <h4 className="font-semibold text-sm">
+                              {template.title}
+                            </h4>
+                            <Badge variant="outline" className="text-xs">
+                              {template.faqs?.length || 0} FAQs
+                            </Badge>
+                          </div>
+                          <div className="grid gap-3 pl-2">
+                            {template.faqs?.map((faq: any, fIndex: number) => {
+                              const key = `${tIndex}-${fIndex}`;
+                              const isSelected = selectedFoqs.has(key);
+                              return (
+                                <div
+                                  key={fIndex}
+                                  className="flex items-start space-x-3 p-2 rounded hover:bg-muted/50 transition-colors"
+                                >
+                                  <Checkbox
+                                    id={`chk-${key}`}
+                                    checked={isSelected}
+                                    onCheckedChange={() =>
+                                      toggleFaqSelection(tIndex, fIndex)
+                                    }
+                                    className="mt-1"
+                                  />
+                                  <div className="grid gap-1.5 leading-none">
+                                    <label
+                                      htmlFor={`chk-${key}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                    >
+                                      {faq.question}
+                                    </label>
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {faq.answer}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+
+                <DialogFooter className="mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsLibraryOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddSelected}
+                    disabled={selectedFoqs.size === 0}
+                  >
+                    Add {selectedFoqs.size} Selected FAQs
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              onClick={handleAddFAQ}
+              className="gap-2 bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              <Plus className="w-4 h-4" />
+              Add Custom FAQ
+            </Button>
+          </div>
         </CardContent>
       )}
     </Card>
