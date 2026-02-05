@@ -147,7 +147,7 @@ const FaqTemplates = () => {
           color: "green",
         });
       } else {
-        await axios.post(`${API_URL}/api/faq-templates`, payload, {
+        await axios.post(`${API_URL}/faq-templates`, payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
         notifications.show({

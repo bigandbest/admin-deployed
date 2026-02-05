@@ -179,14 +179,8 @@ export default function AddProductForm({
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const token = localStorage.getItem("admin_token"); // Retrieve token
-        if (!token) return;
-
         const response = await fetch(
-          `${(import.meta as any).env.VITE_API_URL || "http://localhost:8000"}/api/faq-templates`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
+          `${(import.meta as any).env.VITE_API_BASE_URL || "http://localhost:8000/api"}/faq-templates`,
         );
         const data = await response.json();
         if (data.success) {
