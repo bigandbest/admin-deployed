@@ -19,12 +19,12 @@ import {
   IconSearch,
   IconEdit,
   IconTrash,
-  IconQuestionMark,
+
 } from "@tabler/icons-react";
 import axios from "axios";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 const FaqTemplates = () => {
   const { token } = useAdminAuth();
@@ -48,7 +48,7 @@ const FaqTemplates = () => {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/faq-templates`, {
+      const response = await axios.get(`${API_URL}/faq-templates`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
