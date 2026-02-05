@@ -137,7 +137,7 @@ const FaqTemplates = () => {
 
       if (editingTemplate) {
         await axios.put(
-          `${API_URL}/api/faq-templates/${editingTemplate.id}`,
+          `${API_URL}/faq-templates/${editingTemplate.id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } },
         );
@@ -176,7 +176,7 @@ const FaqTemplates = () => {
       return;
 
     try {
-      await axios.delete(`${API_URL}/api/faq-templates/${id}`, {
+      await axios.delete(`${API_URL}/faq-templates/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       notifications.show({
