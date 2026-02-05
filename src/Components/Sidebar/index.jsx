@@ -95,11 +95,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
 
   // Define sidebar menu items
   const menuItems = [
-    {
-      title: "Dashboard",
-      icon: <RiDashboardFill />,
-      path: "/",
-    },
+    // {
+    //   title: "Dashboard",
+    //   icon: <RiDashboardFill />,
+    //   path: "/",
+    // },
     {
       title: "Product Master",
       icon: <HiArchive />,
@@ -172,13 +172,17 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/team-members",
           description: "Manage team members",
         },
+        {
+          title: "Brand Partners",
+          icon: <FaHandshake />,
+          path: "/brand-partners",
+        },
+        {
+          title: "Certifications",
+          icon: <FaList />,
+          path: "/certifications",
+        },
       ],
-    },
-    {
-      title: "Contact Queries",
-      icon: <FaEnvelope />,
-      path: "/contact-queries",
-      description: "View and manage contact form submissions",
     },
 
     // {
@@ -252,6 +256,18 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/coupons",
           description: "Manage discount coupons and promo codes",
         },
+        {
+          title: "Contact Queries",
+          icon: <FaEnvelope />,
+          path: "/contact-queries",
+          description: "View and manage contact form submissions",
+        },
+        {
+          title: "Product Enquiries",
+          icon: <RiQuestionnaireFill />,
+          path: "/product-enquiries",
+          description: "Manage product enquiries and create bid offers",
+        },
       ],
     },
     // {
@@ -280,16 +296,6 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           title: "Business Partners",
           icon: <FaHandshake />,
           path: "/business-data",
-        },
-        {
-          title: "Brand Partners",
-          icon: <FaHandshake />,
-          path: "/brand-partners",
-        },
-        {
-          title: "Certifications",
-          icon: <FaList />,
-          path: "/certifications",
         },
       ],
     },
@@ -336,24 +342,24 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
         },
       ],
     },
-    {
-      title: "Product Enquiries",
-      icon: <RiQuestionnaireFill />,
-      path: "/product-enquiries",
-      description: "Manage product enquiries and create bid offers",
-    },
 
     {
-      title: "Orders",
+      title: "Order & Return",
       icon: <FaList />,
-      path: "/AdminOrders",
-      description: "Manage all orders (COD, Prepaid, Bulk, Returns)",
-    },
-    {
-      title: "Returns & Refunds",
-      icon: <FaHandshake />,
-      path: "/return-orders",
-      description: "Manage return and cancellation requests",
+      submenu: [
+        {
+          title: "Orders",
+          icon: <FaList />,
+          path: "/AdminOrders",
+          description: "Manage all orders (COD, Prepaid, Bulk, Returns)",
+        },
+        {
+          title: "Returns & Refunds",
+          icon: <FaHandshake />,
+          path: "/return-orders",
+          description: "Manage return and cancellation requests",
+        },
+      ],
     },
 
     {
@@ -364,7 +370,8 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           title: "Delivery Zones",
           icon: <FaList />,
           path: "/delivery-zones",
-          description: "Manage delivery zones and pincodes for product delivery",
+          description:
+            "Manage delivery zones and pincodes for product delivery",
         },
         {
           title: "Inventory Management",
