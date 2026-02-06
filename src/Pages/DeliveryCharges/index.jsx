@@ -50,6 +50,7 @@ const DeliveryCharges = () => {
         min_order_value: 0,
         delivery_charge: 0,
         discount: 0,
+        surcharge: 0,
         description: "",
         is_active: true,
     });
@@ -83,6 +84,7 @@ const DeliveryCharges = () => {
                 min_order_value: milestone.min_order_value,
                 delivery_charge: milestone.delivery_charge,
                 discount: milestone.discount || 0,
+                surcharge: milestone.surcharge || 0,
                 description: milestone.description || "",
                 is_active: milestone.is_active,
             });
@@ -92,6 +94,7 @@ const DeliveryCharges = () => {
                 min_order_value: 0,
                 delivery_charge: 0,
                 discount: 0,
+                surcharge: 0,
                 description: "",
                 is_active: true,
             });
@@ -116,6 +119,15 @@ const DeliveryCharges = () => {
             notifications.show({
                 title: "Validation Error",
                 message: "Delivery charge must be greater than or equal to 0",
+                color: "red",
+            });
+            return;
+        }
+
+        if (formData.surcharge < 0) {
+            notifications.show({
+                title: "Validation Error",
+                message: "Surcharge must be greater than or equal to 0",
                 color: "red",
             });
             return;
@@ -317,6 +329,7 @@ const DeliveryCharges = () => {
                                 <Table.Th>Min Order Value</Table.Th>
                                 <Table.Th>Delivery Charge</Table.Th>
                                 <Table.Th>Discount</Table.Th>
+                                <Table.Th>Surcharge</Table.Th>
                                 <Table.Th>Description</Table.Th>
                                 <Table.Th>Status</Table.Th>
                                 <Table.Th>Actions</Table.Th>
@@ -345,6 +358,12 @@ const DeliveryCharges = () => {
                                         <Group gap="xs">
                                             <FaRupeeSign size={12} />
                                             <Text weight={500}>{milestone.discount || 0}</Text>
+                                        </Group>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Group gap="xs">
+                                            <FaRupeeSign size={12} />
+                                            <Text weight={500}>{milestone.surcharge || 0}</Text>
                                         </Group>
                                     </Table.Td>
                                     <Table.Td>
@@ -440,6 +459,17 @@ const DeliveryCharges = () => {
                             value={formData.discount}
                             onChange={(value) =>
                                 setFormData({ ...formData, discount: value || 0 })
+                            }
+                            leftSection={<FaRupeeSign />}
+                        />
+
+                        <NumberInput
+                            label="Surcharge (₹)"
+                            placeholder="Enter surcharge amount"
+                            min={0}
+                            value={formData.surcharge}
+                            onChange={(value) =>
+                                setFormData({ ...formData, surcharge: value || 0 })
                             }
                             leftSection={<FaRupeeSign />}
                         />
