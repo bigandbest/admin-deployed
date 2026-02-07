@@ -12,6 +12,8 @@ import { FaEdit, FaTrash, FaPlus, FaTimes, FaUpload } from "react-icons/fa";
 const TeamManager = () => {
     const [teamMembers, setTeamMembers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentMember, setCurrentMember] = useState(null);
@@ -87,6 +89,7 @@ const TeamManager = () => {
     };
 
     const closeModal = () => {
+        if (submitting) return; // Prevent closing while submitting
         setIsModalOpen(false);
         setIsEditing(false);
         setCurrentMember(null);
@@ -99,6 +102,7 @@ const TeamManager = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
         try {
             if (isEditing) {
                 await updateTeamMember(currentMember.id, formData);
@@ -107,21 +111,26 @@ const TeamManager = () => {
                 await addTeamMember(formData);
                 toast.success("Team member added successfully");
             }
-            fetchTeamMembers();
+            await fetchTeamMembers();
             closeModal();
         } catch (error) {
             toast.error(isEditing ? "Failed to update member" : "Failed to add member");
+        } finally {
+            setSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this team member?")) {
+            setDeletingId(id);
             try {
                 await deleteTeamMember(id);
                 toast.success("Team member deleted successfully");
-                fetchTeamMembers();
+                await fetchTeamMembers();
             } catch (error) {
                 toast.error("Failed to delete team member");
+            } finally {
+                setDeletingId(null);
             }
         }
     };
@@ -175,9 +184,17 @@ const TeamManager = () => {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(member.id)}
-                                            className="bg-white p-2 rounded-full shadow-md text-red-500 hover:text-red-600 transition-colors"
+                                            disabled={deletingId === member.id}
+                                            className={`bg-white p-2 rounded-full shadow-md text-red-500 transition-colors ${deletingId === member.id
+                                                ? "opacity-50 cursor-not-allowed"
+                                                : "hover:text-red-600"
+                                                }`}
                                         >
-                                            <FaTrash />
+                                            {deletingId === member.id ? (
+                                                <div className="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full" />
+                                            ) : (
+                                                <FaTrash />
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -299,10 +316,17 @@ const TeamManager = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={uploading}
-                                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+                                    disabled={uploading || submitting}
+                                    className={`px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
                                 >
-                                    {isEditing ? "Update" : "Add"}
+                                    {submitting ? (
+                                        <>
+                                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        isEditing ? "Update" : "Add"
+                                    )}
                                 </button>
                             </div>
                         </form>
