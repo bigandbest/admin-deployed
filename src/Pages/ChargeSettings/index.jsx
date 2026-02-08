@@ -236,7 +236,7 @@ const ChargeSettings = () => {
                             description="Fee for order processing and handling"
                         />
                     </Grid.Col>
-                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                    {/* <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                         <InfoCard
                             title="Surge Charge"
                             value={settings.surge_charge}
@@ -244,7 +244,7 @@ const ChargeSettings = () => {
                             color="orange"
                             description="Additional fee during peak demand"
                         />
-                    </Grid.Col>
+                    </Grid.Col> */}
                     <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                         <InfoCard
                             title="Platform Charge"
@@ -263,7 +263,7 @@ const ChargeSettings = () => {
                             description="Global discount applied to orders"
                         />
                     </Grid.Col>
-                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                    {/* <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                         <InfoCard
                             title="Default Delivery"
                             value={settings.delivery_charge}
@@ -271,7 +271,7 @@ const ChargeSettings = () => {
                             color="cyan"
                             description="Base delivery fee when no milestone met"
                         />
-                    </Grid.Col>
+                    </Grid.Col> */}
                 </Grid>
             </Paper>
 
@@ -297,7 +297,7 @@ const ChargeSettings = () => {
                             description="Fee charged for order processing and handling"
                         />
 
-                        <NumberInput
+                        {/* <NumberInput
                             label="Surge Charge (₹)"
                             placeholder="Enter surge charge"
                             required
@@ -308,7 +308,7 @@ const ChargeSettings = () => {
                             }
                             leftSection={<FaRupeeSign />}
                             description="Additional fee during peak demand periods"
-                        />
+                        /> */}
 
                         <NumberInput
                             label="Platform Charge (₹)"
@@ -336,7 +336,7 @@ const ChargeSettings = () => {
                             description="Global discount to substract from order total"
                         />
 
-                        <NumberInput
+                        {/* <NumberInput
                             label="Default Delivery Charge (₹)"
                             placeholder="Enter base delivery charge"
                             required
@@ -347,7 +347,7 @@ const ChargeSettings = () => {
                             }
                             leftSection={<FaRupeeSign />}
                             description="Charge applied when order is below all milestones"
-                        />
+                        /> */}
 
                         <Group justify="flex-end" mt="md">
                             <Button variant="subtle" onClick={close} disabled={submitting}>
