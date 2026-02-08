@@ -47,7 +47,7 @@ const CategoryMapping = () => {
     <div className="p-6 mantine-bg min-h-screen">
       <Card shadow="sm" p="lg" radius="md" className="mantine-card mb-6">
         <LoadingOverlay visible={loading} />
-        
+
         <Title order={2} mb="md">Manage Section Mappings</Title>
         <Text size="sm" color="dimmed" mb="xl">
           Control which categories and subcategories appear in PriceZone and ShopByCategory sections
@@ -82,6 +82,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          singleSelect={true}
         />
 
         <Divider my="xl" />
@@ -93,6 +94,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          singleSelect={true}
         />
 
         <Divider my="xl" />
@@ -104,6 +106,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          singleSelect={true}
         />
 
         <Divider my="xl" />
@@ -115,6 +118,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          singleSelect={true}
         />
 
         <Divider my="xl" />

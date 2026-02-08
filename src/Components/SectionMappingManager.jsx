@@ -22,6 +22,7 @@ import {
     updateSectionSubcategoryMappings,
     getCategoriesInSection,
     addCategoriesToSection,
+    syncCategoriesInSection,
 } from "../utils/supabaseApi";
 
 const SectionMappingManager = ({
@@ -30,6 +31,7 @@ const SectionMappingManager = ({
     mappingType, // 'subcategory', 'category', or 'both'
     categories,
     subcategories,
+    singleSelect = false, // New prop
 }) => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -79,7 +81,14 @@ const SectionMappingManager = ({
                     catResult.data.forEach((mapping) => {
                         mappings[`cat_${mapping.category_id}`] = true;
                     });
-                    setSelectedMappings((prev) => ({ ...prev, ...mappings }));
+
+                    // If singleSelect is true and multiple are selected, keep only the first one (cleanup)
+                    if (singleSelect && catResult.data.length > 1) {
+                        const firstKey = `cat_${catResult.data[0].category_id}`;
+                        setSelectedMappings((prev) => ({ ...prev, [firstKey]: true }));
+                    } else {
+                        setSelectedMappings((prev) => ({ ...prev, ...mappings }));
+                    }
                 }
             }
         } catch (error) {
@@ -94,12 +103,32 @@ const SectionMappingManager = ({
     };
 
     const handleToggleMapping = (key) => {
-        setSelectedMappings((prev) => ({
-            ...prev,
-            [key]: !prev[key],
-        }));
+        if (singleSelect) {
+            // specific logic for single select
+            setSelectedMappings((prev) => {
+                const isSelected = !!prev[key];
+                if (isSelected) {
+                    // If already selected, allow deselection (or maybe enforce at least one? user said "allow only one", implying 0 or 1)
+                    // Let's allow deselecting to 0.
+                    const newMappings = { ...prev };
+                    delete newMappings[key];
+                    return newMappings;
+                } else {
+                    // If selecting new, clear all others of the same type?
+                    // Or clear ALL mappings just to be safe if singleSelect applies to the whole manager
+                    // The user request context implies single category.
+                    // We will clear ALL selected mappings and set only this one.
+                    return { [key]: true };
+                }
+            });
+        } else {
+            setSelectedMappings((prev) => ({
+                ...prev,
+                [key]: !prev[key],
+            }));
+        }
 
-        // Set default display order if newly selected
+        // Set default display order if newly selected (only needed if not single select or if we want to preserve order logic)
         if (!selectedMappings[key] && !displayOrders[key]) {
             const maxOrder = Math.max(
                 ...Object.values(displayOrders).filter((v) => typeof v === "number"),
@@ -120,6 +149,8 @@ const SectionMappingManager = ({
     };
 
     const handleSelectAll = (type) => {
+        if (singleSelect) return; // Disable for single select
+
         const newMappings = { ...selectedMappings };
         const newOrders = { ...displayOrders };
         let order = Math.max(...Object.values(displayOrders).filter((v) => typeof v === "number"), -1) + 1;
@@ -144,6 +175,8 @@ const SectionMappingManager = ({
     };
 
     const handleDeselectAll = (type) => {
+        // Deselect all is fine for single select technically, but user UI might not need it if they can just uncheck.
+        // But for consistency we can leave it or hide it. Plan said hide it.
         const newMappings = { ...selectedMappings };
         const newOrders = { ...displayOrders };
 
@@ -209,11 +242,16 @@ const SectionMappingManager = ({
                     }
                 });
 
-                if (categoryIds.length > 0) {
-                    const catResult = await addCategoriesToSection(sectionId, categoryIds);
-                    if (!catResult.success) {
-                        throw new Error(catResult.error || "Failed to save category mappings");
-                    }
+                // Validation for single select
+                if (singleSelect && categoryIds.length > 1) {
+                    throw new Error("Only one category allowed for this section");
+                }
+
+
+                // Sync category mappings (replace existing with selected)
+                const catResult = await syncCategoriesInSection(sectionId, categoryIds);
+                if (!catResult.success) {
+                    throw new Error(catResult.error || "Failed to save category mappings");
                 }
             }
 
@@ -257,7 +295,10 @@ const SectionMappingManager = ({
                     <div>
                         <Title order={3}>{sectionName}</Title>
                         <Text size="sm" color="dimmed">
-                            Select which {mappingType === "subcategory" ? "subcategories" : mappingType === "category" ? "categories" : "categories and subcategories"} to display
+                            {singleSelect
+                                ? "Select exactly one category to display"
+                                : `Select which ${mappingType === "subcategory" ? "subcategories" : mappingType === "category" ? "categories" : "categories and subcategories"} to display`
+                            }
                         </Text>
                     </div>
                     <Badge size="lg" color="blue">
@@ -265,32 +306,36 @@ const SectionMappingManager = ({
                     </Badge>
                 </Group>
 
-                <Alert icon={<FaInfoCircle />} color="blue" variant="light">
-                    Display order determines the sequence in which items appear on the frontend.
-                    Lower numbers appear first.
-                </Alert>
+                {!singleSelect && (
+                    <Alert icon={<FaInfoCircle />} color="blue" variant="light">
+                        Display order determines the sequence in which items appear on the frontend.
+                        Lower numbers appear first.
+                    </Alert>
+                )}
 
                 {(mappingType === "subcategory" || mappingType === "both") && (
                     <>
                         <Group position="apart">
                             <Title order={4}>Subcategories</Title>
-                            <Group>
-                                <Button
-                                    size="xs"
-                                    variant="light"
-                                    onClick={() => handleSelectAll("subcategory")}
-                                >
-                                    Select All
-                                </Button>
-                                <Button
-                                    size="xs"
-                                    variant="light"
-                                    color="red"
-                                    onClick={() => handleDeselectAll("subcategory")}
-                                >
-                                    Deselect All
-                                </Button>
-                            </Group>
+                            {!singleSelect && (
+                                <Group>
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() => handleSelectAll("subcategory")}
+                                    >
+                                        Select All
+                                    </Button>
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        color="red"
+                                        onClick={() => handleDeselectAll("subcategory")}
+                                    >
+                                        Deselect All
+                                    </Button>
+                                </Group>
+                            )}
                         </Group>
 
                         <Accordion variant="separated">
@@ -350,23 +395,25 @@ const SectionMappingManager = ({
                     <>
                         <Group position="apart">
                             <Title order={4}>Categories</Title>
-                            <Group>
-                                <Button
-                                    size="xs"
-                                    variant="light"
-                                    onClick={() => handleSelectAll("category")}
-                                >
-                                    Select All
-                                </Button>
-                                <Button
-                                    size="xs"
-                                    variant="light"
-                                    color="red"
-                                    onClick={() => handleDeselectAll("category")}
-                                >
-                                    Deselect All
-                                </Button>
-                            </Group>
+                            {!singleSelect && (
+                                <Group>
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() => handleSelectAll("category")}
+                                    >
+                                        Select All
+                                    </Button>
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        color="red"
+                                        onClick={() => handleDeselectAll("category")}
+                                    >
+                                        Deselect All
+                                    </Button>
+                                </Group>
+                            )}
                         </Group>
 
                         <Stack spacing="xs">

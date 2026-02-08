@@ -127,6 +127,7 @@ export const {
   updateAdsBanner,
   deleteAdsBanner,
   toggleAdsBannerStatus,
+  syncCategoriesInSection,
   addCategory,
   updateCategory,
   deleteCategory,

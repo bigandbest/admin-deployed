@@ -778,6 +778,19 @@ export async function updateProductSectionOrder(sectionsOrder) {
 }
 
 // CATEGORY-SECTION MAPPING
+export async function syncCategoriesInSection(sectionId, categoryIds) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_ids: categoryIds }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function addCategoriesToSection(sectionId, categoryIds) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories`, {
