@@ -58,6 +58,9 @@ const ProductSectionsManagement = () => {
     section_name: "",
     description: "",
     is_active: true,
+    is_marketing: false,
+    allow_group_mapping: false,
+    allow_category_mapping: false,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -369,7 +372,7 @@ const ProductSectionsManagement = () => {
       if (result.success) {
         setSections(
           (sections || []).map((section) =>
-            section.id === selectedSection.id ? result.section : section
+            section.id === selectedSection.id ? result.data : section
           )
         );
         notifications.show({
@@ -454,6 +457,9 @@ const ProductSectionsManagement = () => {
       section_name: section.section_name,
       description: section.description || "",
       is_active: section.is_active,
+      is_marketing: section.is_marketing || false,
+      allow_group_mapping: section.allow_group_mapping || false,
+      allow_category_mapping: section.allow_category_mapping || false,
     });
     openEditModal();
   };
@@ -544,6 +550,11 @@ const ProductSectionsManagement = () => {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">{section.component_name}</Text>
+                      <Group gap={5} mt={5}>
+                        {section.is_marketing && <Badge size="xs" color="orange">Marketing</Badge>}
+                        {section.allow_group_mapping && <Badge size="xs" color="blue">Group Map</Badge>}
+                        {section.allow_category_mapping && <Badge size="xs" color="cyan">Cat Map</Badge>}
+                      </Group>
                     </Table.Td>
                     <Table.Td>
                       <Switch
@@ -621,6 +632,7 @@ const ProductSectionsManagement = () => {
         size="md"
       >
         <Stack spacing="md">
+          <LoadingOverlay visible={submitting} overlayBlur={2} />
           <TextInput
             label="Section Name"
             placeholder="Enter section display name"
@@ -647,6 +659,33 @@ const ProductSectionsManagement = () => {
             checked={formData.is_active}
             onChange={(e) =>
               setFormData({ ...formData, is_active: e.currentTarget.checked })
+            }
+          />
+
+          <Switch
+            label="Marketing Section"
+            description="Mark this section as for marketing purposes"
+            checked={formData.is_marketing}
+            onChange={(e) =>
+              setFormData({ ...formData, is_marketing: e.currentTarget.checked })
+            }
+          />
+
+          <Switch
+            label="Allow Group Mapping"
+            description="Enable mapping groups to this section"
+            checked={formData.allow_group_mapping}
+            onChange={(e) =>
+              setFormData({ ...formData, allow_group_mapping: e.currentTarget.checked })
+            }
+          />
+
+          <Switch
+            label="Allow Category Mapping"
+            description="Enable mapping categories to this section"
+            checked={formData.allow_category_mapping}
+            onChange={(e) =>
+              setFormData({ ...formData, allow_category_mapping: e.currentTarget.checked })
             }
           />
 

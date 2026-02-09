@@ -41,6 +41,7 @@ const StoreSectionMapping = () => {
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState("store-mapping");
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -89,6 +90,7 @@ const StoreSectionMapping = () => {
   const handleStoreMapping = async () => {
     if (!selectedStore || selectedSections.length === 0) return;
 
+    setSubmitting(true);
     try {
       await api.post("/store-section-mappings/store-sections", {
         store_id: selectedStore,
@@ -101,6 +103,8 @@ const StoreSectionMapping = () => {
       fetchInitialData(); // Just refresh mappings
     } catch (error) {
       console.error("Failed to create store-section mapping:", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -109,6 +113,7 @@ const StoreSectionMapping = () => {
   const handleGroupMapping = async () => {
     if (!selectedSection || selectedGroups.length === 0) return;
 
+    setSubmitting(true);
     try {
       await api.post("/store-section-mappings/section-group", {
         section_id: selectedSection,
@@ -121,6 +126,8 @@ const StoreSectionMapping = () => {
       fetchInitialData(); // Just refresh mappings
     } catch (error) {
       console.error("Failed to create group-section mapping:", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -160,10 +167,31 @@ const StoreSectionMapping = () => {
   }));
 
 
+
+  // Filter options for group mapping based on allow_group_mapping flag
+  const groupMappingSectionOptions = sections
+    .filter(s => s.allow_group_mapping)
+    .map((section) => ({
+      value: section.id.toString(),
+      label: `${section.section_name} (${section.section_key})`,
+    }));
+
   const groupOptions = groups.map((group) => ({
     value: group.id.toString(),
     label: group.name,
   }));
+
+  // Handle opening edit modal for group mapping
+  const handleEditGroupMapping = (mapping) => {
+    setSelectedSection(mapping.section_id.toString());
+    const mappedGroupIds = mapping.groups.map(g => g.id.toString());
+    setSelectedGroups(mappedGroupIds);
+    setCategoryMappingModal(true);
+    // Fetch groups if not already loaded (might be needed if modal wasn't opened before)
+    if (groups.length === 0) {
+      fetchGroups();
+    }
+  };
 
   // Table columns for store-section mappings
   const storeSectionColumns = [
@@ -244,6 +272,11 @@ const StoreSectionMapping = () => {
       title: "Actions",
       render: (mapping) => (
         <Group spacing="xs">
+          <Tooltip label="Edit mapping">
+            <ActionIcon color="blue" onClick={() => handleEditGroupMapping(mapping)}>
+              <IconEdit size={16} />
+            </ActionIcon>
+          </Tooltip>
           <Tooltip label="Delete mapping">
             <ActionIcon color="red" onClick={() => deleteMapping(mapping.id)}>
               <IconTrash size={16} />
@@ -364,7 +397,8 @@ const StoreSectionMapping = () => {
         title="Map Store to Sections"
         size="md"
       >
-        <div className="space-y-4">
+        <div className="space-y-4" style={{ position: "relative" }}>
+          <LoadingOverlay visible={submitting} overlayBlur={2} />
           <Select
             label="Select Store"
             placeholder="Choose a store"
@@ -400,14 +434,15 @@ const StoreSectionMapping = () => {
       <Modal
         opened={categoryMappingModal}
         onClose={() => setCategoryMappingModal(false)}
-        title="Map Group to Section"
+        title="Manage Group-Section Mapping"
         size="md"
       >
-        <div className="space-y-4">
+        <div className="space-y-4" style={{ position: "relative" }}>
+          <LoadingOverlay visible={submitting} overlayBlur={2} />
           <Select
             label="Select Section"
             placeholder="Choose a section"
-            data={sectionOptions}
+            data={groupMappingSectionOptions}
             value={selectedSection}
             onChange={setSelectedSection}
             required
