@@ -159,14 +159,7 @@ const SmallPromoCardManagement = () => {
         }
     };
 
-    // Ensure selected product is in the list (if it was loaded previously but now filtered out by search, or strictly from ID)
-    // This is tricky with server-side search. For now, we assume if they search, they pick from results.
-    // If they edit a card, we might need to fetch the specific resource_id product details to show the label correctly.
-    // For simplicity, we trust the ID value, but the label might be missing if not in the current list.
-    // To fix this: When `currentCard` is set, we should ideally fetch that single product and prepend it.
-    // I'll leave that as an enhancement if needed, or check if `Select` handles value-only gracefully (it implies label=value).
-
-    // Derived Category Options
+   
     const categoryOptions = useMemo(() => {
         return categories.map(cat => ({
             value: cat.id,
@@ -174,7 +167,7 @@ const SmallPromoCardManagement = () => {
         }));
     }, [categories]);
 
-    // Derived Subcategory Options based on selected Category
+   
     const subCategoryOptions = useMemo(() => {
         if (!formData.resource_id) return [];
         const selectedCat = categories.find(c => c.id === formData.resource_id);
