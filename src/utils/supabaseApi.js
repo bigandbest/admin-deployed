@@ -66,6 +66,7 @@ export const {
 
   // Products
   getAllProducts,
+  getProductsWithFilters,
 
   // Categories
   getAllCategories,

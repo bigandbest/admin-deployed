@@ -18,7 +18,7 @@ import {
 import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import axios from "axios";
 import { notifications } from "@mantine/notifications";
-import { getAllCategories } from "../../utils/supabaseApi";
+import { getAllCategories, getProductsWithFilters } from "../../utils/supabaseApi";
 import { useRef } from "react";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL
@@ -65,7 +65,6 @@ const SmallPromoCardManagement = () => {
             }
         } catch (error) {
             console.error("Error fetching cards:", error);
-            // Non-critical background fetch, maybe supress toaster or use generic one
             notifications.show({
                 title: "Error",
                 message: "Failed to fetch cards",
@@ -78,29 +77,20 @@ const SmallPromoCardManagement = () => {
         if (loadingProducts) return;
         setLoadingProducts(true);
         try {
-            const baseUrl = import.meta.env.VITE_API_BASE_URL
-                ? `${import.meta.env.VITE_API_BASE_URL}/productsroute/filter`
-                : "http://localhost:8000/api/productsroute/filter";
+            const response = await getProductsWithFilters({
+                search,
+                active: true
+            }, page, 20);
 
-            const response = await axios.get(baseUrl, {
-                params: {
-                    page,
-                    limit: 20,
-                    search,
-                    active: true
-                }
-            });
-
-            // In fetchProducts
-            if (response.data.success) {
-                const list = response.data.products || [];
+            if (response.success) {
+                const list = response.products || [];
                 if (Array.isArray(list)) {
                     const newProducts = list
                         .filter(p => p && p.id) // Filter nulls
                         .map(p => ({
                             value: String(p.id),
                             label: p.name || "Unknown Product",
-                            image: p.image_url
+                            image: p.image_url || p.image
                         }));
 
                     setProducts(prev => {
@@ -122,7 +112,6 @@ const SmallPromoCardManagement = () => {
                     setHasMoreProducts(newProducts.length === 20);
                 }
             }
-
         } catch (error) {
             console.error("Error fetching products:", error);
         } finally {
@@ -144,7 +133,7 @@ const SmallPromoCardManagement = () => {
             setCategories([]);
         }
     };
-    // ... in render
+    
 
 
     useEffect(() => {

@@ -7,6 +7,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const Coupons = () => {
     const [coupons, setCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(null); // specific coupon id being processed
+    const [isSubmitting, setIsSubmitting] = useState(false); // form submission
     const [showModal, setShowModal] = useState(false);
     const [editingCoupon, setEditingCoupon] = useState(null);
     const [filter, setFilter] = useState("ALL");
@@ -65,6 +67,7 @@ const Coupons = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
 
         try {
             const token = getAuthToken();
@@ -103,11 +106,14 @@ const Coupons = () => {
         } catch (error) {
             console.error("Error saving coupon:", error);
             alert("Failed to save coupon");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleToggleStatus = async (coupon) => {
         try {
+            setActionLoading(coupon.id);
             const token = getAuthToken();
             const newStatus = coupon.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
 
@@ -123,10 +129,15 @@ const Coupons = () => {
             const result = await response.json();
 
             if (result.success) {
-                fetchCoupons();
+                setCoupons(prev => prev.map(c =>
+                    c.id === coupon.id ? { ...c, status: newStatus } : c
+                ));
             }
+
         } catch (error) {
             console.error("Error toggling status:", error);
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -134,6 +145,7 @@ const Coupons = () => {
         if (!confirm("Are you sure you want to delete this coupon?")) return;
 
         try {
+            setActionLoading(id);
             const token = getAuthToken();
             const response = await fetch(`${API_BASE_URL}/coupons/admin/${id}`, {
                 method: "DELETE",
@@ -145,10 +157,12 @@ const Coupons = () => {
             const result = await response.json();
 
             if (result.success) {
-                fetchCoupons();
+                setCoupons(prev => prev.filter(c => c.id !== id));
             }
         } catch (error) {
             console.error("Error deleting coupon:", error);
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -263,8 +277,8 @@ const Coupons = () => {
                     <button
                         onClick={() => setFilter("ALL")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "ALL"
-                                ? "bg-purple-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-purple-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                     >
                         All
@@ -272,8 +286,8 @@ const Coupons = () => {
                     <button
                         onClick={() => setFilter("ACTIVE")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "ACTIVE"
-                                ? "bg-green-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-green-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                     >
                         Active
@@ -281,8 +295,8 @@ const Coupons = () => {
                     <button
                         onClick={() => setFilter("DISABLED")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "DISABLED"
-                                ? "bg-gray-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-gray-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                     >
                         Disabled
@@ -290,8 +304,8 @@ const Coupons = () => {
                     <button
                         onClick={() => setFilter("EXPIRED")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "EXPIRED"
-                                ? "bg-red-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-red-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                     >
                         Expired
@@ -373,10 +387,10 @@ const Coupons = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span
                                                 className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${coupon.status === "ACTIVE"
-                                                        ? "bg-green-100 text-green-800"
-                                                        : coupon.status === "EXPIRED"
-                                                            ? "bg-red-100 text-red-800"
-                                                            : "bg-gray-100 text-gray-800"
+                                                    ? "bg-green-100 text-green-800"
+                                                    : coupon.status === "EXPIRED"
+                                                        ? "bg-red-100 text-red-800"
+                                                        : "bg-gray-100 text-gray-800"
                                                     }`}
                                             >
                                                 {coupon.status}
@@ -386,24 +400,27 @@ const Coupons = () => {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => handleToggleStatus(coupon)}
-                                                    className="text-blue-600 hover:text-blue-900"
+                                                    className={`${actionLoading === coupon.id ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:text-blue-900"}`}
+                                                    disabled={actionLoading === coupon.id}
                                                     title={coupon.status === "ACTIVE" ? "Disable" : "Enable"}
                                                 >
-                                                    {coupon.status === "ACTIVE" ? <FaToggleOn size={20} /> : <FaToggleOff size={20} />}
+                                                    {actionLoading === coupon.id ? <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" /> : (coupon.status === "ACTIVE" ? <FaToggleOn size={20} /> : <FaToggleOff size={20} />)}
                                                 </button>
                                                 <button
                                                     onClick={() => handleEdit(coupon)}
                                                     className="text-indigo-600 hover:text-indigo-900"
                                                     title="Edit"
+                                                    disabled={actionLoading === coupon.id}
                                                 >
                                                     <FaEdit size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(coupon.id)}
-                                                    className="text-red-600 hover:text-red-900"
+                                                    className={`${actionLoading === coupon.id ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:text-red-900"}`}
                                                     title="Delete"
+                                                    disabled={actionLoading === coupon.id}
                                                 >
-                                                    <FaTrash size={18} />
+                                                    {actionLoading === coupon.id ? <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" /> : <FaTrash size={18} />}
                                                 </button>
                                             </div>
                                         </td>
@@ -603,7 +620,7 @@ const Coupons = () => {
                                         type="submit"
                                         className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                                     >
-                                        {editingCoupon ? "Update Coupon" : "Create Coupon"}
+                                        {editingCoupon ? (isSubmitting ? "Updating..." : "Update Coupon") : (isSubmitting ? "Creating..." : "Create Coupon")}
                                     </button>
                                 </div>
                             </form>

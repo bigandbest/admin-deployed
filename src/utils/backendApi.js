@@ -494,6 +494,25 @@ export async function getAllProducts() {
   }
 }
 
+export async function getProductsWithFilters(filters = {}, page = 1, limit = 20) {
+  try {
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('limit', limit);
+
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+        params.append(key, filters[key]);
+      }
+    });
+
+    const response = await fetch(`${API_BASE_URL}/productsroute/filter?${params.toString()}`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // CATEGORIES
 export async function getAllCategories() {
   try {
