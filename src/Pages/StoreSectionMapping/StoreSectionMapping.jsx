@@ -119,6 +119,32 @@ const StoreSectionMapping = () => {
     }
   };
 
+  // Delete individual group from section
+  const deleteIndividualGroup = async (mapping, groupId) => {
+    if (window.confirm("Are you sure you want to remove this group from the section?")) {
+      try {
+        // Find the specific group mapping ID
+        // The backend expects psg_{id} format for individual group deletions
+        const groupMapping = mappings.find(m =>
+          m.section_id === mapping.section_id &&
+          m.groups?.some(g => g.id === groupId)
+        );
+
+        if (groupMapping && groupMapping.groups) {
+          const group = groupMapping.groups.find(g => g.id === groupId);
+          if (group && group._mapping_id) {
+            await api.delete(`/store-section-mappings/${group._mapping_id}`);
+            fetchInitialData();
+          } else {
+            console.error("Group mapping ID not found");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to delete individual group:", error);
+      }
+    }
+  };
+
   // Filter options for group mapping based on allow_group_mapping flag
   const groupMappingSectionOptions = sections
     .filter(s => s.allow_group_mapping)
@@ -155,7 +181,26 @@ const StoreSectionMapping = () => {
       render: (mapping) => (
         <div className="flex flex-wrap gap-1">
           {mapping.groups?.map((group) => (
-            <Badge key={group.id} size="sm" variant="filled" color="blue">
+            <Badge
+              key={group.id}
+              size="sm"
+              variant="filled"
+              color="blue"
+              rightSection={
+                <ActionIcon
+                  size="xs"
+                  color="red"
+                  radius="xl"
+                  variant="transparent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteIndividualGroup(mapping, group.id);
+                  }}
+                >
+                  <IconTrash size={12} />
+                </ActionIcon>
+              }
+            >
               {group.name}
             </Badge>
           ))}
