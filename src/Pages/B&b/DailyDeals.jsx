@@ -347,8 +347,26 @@ const DailyDealsPage = () => {
         }
       }));
 
+      // Use raw products first to transform correctly
+      const rawProducts = allProductsResponse.data.products || [];
+
+      const transformedAllProducts = rawProducts.map((product) => {
+        // Find default variant or first variant for price
+        const defaultVariant =
+          product.variants?.find((v) => v.is_default) || product.variants?.[0];
+        // Find primary media or first media for image
+        const primaryMedia =
+          product.media?.find((m) => m.is_primary) || product.media?.[0];
+
+        return {
+          ...product,
+          price: defaultVariant?.price || "N/A",
+          image: primaryMedia?.url || null,
+        };
+      });
+
       setDealProducts(transformedDealProducts);
-      setAllProducts(allProductsResponse.data.products || []);
+      setAllProducts(transformedAllProducts);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -521,7 +539,11 @@ const DailyDealsPage = () => {
                                 </h4>
                                 {item.products?.category && (
                                   <p className="text-sm text-gray-500 mb-2">
-                                    Category: {item.products.category}
+                                    Category:{" "}
+                                    {typeof item.products.category === "object" &&
+                                      item.products.category !== null
+                                      ? item.products.category.name
+                                      : item.products.category}
                                   </p>
                                 )}
                                 {item.products?.price && (
@@ -628,7 +650,10 @@ const DailyDealsPage = () => {
                                 </h4>
                                 {product.category && (
                                   <p className="text-sm text-gray-500 mb-1">
-                                    {product.category}
+                                    {typeof product.category === "object" &&
+                                      product.category !== null
+                                      ? product.category.name
+                                      : product.category}
                                   </p>
                                 )}
                                 <div className="flex items-center justify-between">
