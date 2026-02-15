@@ -178,6 +178,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/brand-partners",
         },
         {
+          title: "Business Partner Inquiries",
+          icon: <FaHandshake />,
+          path: "/business-partner-inquiries",
+          description: "View and manage partnership inquiries",
+        },
+        {
           title: "Certifications",
           icon: <FaList />,
           path: "/certifications",

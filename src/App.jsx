@@ -97,6 +97,7 @@ import ProductEnquiries from "./Pages/ProductEnquiries/index.jsx";
 import CustomerReviewManager from "./Pages/ReviewManager/index.jsx";
 import SmallPromoCardManagement from "./Pages/SmallPromoCards/SmallPromoCardManagement.jsx";
 import PartnerManager from "./Pages/Partners/PartnerManager.jsx";
+import BusinessPartnerInquiries from "./Pages/BusinessPartnerInquiries/BusinessPartnerInquiries.jsx";
 import CertificationManager from "./Pages/Certifications/CertificationManager.jsx";
 import AboutContentManager from "./Pages/AboutManager/AboutContentManager.jsx";
 import ContactQueries from "./Pages/ContactQueries/ContactQueries.jsx";
@@ -532,6 +533,10 @@ function App() {
         {
           path: "/brand-partners",
           element: <PartnerManager />,
+        },
+        {
+          path: "/business-partner-inquiries",
+          element: <BusinessPartnerInquiries />,
         },
         {
           path: "/certifications",
