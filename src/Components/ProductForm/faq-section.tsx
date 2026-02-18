@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "react-toastify";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import { Input } from "../UI/input";
@@ -16,7 +17,7 @@ import {
   DialogDescription,
 } from "../UI/dialog";
 import { Checkbox } from "../UI/checkbox";
-import { ScrollArea } from "../UI/scroll-area";
+
 import { Badge } from "../UI/badge";
 import {
   Accordion,
@@ -63,15 +64,39 @@ export default function FAQSection({
     setSelectedFoqs(newSelection);
   };
 
+
+
   const handleAddSelected = () => {
+    console.log("Attempting to add selected FAQs. Count:", selectedFoqs.size);
     const newFaqsToAdd: FAQItem[] = [];
+
     selectedFoqs.forEach((key) => {
-      const [tIndex, fIndex] = key.split("-").map(Number);
-      const template = templates[tIndex];
-      if (template && template.faqs && template.faqs[fIndex]) {
-        newFaqsToAdd.push({ ...template.faqs[fIndex] });
+      try {
+        const [tIndex, fIndex] = key.split("-").map(Number);
+        const template = templates[tIndex];
+
+        console.log(`Processing selection: Key=${key}, tIndex=${tIndex}, fIndex=${fIndex}`);
+
+        if (template && template.faqs && template.faqs[fIndex]) {
+          const faqToAdd = { ...template.faqs[fIndex] };
+          // Ensure we copy strictly the properties we need
+          newFaqsToAdd.push({
+            question: faqToAdd.question || "",
+            answer: faqToAdd.answer || ""
+          });
+        } else {
+          console.error("Template or FAQ not found for key:", key, {
+            templateExists: !!template,
+            faqsExist: !!template?.faqs,
+            faqIndexExists: !!template?.faqs?.[fIndex]
+          });
+        }
+      } catch (err) {
+        console.error("Error processing selected FAQ key:", key, err);
       }
     });
+
+    console.log("FAQs prepared to add:", newFaqsToAdd.length, newFaqsToAdd);
 
     if (newFaqsToAdd.length > 0) {
       // Filter out empty initial FAQ if it exists and is the only one
@@ -83,7 +108,13 @@ export default function FAQSection({
       ) {
         currentFaqs = [];
       }
-      setFaqs([...currentFaqs, ...newFaqsToAdd]);
+
+      const distinctFaqs = [...currentFaqs, ...newFaqsToAdd];
+      setFaqs(distinctFaqs);
+      toast.success(`${newFaqsToAdd.length} FAQs added successfully`);
+    } else {
+      console.warn("No FAQs were added despite selection.");
+      toast.warning("No valid FAQs could be added from selection.");
     }
     setIsLibraryOpen(false);
   };
@@ -213,7 +244,7 @@ export default function FAQSection({
                   </DialogDescription>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 pr-4 mt-4 border rounded-md p-4">
+                <div className="flex-1 pr-4 mt-4 border rounded-md p-4 overflow-y-auto min-h-0">
                   {templates.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       No templates found.
@@ -266,7 +297,7 @@ export default function FAQSection({
                       ))}
                     </div>
                   )}
-                </ScrollArea>
+                </div>
 
                 <DialogFooter className="mt-4">
                   <Button
