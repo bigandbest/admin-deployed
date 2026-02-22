@@ -19,6 +19,8 @@ import {
   CloseButton,
   Menu,
   Checkbox,
+  Pagination,
+  NativeSelect,
 } from "@mantine/core";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload, FaChevronDown, FaFilter, FaLayerGroup } from "react-icons/fa";
 
@@ -299,10 +301,10 @@ import {
 } from "../../utils/supabaseApi";
 
 // TableHeader component with dropdown filter and click-to-navigate
-const TableHeader = ({ 
-  label, 
-  hasFilter = false, 
-  filterContent = null, 
+const TableHeader = ({
+  label,
+  hasFilter = false,
+  filterContent = null,
   navigateTo = null,
   icon = null,
   activeFilterCount = 0
@@ -317,7 +319,7 @@ const TableHeader = ({
 
   if (!hasFilter) {
     return (
-      <th 
+      <th
         className={`px-4 py-3 text-gray-500 font-medium whitespace-nowrap ${navigateTo ? 'product-table-header-clickable' : ''}`}
         onClick={handleHeaderClick}
         title={navigateTo ? `Click to navigate to ${label}` : ''}
@@ -333,7 +335,7 @@ const TableHeader = ({
   return (
     <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap group">
       <div className="flex items-center gap-2 justify-between">
-        <div 
+        <div
           className={`flex items-center gap-2 ${navigateTo ? 'product-table-header-clickable flex-1' : ''}`}
           onClick={handleHeaderClick}
           title={navigateTo ? `Click to navigate to ${label}` : ''}
@@ -341,10 +343,10 @@ const TableHeader = ({
           {icon}
           <span>{label}</span>
           {activeFilterCount > 0 && (
-            <Badge 
-              size="xs" 
-              color="blue" 
-              variant="filled" 
+            <Badge
+              size="xs"
+              color="blue"
+              variant="filled"
               className="ml-1 filter-badge-enter"
               style={{ minWidth: '18px', height: '18px', padding: '0 4px' }}
             >
@@ -354,8 +356,8 @@ const TableHeader = ({
         </div>
         <Menu position="bottom-end" shadow="md" width={250} withArrow>
           <Menu.Target>
-            <ActionIcon 
-              variant="subtle" 
+            <ActionIcon
+              variant="subtle"
               size="sm"
               className={`hover:bg-blue-100 hover:text-blue-600 transition-all opacity-70 group-hover:opacity-100 ${activeFilterCount > 0 ? 'text-blue-600' : ''}`}
               title="Click to filter"
@@ -391,9 +393,11 @@ const ProductsPage = () => {
   const [subcategoryFilter, setSubcategoryFilter] = useState(null);
   const [groupFilter, setGroupFilter] = useState(null);
   const [activeFilter, setStatusFilter] = useState(null);
-  const [displayedItems, setDisplayedItems] = useState(10);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const itemsPerLoad = 10;
+  // Server-side pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Column-specific filters
   const [brandFilter, setBrandFilter] = useState([]);
@@ -446,45 +450,16 @@ const ProductsPage = () => {
     }
   };
 
-  // Check authentication on component mount
-  useEffect(() => {
-    async function getProducts() {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
-        );
-        const result = await response.json();
-
-        if (result.success && result.products) {
-          setProducts(result.products);
-        } else {
-          setError(result.error || "Failed to fetch products");
-        }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setError("Failed to fetch products");
-      }
-      setLoading(false);
-    }
-    getProducts();
-    // Initialize data fetching
-    fetchProducts();
-    fetchCategories();
-    fetchSubcategories();
-    fetchGroups();
-  }, [navigate]);
-
-  // Fetch products from backend API with pagination
-  const fetchProducts = async () => {
+  // Fetch products from backend API with server-side pagination
+  const fetchProducts = useCallback(async (page = currentPage, limit = itemsPerPage) => {
     setLoading(true);
     setError("");
 
     try {
-      // Build query params for filtering and pagination
       const params = new URLSearchParams();
-      params.append('page', '1');
-      params.append('limit', '100'); // Fetch 100 at a time instead of 1000
-      
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+
       if (categoryFilter) params.append('category_id', categoryFilter);
       if (searchQuery) params.append('search', searchQuery);
       if (activeFilter) params.append('active', activeFilter);
@@ -496,6 +471,8 @@ const ProductsPage = () => {
 
       if (result.success && result.products) {
         setProducts(result.products);
+        setTotalProducts(result.total || 0);
+        setTotalPages(result.totalPages || Math.ceil((result.total || 0) / limit));
       } else {
         setError(result.error || "Failed to fetch products");
       }
@@ -505,7 +482,19 @@ const ProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, categoryFilter, searchQuery, activeFilter]);
+
+  // Fetch on mount and when page/filters change
+  useEffect(() => {
+    fetchProducts(currentPage, itemsPerPage);
+  }, [currentPage, itemsPerPage, fetchProducts]);
+
+  // Initialize category/subcategory/group dropdowns on mount
+  useEffect(() => {
+    fetchCategories();
+    fetchSubcategories();
+    fetchGroups();
+  }, []);
 
   // Fetch subcategories for dropdown
   const fetchSubcategories = async () => {
@@ -613,25 +602,25 @@ const ProductsPage = () => {
       !activeFilter || String(product.active) === String(activeFilter);
 
     // Brand filtering
-    const matchesBrand = 
+    const matchesBrand =
       brandFilter.length === 0 || brandFilter.includes(product.brand_name);
 
     // Store filtering
-    const matchesStore = 
+    const matchesStore =
       storeFilter.length === 0 || storeFilter.includes(product.store_name);
 
     // Vertical filtering
-    const matchesVertical = 
+    const matchesVertical =
       verticalFilter.length === 0 || verticalFilter.includes(product.vertical);
 
     // Return policy filtering
-    const matchesReturnPolicy = 
-      !returnPolicyFilter || 
+    const matchesReturnPolicy =
+      !returnPolicyFilter ||
       (returnPolicyFilter === "applicable" && product.return_applicable) ||
       (returnPolicyFilter === "not_applicable" && !product.return_applicable);
 
     // Stock filtering
-    const matchesStock = 
+    const matchesStock =
       !stockFilter ||
       (stockFilter === "in_stock" && isProductInStock(product)) ||
       (stockFilter === "out_of_stock" && !isProductInStock(product));
@@ -650,60 +639,13 @@ const ProductsPage = () => {
     );
   });
 
-  // For infinite scroll - show products up to displayedItems count
-  const displayedProducts = filteredProducts.slice(0, displayedItems);
-  const hasMoreItems = displayedItems < filteredProducts.length;
+  // Display filtered products (client-side filters on server-paginated data)
+  const displayedProducts = filteredProducts;
 
-  // Load more items function
-  const loadMoreItems = useCallback(() => {
-    if (!isLoadingMore && hasMoreItems) {
-      setIsLoadingMore(true);
-      setTimeout(() => {
-        setDisplayedItems((prev) =>
-          Math.min(prev + itemsPerLoad, filteredProducts.length),
-        );
-        setIsLoadingMore(false);
-      }, 500);
-    }
-  }, [isLoadingMore, hasMoreItems, itemsPerLoad, filteredProducts.length]);
-
-  // Scroll event handler for infinite scroll
+  // Reset to page 1 when server-side filters change
   useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + document.documentElement.scrollTop >=
-        document.documentElement.offsetHeight - 1000
-      ) {
-        loadMoreItems();
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [
-    displayedItems,
-    filteredProducts.length,
-    isLoadingMore,
-    hasMoreItems,
-    loadMoreItems,
-  ]);
-
-  // Reset displayed items when filters change
-  useEffect(() => {
-    setDisplayedItems(itemsPerLoad);
-  }, [
-    searchQuery,
-    categoryFilter,
-    subcategoryFilter,
-    groupFilter,
-    activeFilter,
-    brandFilter,
-    storeFilter,
-    verticalFilter,
-    returnPolicyFilter,
-    stockFilter,
-    itemsPerLoad,
-  ]);
+    setCurrentPage(1);
+  }, [categoryFilter, activeFilter, searchQuery]);
 
   // Auto-clear dependent filters when parent filters change
   useEffect(() => {
@@ -801,7 +743,7 @@ const ProductsPage = () => {
             <p className="text-gray-600">
               {loading
                 ? "Loading..."
-                : `${filteredProducts.length} of ${products.length} products`}
+                : `${displayedProducts.length} of ${totalProducts} products (page ${currentPage} of ${totalPages})`}
               {(searchQuery ||
                 categoryFilter ||
                 subcategoryFilter ||
@@ -962,26 +904,26 @@ const ProductsPage = () => {
             verticalFilter.length > 0 ||
             returnPolicyFilter ||
             stockFilter) && (
-            <Button
-              variant="light"
-              color="gray"
-              onClick={() => {
-                setSearchQuery("");
-                setCategoryFilter(null);
-                setSubcategoryFilter(null);
-                setGroupFilter(null);
-                setStatusFilter(null);
-                setBrandFilter([]);
-                setStoreFilter([]);
-                setVerticalFilter([]);
-                setReturnPolicyFilter(null);
-                setStockFilter(null);
-              }}
-              className="lg:w-auto w-full"
-            >
-              Clear Filters
-            </Button>
-          )}
+              <Button
+                variant="light"
+                color="gray"
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter(null);
+                  setSubcategoryFilter(null);
+                  setGroupFilter(null);
+                  setStatusFilter(null);
+                  setBrandFilter([]);
+                  setStoreFilter([]);
+                  setVerticalFilter([]);
+                  setReturnPolicyFilter(null);
+                  setStockFilter(null);
+                }}
+                className="lg:w-auto w-full"
+              >
+                Clear Filters
+              </Button>
+            )}
         </div>
 
         <div
@@ -1004,9 +946,9 @@ const ProductsPage = () => {
                 <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <TableHeader label="Image" />
-                    
-                    <TableHeader 
-                      label="Product Name" 
+
+                    <TableHeader
+                      label="Product Name"
                       hasFilter={true}
                       navigateTo="/products"
                       activeFilterCount={searchQuery ? 1 : 0}
@@ -1022,14 +964,14 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
-                    <TableHeader 
-                      label="Variant Details" 
+
+                    <TableHeader
+                      label="Variant Details"
                       navigateTo="/products/variants"
                     />
-                    
-                    <TableHeader 
-                      label="Category" 
+
+                    <TableHeader
+                      label="Category"
                       icon={<FaLayerGroup />}
                       hasFilter={true}
                       navigateTo="/categories"
@@ -1050,9 +992,9 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
-                    <TableHeader 
-                      label="Subcategory" 
+
+                    <TableHeader
+                      label="Subcategory"
                       icon={<FaLayerGroup />}
                       hasFilter={true}
                       navigateTo="/categories"
@@ -1072,9 +1014,9 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
-                    <TableHeader 
-                      label="Group" 
+
+                    <TableHeader
+                      label="Group"
                       icon={<FaLayerGroup />}
                       hasFilter={true}
                       activeFilterCount={groupFilter ? 1 : 0}
@@ -1093,9 +1035,9 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
-                    <TableHeader 
-                      label="Brand" 
+
+                    <TableHeader
+                      label="Brand"
                       icon={<FaLayerGroup />}
                       hasFilter={true}
                       navigateTo="/brands"
@@ -1120,9 +1062,9 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
-                    <TableHeader 
-                      label="Store" 
+
+                    <TableHeader
+                      label="Store"
                       icon={<FaLayerGroup />}
                       hasFilter={true}
                       navigateTo="/shop-by-stores"
@@ -1147,15 +1089,15 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
+
                     <TableHeader label="HSN/SAC" />
-                    
+
                     <TableHeader label="GST" />
-                    
+
                     <TableHeader label="CESS" />
-                    
-                    <TableHeader 
-                      label="Vertical" 
+
+                    <TableHeader
+                      label="Vertical"
                       hasFilter={true}
                       activeFilterCount={verticalFilter.length}
                       filterContent={
@@ -1178,9 +1120,9 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
-                    <TableHeader 
-                      label="Return Policy" 
+
+                    <TableHeader
+                      label="Return Policy"
                       hasFilter={true}
                       activeFilterCount={returnPolicyFilter ? 1 : 0}
                       filterContent={
@@ -1199,13 +1141,13 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
+
                     <TableHeader label="Rating" />
-                    
+
                     <TableHeader label="Price" />
-                    
-                    <TableHeader 
-                      label="Stock" 
+
+                    <TableHeader
+                      label="Stock"
                       hasFilter={true}
                       activeFilterCount={stockFilter ? 1 : 0}
                       filterContent={
@@ -1224,17 +1166,17 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
+
                     <TableHeader label="Bulk Pricing" />
-                    
+
                     <TableHeader label="FAQ" />
-                    
+
                     <TableHeader label="Media" />
-                    
+
                     <TableHeader label="Description" />
-                    
-                    <TableHeader 
-                      label="Status" 
+
+                    <TableHeader
+                      label="Status"
                       hasFilter={true}
                       activeFilterCount={activeFilter ? 1 : 0}
                       filterContent={
@@ -1253,7 +1195,7 @@ const ProductsPage = () => {
                         </div>
                       }
                     />
-                    
+
                     <TableHeader label="Actions" />
                   </tr>
                 </thead>
@@ -1613,15 +1555,15 @@ const ProductsPage = () => {
                 </Title>
                 <Text size="md" color="dimmed" className="mb-6">
                   {searchQuery ||
-                  categoryFilter ||
-                  subcategoryFilter ||
-                  groupFilter ||
-                  activeFilter ||
-                  brandFilter.length > 0 ||
-                  storeFilter.length > 0 ||
-                  verticalFilter.length > 0 ||
-                  returnPolicyFilter ||
-                  stockFilter
+                    categoryFilter ||
+                    subcategoryFilter ||
+                    groupFilter ||
+                    activeFilter ||
+                    brandFilter.length > 0 ||
+                    storeFilter.length > 0 ||
+                    verticalFilter.length > 0 ||
+                    returnPolicyFilter ||
+                    stockFilter
                     ? "No products match your current filters. Try adjusting your search criteria or clearing some filters."
                     : "Get started by adding your first product to the inventory."}
                 </Text>
@@ -1644,82 +1586,60 @@ const ProductsPage = () => {
                     verticalFilter.length > 0 ||
                     returnPolicyFilter ||
                     stockFilter) && (
-                    <Button
-                      variant="light"
-                      color="gray"
-                      size="md"
-                      onClick={() => {
-                        setSearchQuery("");
-                        setCategoryFilter(null);
-                        setSubcategoryFilter(null);
-                        setGroupFilter(null);
-                        setStatusFilter(null);
-                        setBrandFilter([]);
-                        setStoreFilter([]);
-                        setVerticalFilter([]);
-                        setReturnPolicyFilter(null);
-                        setStockFilter(null);
-                      }}
-                    >
-                      Clear All Filters
-                    </Button>
-                  )}
+                      <Button
+                        variant="light"
+                        color="gray"
+                        size="md"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setCategoryFilter(null);
+                          setSubcategoryFilter(null);
+                          setGroupFilter(null);
+                          setStatusFilter(null);
+                          setBrandFilter([]);
+                          setStoreFilter([]);
+                          setVerticalFilter([]);
+                          setReturnPolicyFilter(null);
+                          setStockFilter(null);
+                        }}
+                      >
+                        Clear All Filters
+                      </Button>
+                    )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Load More / Pagination */}
-          {displayedProducts.length > 0 && (
-            <div className="flex flex-col items-center mt-8 gap-4">
-              <Text size="sm" color="dimmed" className="text-center">
-                Showing {displayedProducts.length} of {filteredProducts.length}{" "}
-                products
-                {(searchQuery ||
-                  categoryFilter ||
-                  subcategoryFilter ||
-                  groupFilter ||
-                  activeFilter ||
-                  brandFilter.length > 0 ||
-                  storeFilter.length > 0 ||
-                  verticalFilter.length > 0 ||
-                  returnPolicyFilter ||
-                  stockFilter) &&
-                  " (filtered)"}
+          {/* Pagination Controls */}
+          {totalProducts > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4 px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
+              <Text size="sm" color="dimmed">
+                Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts} products
               </Text>
 
-              {isLoadingMore && (
-                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 dark:border-blue-400"></div>
-                  <Text size="sm" className="text-blue-700 dark:text-blue-300">
-                    Loading more products...
-                  </Text>
-                </div>
-              )}
+              <Pagination
+                total={totalPages}
+                value={currentPage}
+                onChange={(page) => setCurrentPage(page)}
+                color="blue"
+                radius="md"
+                withEdges
+              />
 
-              {hasMoreItems && !isLoadingMore && (
-                <Button
-                  variant="light"
-                  color="blue"
-                  onClick={loadMoreItems}
-                  className="w-full sm:w-auto"
-                >
-                  Load More Products (
-                  {filteredProducts.length - displayedProducts.length}{" "}
-                  remaining)
-                </Button>
-              )}
-
-              {!hasMoreItems && displayedProducts.length > itemsPerLoad && (
-                <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                  <Text
-                    size="sm"
-                    className="text-green-700 dark:text-green-300"
-                  >
-                    ✅ All products loaded
-                  </Text>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Text size="sm" color="dimmed">Per page:</Text>
+                <NativeSelect
+                  value={String(itemsPerPage)}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  data={["25", "50", "100"]}
+                  size="xs"
+                  style={{ width: 70 }}
+                />
+              </div>
             </div>
           )}
         </div>
