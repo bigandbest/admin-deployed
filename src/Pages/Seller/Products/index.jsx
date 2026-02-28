@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Card, 
-  Title, 
-  Button, 
-  Table, 
-  Badge, 
-  TextInput, 
-  Select, 
+import {
+  Card,
+  Title,
+  Button,
+  Table,
+  Badge,
+  TextInput,
+  Select,
   Group,
   ActionIcon,
   Text,
@@ -49,7 +49,7 @@ export default function SellerProducts() {
         ...(statusFilter !== "all" && { status: statusFilter }),
         ...(searchTerm && { search: searchTerm })
       };
-      
+
       const result = await getSellerProducts(filters);
       if (result.success) {
         setProducts(result.data.products || []);
@@ -156,7 +156,7 @@ export default function SellerProducts() {
                       <Text fw={600}>₹{product.sellerOfferPrice?.toLocaleString() || 0}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Badge 
+                      <Badge
                         color={statusColors[product.status] || "gray"}
                         variant="light"
                       >
@@ -165,8 +165,8 @@ export default function SellerProducts() {
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs">
-                        <ActionIcon 
-                          variant="light" 
+                        <ActionIcon
+                          variant="light"
                           color="blue"
                           onClick={() => navigate(`/seller/products/edit/${product.id}`)}
                         >
@@ -194,9 +194,9 @@ export default function SellerProducts() {
             {/* Pagination */}
             {totalPages > 1 && (
               <Group justify="center" className="mt-4">
-                <Pagination 
-                  total={totalPages} 
-                  value={page} 
+                <Pagination
+                  total={totalPages}
+                  value={page}
                   onChange={setPage}
                 />
               </Group>
