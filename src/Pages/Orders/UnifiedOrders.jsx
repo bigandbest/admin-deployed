@@ -283,8 +283,8 @@ const UnifiedOrders = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                                 <div>
                                                     <p className="text-sm text-gray-600">Customer</p>
-                                                    <p className="font-semibold">{order.user_name || order.users?.name || 'N/A'}</p>
-                                                    <p className="text-sm text-gray-600">{order.user_email || order.users?.email || 'N/A'}</p>
+                                                    <p className="font-semibold">{order.user?.name || order.user_name || 'N/A'}</p>
+                                                    <p className="text-sm text-gray-600">{order.user?.email || order.user_email || 'N/A'}</p>
                                                     {order.company_name && (
                                                         <p className="text-xs text-gray-500 mt-1">
                                                             <span className="font-semibold">Co:</span> {order.company_name}
@@ -298,7 +298,7 @@ const UnifiedOrders = () => {
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-gray-600">Total Amount</p>
-                                                    <p className="font-bold text-xl text-green-700">₹{order.total || order.product_total_price}</p>
+                                                    <p className="font-bold text-xl text-green-700">₹{order.total || 0}</p>
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-gray-600 mb-1">Payment & Status</p>
@@ -519,7 +519,7 @@ const OrderDetails = ({ orderId, onUpdate, status, adminnotes, paymentMethod, or
                     <div className="space-y-2">
                         {items.map((item) => {
                             // Helper to get product details from nested structure
-                            const product = item.variant?.product || item.products;
+                            const product = item.variant?.product || item.product;
 
                             // Get image: Variant Specific -> Product Specific -> Global/Legacy
                             const variantMedia = item.variant?.media || [];
