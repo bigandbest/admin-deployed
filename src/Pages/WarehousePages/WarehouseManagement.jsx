@@ -54,6 +54,8 @@ const WarehouseManagement = () => {
     zone_ids: [],
     parent_warehouse_id: null,
     pincode_assignments: [], // For division warehouses
+    seller_ids: [], // For division warehouses
+    rider_ids: [], // For division warehouses
   });
 
   const [warehouseHierarchy, setWarehouseHierarchy] = useState([]);
@@ -225,6 +227,8 @@ const WarehouseManagement = () => {
         zone_ids: [],
         parent_warehouse_id: null,
         pincode_assignments: [],
+        seller_ids: [],
+        rider_ids: [],
       });
 
       await fetchWarehouses();
@@ -615,6 +619,8 @@ const WarehouseManagement = () => {
                 }))
                 : [],
               parent_warehouse_id: warehouse.parent_warehouse_id || null,
+              seller_ids: warehouse.sellers ? warehouse.sellers.map((s) => s.id) : [],
+              rider_ids: warehouse.riders ? warehouse.riders.map((r) => r.id) : [],
             });
             setShowWarehouseModal(true);
           }}
@@ -629,6 +635,8 @@ const WarehouseManagement = () => {
               zone_ids: [],
               parent_warehouse_id: null,
               pincode_assignments: [],
+              seller_ids: [],
+              rider_ids: [],
             });
             setShowWarehouseModal(true);
           }}
@@ -1357,6 +1365,10 @@ const WarehouseModal = ({
   const [availablePincodes, setAvailablePincodes] = useState([]);
   const [loadingPincodes, setLoadingPincodes] = useState(false);
   const [pincodeSearch, setPincodeSearch] = useState("");
+  const [availableSellers, setAvailableSellers] = useState([]);
+  const [availableRiders, setAvailableRiders] = useState([]);
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [riderSearch, setRiderSearch] = useState("");
 
   // Fetch available pincodes when parent warehouse changes for division warehouses
   useEffect(() => {
@@ -1399,6 +1411,29 @@ const WarehouseModal = ({
 
     fetchAvailablePincodes();
   }, [data.type, data.parent_warehouse_id]);
+
+  // Fetch available sellers and riders for division warehouses
+  useEffect(() => {
+    const fetchSellersAndRiders = async () => {
+      if (data.type === "division") {
+        try {
+          const [sellersRes, ridersRes] = await Promise.all([
+            axios.get(`${API_BASE_URL}/seller/available-list`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` }
+            }).catch(() => ({ data: { data: [] } })),
+            axios.get(`${API_BASE_URL}/riders/available-list`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` }
+            }).catch(() => ({ data: { data: [] } })),
+          ]);
+          setAvailableSellers(sellersRes.data?.data || []);
+          setAvailableRiders(ridersRes.data?.data || []);
+        } catch (err) {
+          console.error("Error fetching sellers/riders:", err);
+        }
+      }
+    };
+    fetchSellersAndRiders();
+  }, [data.type]);
 
   if (!isOpen) return null;
 
@@ -1844,6 +1879,140 @@ const WarehouseModal = ({
                       </div>
                     </div>
                   )}
+              </div>
+            </div>
+          )}
+
+          {/* Seller Assignment (Division warehouses only) */}
+          {data.type === "division" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🧑‍💼 Assigned Sellers
+              </label>
+              <div className="border rounded-lg p-3 bg-gray-50">
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm mb-2"
+                  placeholder="Search sellers by name, email..."
+                  value={sellerSearch}
+                  onChange={(e) => setSellerSearch(e.target.value)}
+                />
+                {availableSellers.length > 0 ? (
+                  <div className="border border-gray-300 rounded-lg max-h-32 overflow-y-auto mb-2">
+                    {availableSellers
+                      .filter((s) => {
+                        if (!sellerSearch) return true;
+                        const term = sellerSearch.toLowerCase();
+                        return (
+                          s.business_name?.toLowerCase().includes(term) ||
+                          s.user?.name?.toLowerCase().includes(term) ||
+                          s.user?.email?.toLowerCase().includes(term)
+                        );
+                      })
+                      .filter(s => !(data.seller_ids || []).includes(s.id))
+                      .map((seller) => (
+                        <div
+                          key={seller.id}
+                          onClick={() => setData({ ...data, seller_ids: [...(data.seller_ids || []), seller.id] })}
+                          className="px-3 py-2 border-b last:border-b-0 cursor-pointer hover:bg-blue-50 flex justify-between items-center text-sm"
+                        >
+                          <div>
+                            <div className="font-medium">{seller.business_name || seller.user?.name}</div>
+                            <div className="text-xs text-gray-500">{seller.user?.email} • {seller.seller_type}</div>
+                          </div>
+                          <span className="text-blue-600 text-lg font-bold">+</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 mb-2">No sellers available. Sellers will appear here once registered.</p>
+                )}
+                {(data.seller_ids || []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {data.seller_ids.map((sid) => {
+                      const seller = availableSellers.find(s => s.id === sid);
+                      return (
+                        <div key={sid} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                          <span>{seller?.business_name || seller?.user?.name || `Seller #${sid}`}</span>
+                          <button
+                            type="button"
+                            onClick={() => setData({ ...data, seller_ids: data.seller_ids.filter(id => id !== sid) })}
+                            className="ml-2 text-green-600 hover:text-green-800 rounded-full p-0.5"
+                          >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Rider Assignment (Division warehouses only) */}
+          {data.type === "division" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🚴 Assigned Riders
+              </label>
+              <div className="border rounded-lg p-3 bg-gray-50">
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm mb-2"
+                  placeholder="Search riders by name..."
+                  value={riderSearch}
+                  onChange={(e) => setRiderSearch(e.target.value)}
+                />
+                {availableRiders.length > 0 ? (
+                  <div className="border border-gray-300 rounded-lg max-h-32 overflow-y-auto mb-2">
+                    {availableRiders
+                      .filter((r) => {
+                        if (!riderSearch) return true;
+                        const term = riderSearch.toLowerCase();
+                        return (
+                          r.user?.name?.toLowerCase().includes(term) ||
+                          r.user?.email?.toLowerCase().includes(term) ||
+                          r.vehicle_type?.toLowerCase().includes(term)
+                        );
+                      })
+                      .filter(r => !(data.rider_ids || []).includes(r.id))
+                      .map((rider) => (
+                        <div
+                          key={rider.id}
+                          onClick={() => setData({ ...data, rider_ids: [...(data.rider_ids || []), rider.id] })}
+                          className="px-3 py-2 border-b last:border-b-0 cursor-pointer hover:bg-blue-50 flex justify-between items-center text-sm"
+                        >
+                          <div>
+                            <div className="font-medium">{rider.user?.name || `Rider #${rider.id}`}</div>
+                            <div className="text-xs text-gray-500">{rider.vehicle_type} • {rider.is_available ? '✅ Available' : '⏸ Busy'}</div>
+                          </div>
+                          <span className="text-blue-600 text-lg font-bold">+</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 mb-2">No riders available. Riders will appear here once registered.</p>
+                )}
+                {(data.rider_ids || []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {data.rider_ids.map((rid) => {
+                      const rider = availableRiders.find(r => r.id === rid);
+                      return (
+                        <div key={rid} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                          <span>{rider?.user?.name || `Rider #${rid}`}</span>
+                          <button
+                            type="button"
+                            onClick={() => setData({ ...data, rider_ids: data.rider_ids.filter(id => id !== rid) })}
+                            className="ml-2 text-orange-600 hover:text-orange-800 rounded-full p-0.5"
+                          >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

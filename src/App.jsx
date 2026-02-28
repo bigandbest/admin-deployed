@@ -56,6 +56,8 @@ import WarehouseManagement from "./Pages/WarehousePages/WarehouseManagement.jsx"
 import WarehouseProducts from "./Pages/WarehousePages/WarehouseProducts.jsx";
 import InventoryManagement from "./Pages/WarehousePages/InventoryManagement.jsx";
 import PincodeManagement from "./Pages/WarehousePages/PincodeManagement.jsx";
+import SellerRequests from "./Pages/WarehousePages/SellerRequests.jsx";
+import SellerPincodeRequests from "./Pages/Seller/SellerPincodeRequests.jsx";
 import VideoBannerManagement from "./Pages/VideoBanners/VideoBannerManagement.jsx";
 import AdminOrders from "./Pages/Orders/index.jsx";
 import ShippingBanner from "./Pages/ShippingBanner/ShippingBanner.jsx";
@@ -93,6 +95,7 @@ import DeliveryCharges from "./Pages/DeliveryCharges/index.jsx";
 import ChargeSettings from "./Pages/ChargeSettings/index.jsx";
 import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
+import SellerWithdrawalRequests from "./Pages/WalletManagement/SellerWithdrawalRequests.jsx";
 import ProductEnquiries from "./Pages/ProductEnquiries/index.jsx";
 import CustomerReviewManager from "./Pages/ReviewManager/index.jsx";
 import SmallPromoCardManagement from "./Pages/SmallPromoCards/SmallPromoCardManagement.jsx";
@@ -137,9 +140,8 @@ const MainLayout = () => {
         onMouseLeave={() => handleSidebarHover(false)}
       />
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
+          }`}
       >
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
@@ -378,6 +380,14 @@ function App() {
           element: <PincodeManagement />,
         },
         {
+          path: "/warehouses/seller-requests",
+          element: <SellerRequests />,
+        },
+        {
+          path: "/warehouses/seller-pincode-requests",
+          element: <SellerPincodeRequests />,
+        },
+        {
           path: "/AdminOrders",
           element: <AdminOrders />,
         },
@@ -513,6 +523,10 @@ function App() {
         {
           path: "/wallet-transactions",
           element: <WalletTransactions />,
+        },
+        {
+          path: "/wallet-management/seller-requests",
+          element: <SellerWithdrawalRequests />,
         },
         {
           path: "/enquiries/:id",
