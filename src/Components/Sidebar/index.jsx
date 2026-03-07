@@ -410,7 +410,7 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           description: "Review and approve products added by sellers to your warehouse",
         },
         {
-          title: "Seller Pincode Requests",
+          title: "Seller Region Requests",
           icon: <FaBoxOpen />,
           path: "/warehouses/seller-pincode-requests",
           description: "Review and approve warehouse pincode modification requests from sellers",

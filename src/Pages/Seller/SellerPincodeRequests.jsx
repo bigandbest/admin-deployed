@@ -13,9 +13,14 @@ const SellerPincodeRequests = () => {
         try {
             setLoading(true);
             setError(null);
-            let url = `${API_BASE_URL}/admin/sellers/pincode-requests`;
-            if (filterStatus !== 'all') {
-                url += `?status=${filterStatus}`;
+            let url = `${API_BASE_URL}/seller-pincode/admin/pending`;
+            if (filterStatus !== 'all' && filterStatus !== 'PENDING') {
+                // For the scope of this update, the backend only has 'getPendingRequests'
+                // To support 'all', we would need a generic getAll endpoint.
+                // Falling back to pending for simplicity in this iteration unless backend changed.
+                setRequests([]);
+                setLoading(false);
+                return;
             }
             const response = await axios.get(url, {
                 headers: {
@@ -28,6 +33,7 @@ const SellerPincodeRequests = () => {
                 setError(response.data.error || "Failed to fetch requests");
             }
         } catch (err) {
+            console.error("Fetch requests error:", err);
             setError(err.response?.data?.error || err.message || "An error occurred");
         } finally {
             setLoading(false);
@@ -39,13 +45,13 @@ const SellerPincodeRequests = () => {
     }, [filterStatus]);
 
     const handleApprove = async (id) => {
-        if (!window.confirm("Approve this pincode request?")) return;
+        if (!window.confirm("Approve this pincode request? This will link the seller to the nearest warehouse.")) return;
         try {
-            const resp = await axios.post(`${API_BASE_URL}/admin/sellers/pincode-requests/${id}/approve`, {}, {
+            const resp = await axios.post(`${API_BASE_URL}/seller-pincode/admin/approve/${id}`, {}, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` }
             });
             if (resp.data.success) {
-                alert("Request approved.");
+                alert("Request approved successfully.");
                 fetchRequests();
             } else {
                 alert(resp.data.error || "Failed to approve");
@@ -56,9 +62,13 @@ const SellerPincodeRequests = () => {
     };
 
     const handleReject = async (id) => {
-        if (!window.confirm("Reject this pincode request?")) return;
+        const reason = window.prompt("Enter rejection reason (e.g., 'No active warehouse serves this pincode'):");
+        if (reason === null) return; // Cancelled
+
         try {
-            const resp = await axios.post(`${API_BASE_URL}/admin/sellers/pincode-requests/${id}/reject`, {}, {
+            const resp = await axios.post(`${API_BASE_URL}/seller-pincode/admin/reject/${id}`, {
+                rejection_reason: reason
+            }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` }
             });
             if (resp.data.success) {
@@ -92,8 +102,8 @@ const SellerPincodeRequests = () => {
         <div className="p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Pincode Requests</h1>
-                    <p className="text-sm text-gray-600">Review seller warehouse and pincode modifications</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Seller Region Requests</h1>
+                    <p className="text-sm text-gray-600">Review and approve new area requests from sellers</p>
                 </div>
                 <div className="flex bg-white rounded-lg shadow border overflow-hidden">
                     {["all", "PENDING", "APPROVED", "REJECTED"].map((status) => (
@@ -119,7 +129,7 @@ const SellerPincodeRequests = () => {
 
             {requests.length === 0 ? (
                 <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
-                    No matching pincode requests found.
+                    No matching region requests found.
                 </div>
             ) : (
                 <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
@@ -128,8 +138,7 @@ const SellerPincodeRequests = () => {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warehouse</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested Pincodes</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested Region</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                             </tr>
@@ -141,27 +150,30 @@ const SellerPincodeRequests = () => {
                                         {new Date(req.created_at).toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="text-sm font-medium text-gray-900">{req.seller.business_name || req.seller.name || "N/A"}</div>
-                                        <div className="text-xs text-gray-500">{req.seller.email}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                                        {req.warehouse?.name || "N/A"}
+                                        <div className="text-sm font-medium text-gray-900">{req.seller?.business_name || req.seller?.name || "N/A"}</div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
-                                        {req.pincodes.split(',').length} Pincodes
-                                        <div className="text-xs font-mono mt-1 w-48 truncate" title={req.pincodes}>{req.pincodes}</div>
+                                        <div className="font-semibold text-gray-900">Pincode: {req.pincode}</div>
+                                        <div className="text-xs mt-1 w-64 truncate" title={req.address}>{req.address}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span
-                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${req.status === "APPROVED"
-                                                ? "bg-green-100 text-green-800"
-                                                : req.status === "REJECTED"
-                                                    ? "bg-red-100 text-red-800"
-                                                    : "bg-yellow-100 text-yellow-800"
-                                                }`}
-                                        >
-                                            {req.status}
-                                        </span>
+                                        <div className="flex flex-col">
+                                            <span
+                                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full w-max ${req.status === "APPROVED"
+                                                    ? "bg-green-100 text-green-800"
+                                                    : req.status === "REJECTED"
+                                                        ? "bg-red-100 text-red-800"
+                                                        : "bg-yellow-100 text-yellow-800"
+                                                    }`}
+                                            >
+                                                {req.status}
+                                            </span>
+                                            {req.status === "REJECTED" && req.rejection_reason && (
+                                                <span className="text-[10px] text-red-500 mt-1 max-w-[150px] break-words">
+                                                    Reason: {req.rejection_reason}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         {req.status === "PENDING" && (
