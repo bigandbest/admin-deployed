@@ -35,15 +35,32 @@ export const apiCall = async (endpoint, options = {}) => {
 api.interceptors.request.use(
   (config) => {
     // For admin, we might use Supabase session token or JWT from cookies
-    const token = localStorage.getItem("big-best-admin-auth-token");
-    if (token) {
+    // Try the standard admin token first, fallback to older formats if needed
+    const adminToken = localStorage.getItem("admin_token");
+    const legacyToken = localStorage.getItem("big-best-admin-auth-token");
+
+    // First check the standard direct JWT string token
+    if (adminToken) {
+      // It might be stored as a raw JWT string or a JSON object depending on how it was saved
       try {
-        const parsed = JSON.parse(token);
+        const parsed = JSON.parse(adminToken);
+        if (parsed?.access_token) {
+          config.headers.Authorization = `Bearer ${parsed.access_token}`;
+        } else if (typeof parsed === 'string') {
+          config.headers.Authorization = `Bearer ${parsed}`;
+        }
+      } catch {
+        // If JSON parse fails, it's likely a raw JWT string
+        config.headers.Authorization = `Bearer ${adminToken}`;
+      }
+    } else if (legacyToken) {
+      try {
+        const parsed = JSON.parse(legacyToken);
         if (parsed?.access_token) {
           config.headers.Authorization = `Bearer ${parsed.access_token}`;
         }
       } catch {
-        // Ignore parsing errors
+        config.headers.Authorization = `Bearer ${legacyToken}`;
       }
     }
     return config;

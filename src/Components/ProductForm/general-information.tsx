@@ -93,6 +93,25 @@ export default function GeneralInformation({
             </Select>
           </div>
 
+          {/* Source Type */}
+          <div className="space-y-2">
+            <Label htmlFor="source_type" className="text-sm font-medium">
+              Product Source
+            </Label>
+            <Select
+              value={product.source_type || "WAREHOUSE"}
+              onValueChange={(value) => handleChange("source_type", value)}
+            >
+              <SelectTrigger className="bg-muted/50 border-input">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="WAREHOUSE">Warehouse Product</SelectItem>
+                <SelectItem value="DROP_SHIP">Drop Ship / Seller Fulfilled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* HSN Code & SAC Code */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

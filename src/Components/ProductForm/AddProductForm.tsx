@@ -13,6 +13,7 @@ interface ProductData {
   name: string;
   description: string;
   vertical: string;
+  source_type: string;
   // brand_name removed
   hsn_code: string;
   sac_code: string;
@@ -123,6 +124,7 @@ export default function AddProductForm({
 <p><strong>Country of Origin:</strong> India</p><p><br></p>
 <p><strong>Shelf Life:</strong> </p>`,
       vertical: "qwik",
+      source_type: "WAREHOUSE",
       // brand_name removed
       hsn_code: "",
       sac_code: "",

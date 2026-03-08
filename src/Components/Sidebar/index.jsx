@@ -154,6 +154,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/charge-settings",
           description: "Configure handling, surge, and platform charges",
         },
+        {
+          title: "Rider Payout Rules",
+          icon: <FaRupeeSign />,
+          path: "/rider-payout-rules",
+          description: "Manage rider per-km payout rates based on order value",
+        },
       ],
     },
     {

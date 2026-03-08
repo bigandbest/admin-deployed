@@ -108,6 +108,7 @@ import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
 import Coupons from "./Pages/Coupons/index.jsx";
 import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
 import FaqTemplates from "./Pages/FaqTemplates/FaqTemplates.jsx";
+import RiderPayoutRules from "./Pages/RiderManagement/RiderPayoutRules.jsx";
 
 // Seller Pages
 import SellerDashboard from "./Pages/Seller/Dashboard";
@@ -579,6 +580,10 @@ function App() {
         {
           path: "/faq-templates",
           element: <FaqTemplates />,
+        },
+        {
+          path: "/rider-payout-rules",
+          element: <RiderPayoutRules />,
         },
       ],
     },

@@ -15,10 +15,13 @@ import {
   Loader,
   Center,
   Pagination,
-  Stack
+  Stack,
+  Modal,
+  Drawer,
 } from "@mantine/core";
-import { FaPlus, FaEdit, FaEllipsisV, FaSearch } from "react-icons/fa";
-import { getSellerProducts } from "../../../utils/sellerApi";
+import { FaPlus, FaEdit, FaEllipsisV, FaSearch, FaBox, FaTruck } from "react-icons/fa";
+import { getSellerProducts, addProductStock } from "../../../utils/sellerApi";
+import { notifications } from "@mantine/notifications";
 
 const statusColors = {
   APPROVED: "green",
@@ -26,6 +29,75 @@ const statusColors = {
   ACTION_REQUIRED: "red",
   REJECTED: "gray"
 };
+
+function VariantEditorCard({ variant, onSaved }) {
+  const [offerPrice, setOfferPrice] = useState(variant.seller_offer_price || 0);
+  const [quantity, setQuantity] = useState(variant.stock_quantity || 0);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setSubmitting(true);
+      const payload = {
+        product_id: variant.product_id,
+        variant_id: variant.variant_id,
+        stock_quantity: parseInt(quantity, 10),
+        offer_price: parseFloat(offerPrice),
+        mrp: variant.mrp || null
+      };
+
+      const res = await addProductStock(payload);
+      if (res.success) {
+        notifications.show({ title: "Success", message: "Variant updated and sent for approval", color: "green" });
+        onSaved();
+      } else {
+        notifications.show({ title: "Error", message: res.error || "Failed to update variant", color: "red" });
+      }
+    } catch (err) {
+      notifications.show({ title: "Error", message: "Failed to save variant", color: "red" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card withBorder>
+      <Group justify="space-between">
+        <Stack gap="xs">
+          <Text fw={600}>{variant.variant_name}</Text>
+          <Group>
+            <Badge color={statusColors[variant.status] || "gray"}>
+              {variant.status?.replace("_", " ")}
+            </Badge>
+            <Text size="xs" c="dimmed">SKU: {variant.sku}</Text>
+          </Group>
+        </Stack>
+        <Group>
+          <TextInput
+            label="Offer Price (₹)"
+            value={offerPrice}
+            onChange={(e) => setOfferPrice(e.target.value)}
+            disabled={variant.status === 'PENDING_APPROVAL'}
+          />
+          <TextInput
+            label="Quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            disabled={variant.status === 'PENDING_APPROVAL'}
+          />
+          <Button
+            mt="lg"
+            onClick={handleSave}
+            loading={submitting}
+            disabled={variant.status === 'PENDING_APPROVAL'}
+          >
+            Save
+          </Button>
+        </Group>
+      </Group>
+    </Card>
+  );
+}
 
 export default function SellerProducts() {
   const navigate = useNavigate();
@@ -35,6 +107,8 @@ export default function SellerProducts() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -52,8 +126,24 @@ export default function SellerProducts() {
 
       const result = await getSellerProducts(filters);
       if (result.success) {
-        setProducts(result.data.products || []);
-        setTotalPages(result.data.totalPages || 1);
+        // Group variants by product
+        const grouped = (result.data || []).reduce((acc, curr) => {
+          if (!acc[curr.product_id]) {
+            acc[curr.product_id] = {
+              id: curr.product_id,
+              product_name: curr.product_name,
+              category: curr.category,
+              source_type: curr.source_type,
+              productCode: curr.sku?.split('-')[0] || curr.product_id?.slice(0, 8).toUpperCase(),
+              variants: []
+            };
+          }
+          acc[curr.product_id].variants.push(curr);
+          return acc;
+        }, {});
+
+        setProducts(Object.values(grouped));
+        setTotalPages(result.count ? Math.ceil(result.count / 10) : 1);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -134,9 +224,8 @@ export default function SellerProducts() {
                 <Table.Tr>
                   <Table.Th>Product Code</Table.Th>
                   <Table.Th>Product Name</Table.Th>
-                  <Table.Th>Stock Quantity</Table.Th>
-                  <Table.Th>Your Offer Price</Table.Th>
-                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Category</Table.Th>
+                  <Table.Th>Source Type</Table.Th>
                   <Table.Th>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -144,47 +233,33 @@ export default function SellerProducts() {
                 {products.map((product) => (
                   <Table.Tr key={product.id}>
                     <Table.Td>
-                      <Text fw={500}>{product.productCode || product.sku}</Text>
+                      <Badge variant="light">{product.productCode}</Badge>
                     </Table.Td>
                     <Table.Td>
-                      <Text>{product.name || product.title}</Text>
+                      <Text fw={500}>{product.product_name}</Text>
+                      <Text size="xs" c="dimmed">{product.variants.length} Variant(s)</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text>{product.quantity || 0}</Text>
+                      <Text>{product.category || "N/A"}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text fw={600}>₹{product.sellerOfferPrice?.toLocaleString() || 0}</Text>
+                      {product.source_type === "DROP_SHIP" ? (
+                        <Badge color="violet" leftSection={<FaTruck size={10} />}>Drop Ship</Badge>
+                      ) : (
+                        <Badge color="blue" leftSection={<FaBox size={10} />}>Warehouse</Badge>
+                      )}
                     </Table.Td>
                     <Table.Td>
-                      <Badge
-                        color={statusColors[product.status] || "gray"}
+                      <Button
+                        size="xs"
                         variant="light"
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setVariantsModalOpen(true);
+                        }}
                       >
-                        {product.status?.replace("_", " ") || "Unknown"}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap="xs">
-                        <ActionIcon
-                          variant="light"
-                          color="blue"
-                          onClick={() => navigate(`/seller/products/edit/${product.id}`)}
-                        >
-                          <FaEdit size={16} />
-                        </ActionIcon>
-                        <Menu position="bottom-end">
-                          <Menu.Target>
-                            <ActionIcon variant="subtle">
-                              <FaEllipsisV size={16} />
-                            </ActionIcon>
-                          </Menu.Target>
-                          <Menu.Dropdown>
-                            <Menu.Item>View Details</Menu.Item>
-                            <Menu.Item>Update Stock</Menu.Item>
-                            <Menu.Item color="red">Remove</Menu.Item>
-                          </Menu.Dropdown>
-                        </Menu>
-                      </Group>
+                        Manage Variants
+                      </Button>
                     </Table.Td>
                   </Table.Tr>
                 ))}
@@ -204,6 +279,27 @@ export default function SellerProducts() {
           </>
         )}
       </Card>
+
+      {/* Manage Variants Modal */}
+      <Modal
+        opened={variantsModalOpen}
+        onClose={() => setVariantsModalOpen(false)}
+        title={selectedProduct ? `Manage Variants: ${selectedProduct.product_name}` : ""}
+        size="xl"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Set your stock quantity and offer price for each individual variant.
+          </Text>
+          {selectedProduct?.variants.map(variant => (
+            <VariantEditorCard
+              key={variant.id}
+              variant={variant}
+              onSaved={fetchProducts}
+            />
+          ))}
+        </Stack>
+      </Modal>
     </div>
   );
 }

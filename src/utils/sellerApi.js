@@ -66,6 +66,19 @@ export const addProductStock = async (productData) => {
   }
 };
 
+export const requestToSellProduct = async (data) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/seller/products/request-access`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ productIds: data.productIds })
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 export const updateOfferPrice = async (productId, offerPrice) => {
   try {
     const response = await fetch(`${API_BASE_URL}/seller/products/${productId}/offer-price`, {
