@@ -283,8 +283,8 @@ const UnifiedOrders = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                                 <div>
                                                     <p className="text-sm text-gray-600">Customer</p>
-                                                    <p className="font-semibold">{order.user?.name || order.user_name || 'N/A'}</p>
-                                                    <p className="text-sm text-gray-600">{order.user?.email || order.user_email || 'N/A'}</p>
+                                                    <p className="font-semibold">{order.users?.name || order.user?.name || order.user_name || 'N/A'}</p>
+                                                    <p className="text-sm text-gray-600">{order.users?.email || order.user?.email || order.user_email || 'N/A'}</p>
                                                     {order.company_name && (
                                                         <p className="text-xs text-gray-500 mt-1">
                                                             <span className="font-semibold">Co:</span> {order.company_name}

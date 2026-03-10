@@ -286,13 +286,13 @@ const WalletManagement = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        {wallet.users?.name || "N/A"}
+                        {wallet.user?.name || wallet.users?.name || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {wallet.users?.email || "N/A"}
+                        {wallet.user?.email || wallet.users?.email || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {wallet.users?.phone || "N/A"}
+                        {wallet.user?.phone || wallet.users?.phone || "N/A"}
                       </div>
                     </div>
                   </td>
@@ -303,11 +303,10 @@ const WalletManagement = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        wallet.is_frozen
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${wallet.is_frozen
                           ? getStatusColor("frozen")
                           : getStatusColor("active")
-                      }`}
+                        }`}
                     >
                       {wallet.is_frozen ? "Frozen" : "Active"}
                     </span>
@@ -331,18 +330,6 @@ const WalletManagement = () => {
                         className="text-blue-600 hover:text-blue-800 text-sm"
                       >
                         View
-                      </button>
-                      <button
-                        onClick={() => openActionModal(wallet, "credit")}
-                        className="text-green-600 hover:text-green-800 text-sm"
-                      >
-                        Credit
-                      </button>
-                      <button
-                        onClick={() => openActionModal(wallet, "debit")}
-                        className="text-orange-600 hover:text-orange-800 text-sm"
-                      >
-                        Debit
                       </button>
                       {wallet.is_frozen ? (
                         <button
@@ -419,22 +406,22 @@ const WalletManagement = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Name:</span>{" "}
-                    {selectedWallet.users?.name || "N/A"}
+                    {selectedWallet.user?.name || selectedWallet.users?.name || "N/A"}
                   </div>
                   <div>
                     <span className="font-medium">Email:</span>{" "}
-                    {selectedWallet.users?.email || "N/A"}
+                    {selectedWallet.user?.email || selectedWallet.users?.email || "N/A"}
                   </div>
                   <div>
                     <span className="font-medium">Phone:</span>{" "}
-                    {selectedWallet.users?.phone || "N/A"}
+                    {selectedWallet.user?.phone || selectedWallet.users?.phone || "N/A"}
                   </div>
                   <div>
                     <span className="font-medium">Joined:</span>{" "}
-                    {selectedWallet.users?.created_at
+                    {(selectedWallet.user?.created_at || selectedWallet.users?.created_at)
                       ? new Date(
-                          selectedWallet.users.created_at
-                        ).toLocaleDateString()
+                        selectedWallet.user?.created_at || selectedWallet.users?.created_at
+                      ).toLocaleDateString()
                       : "N/A"}
                   </div>
                 </div>
@@ -451,11 +438,10 @@ const WalletManagement = () => {
                   <div>
                     <span className="font-medium">Status:</span>
                     <span
-                      className={`ml-1 px-2 py-1 text-xs rounded-full ${
-                        selectedWallet.is_frozen
+                      className={`ml-1 px-2 py-1 text-xs rounded-full ${selectedWallet.is_frozen
                           ? "bg-red-100 text-red-800"
                           : "bg-green-100 text-green-800"
-                      }`}
+                        }`}
                     >
                       {selectedWallet.is_frozen ? "Frozen" : "Active"}
                     </span>
@@ -514,7 +500,7 @@ const WalletManagement = () => {
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-600">
-                    User: <strong>{selectedWallet.users?.name}</strong>
+                    User: <strong>{selectedWallet.user?.name || selectedWallet.users?.name}</strong>
                   </p>
                   <p className="text-sm text-gray-600">
                     Current Balance:{" "}
