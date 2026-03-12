@@ -124,9 +124,8 @@ const WalletTransactions = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `wallet-transactions-${
-          new Date().toISOString().split("T")[0]
-        }.csv`;
+        a.download = `wallet-transactions-${new Date().toISOString().split("T")[0]
+          }.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -217,21 +216,19 @@ const WalletTransactions = () => {
           <nav className="flex space-x-8">
             <button
               onClick={() => setActiveTab("transactions")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "transactions"
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "transactions"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+                }`}
             >
               Transactions
             </button>
             <button
               onClick={() => setActiveTab("audit")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "audit"
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "audit"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+                }`}
             >
               Audit Logs
             </button>
@@ -416,10 +413,10 @@ const WalletTransactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {transaction.wallets?.users?.name || "N/A"}
+                        {transaction.wallet?.user?.name || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {transaction.wallets?.users?.email || "N/A"}
+                        {transaction.wallet?.user?.email || "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -430,15 +427,14 @@ const WalletTransactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          transaction.status === "completed"
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${transaction.status === "completed"
                             ? "bg-green-100 text-green-800"
                             : transaction.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : transaction.status === "failed"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
+                              ? "bg-yellow-100 text-yellow-800"
+                              : transaction.status === "failed"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-gray-100 text-gray-800"
+                          }`}
                       >
                         {transaction.status}
                       </span>
@@ -517,10 +513,10 @@ const WalletTransactions = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {log.wallets?.users?.name || "N/A"}
+                        {log.wallet?.user?.name || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {log.wallets?.users?.email || "N/A"}
+                        {log.wallet?.user?.email || "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
