@@ -353,6 +353,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           description: "Manage seller wallet withdrawal requests",
         },
         {
+          title: "Document Verification",
+          icon: <FaList />,
+          path: "/document-verification",
+          description: "Review and verify rider & seller documents",
+        },
+        {
           title: "Notifications",
           icon: <FaBell />,
           path: "/notifications",

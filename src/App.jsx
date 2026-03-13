@@ -109,6 +109,7 @@ import Coupons from "./Pages/Coupons/index.jsx";
 import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
 import FaqTemplates from "./Pages/FaqTemplates/FaqTemplates.jsx";
 import RiderPayoutRules from "./Pages/RiderManagement/RiderPayoutRules.jsx";
+import DocumentVerification from "./Pages/DocumentVerification/DocumentVerification.jsx";
 
 // Seller Pages
 import SellerDashboard from "./Pages/Seller/Dashboard";
@@ -584,6 +585,10 @@ function App() {
         {
           path: "/rider-payout-rules",
           element: <RiderPayoutRules />,
+        },
+        {
+          path: "/document-verification",
+          element: <DocumentVerification />,
         },
       ],
     },
