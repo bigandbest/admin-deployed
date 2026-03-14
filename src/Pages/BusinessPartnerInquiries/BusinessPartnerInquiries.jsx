@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
+import { Cross, CrossIcon, Eye, EyeIcon } from "lucide-react";
 
 const BusinessPartnerInquiries = () => {
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [modalOpen, SetModalOpen] = useState(false);
   useEffect(() => {
     fetchInquiries();
   }, []);
@@ -230,11 +231,34 @@ const BusinessPartnerInquiries = () => {
                           {inquiry.partnership_type}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">
-                          {inquiry.message || "-"}
-                        </div>
+                      <td>
+                        <EyeIcon
+                          className="cursor-pointer"
+                          onClick={() => SetModalOpen(true)}
+                        />
                       </td>
+
+                      {modalOpen && (
+                        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 min-h-[30vh] shadow-2xl">
+
+                          <div className="bg-white p-6 rounded-lg relative w-[400px]">
+
+                            <CrossIcon
+                              className="absolute top-4 right-4 cursor-pointer"
+                              onClick={() => SetModalOpen(false)}
+                            />
+
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">
+                              Inquiry Details
+                            </h3>
+
+                            <p className="text-gray-600">
+                              {inquiry?.message || "-"}
+                            </p>
+
+                          </div>
+                        </div>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <select
                           value={inquiry.status || "Pending"}
@@ -253,6 +277,7 @@ const BusinessPartnerInquiries = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {dayjs(inquiry.created_at).format("MMM DD, YYYY")}
                       </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => handleDelete(inquiry.id)}

@@ -491,6 +491,10 @@ function App() {
           element: <BulkProductSettings />,
         },
         {
+          path: "/business-partner-inquiries",
+          element: <BusinessPartnerInquiries />,
+        },
+        {
           path: "/product-sections",
           element: <ProductSectionsManagement />,
         },

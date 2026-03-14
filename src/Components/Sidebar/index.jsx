@@ -309,6 +309,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           icon: <FaHandshake />,
           path: "/business-data",
         },
+         {
+          title: "Partners Enquiries",
+          icon: <FaHandshake />,
+          path: "/business-partner-inquiries",
+        },
       ],
     },
     // {
