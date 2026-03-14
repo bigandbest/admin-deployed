@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { FiRefreshCcw, FiCheck, FiX, FiEye } from "react-icons/fi";
+import api from "../utils/api";
 
 const ReturnOrdersPage = () => {
   const [requests, setRequests] = useState([]);
@@ -16,9 +17,6 @@ const ReturnOrdersPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL ||
-        "https://big-best-backend.vercel.app/api";
 
       const adminToken = localStorage.getItem("admin_token");
       if (!adminToken) {
@@ -26,13 +24,13 @@ const ReturnOrdersPage = () => {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/return-orders/admin/all`, {
+      const response = await api.get('/return-orders/admin/all', {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
       });
 
-      const data = await response.json();
+      const data = response.data;
       if (data.success) {
         setRequests(data.return_requests || []);
       } else {
@@ -56,27 +54,22 @@ const ReturnOrdersPage = () => {
 
     try {
       setUpdating(true);
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL ||
-        "https://big-best-backend.vercel.app/api";
       const adminToken = localStorage.getItem("admin_token");
 
-      const response = await fetch(
-        `${API_BASE_URL}/return-orders/admin/status/${requestId}`,
+      const response = await api.put(
+        `/return-orders/admin/status/${requestId}`,
         {
-          method: "PUT",
+          status: newStatus,
+          admin_notes: `Status updated to ${newStatus} by admin`,
+        },
+        {
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${adminToken}`,
           },
-          body: JSON.stringify({
-            status: newStatus,
-            admin_notes: `Status updated to ${newStatus} by admin`,
-          }),
         }
       );
 
-      const result = await response.json();
+      const result = response.data;
       if (result.success) {
         toast.success(`Request marked as ${newStatus}`);
         fetchRequests(); // Refresh list

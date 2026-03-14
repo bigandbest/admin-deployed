@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaBox, FaClock, FaCheckCircle, FaTruck, FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import api from '../../utils/api';
 
 const CodOrders = () => {
   const [codOrders, setCodOrders] = useState([]);
@@ -10,7 +11,8 @@ const CodOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://big-best-backend.vercel.app/api';
+  // Base URL is provided by src/utils/api.js via VITE_API_BASE_URL / VITE_API_URL
+  // (Avoid hardcoding `https://big-best-backend.vercel.app/api` so local dev works properly.)
 
   useEffect(() => {
     fetchCodOrders();
@@ -19,14 +21,9 @@ const CodOrders = () => {
   const fetchCodOrders = async () => {
     try {
       setLoading(true);
-      console.log('Fetching COD orders from:', `${API_BASE_URL}/cod-orders/all?page=${currentPage}&limit=10`);
-      
-      const response = await fetch(`${API_BASE_URL}/cod-orders/all?page=${currentPage}&limit=10`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log('Fetching COD orders');
+
+      const response = await api.get(`/cod-orders/all?page=${currentPage}&limit=10`);
       
       console.log('Response status:', response.status);
       
@@ -36,9 +33,9 @@ const CodOrders = () => {
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
       
-      const result = await response.json();
+      const result = response.data;
       console.log('API Response:', result);
-      
+
       if (result.success) {
         setCodOrders(result.cod_orders || []);
         setTotalPages(result.pagination?.totalPages || 1);
@@ -61,22 +58,13 @@ const CodOrders = () => {
     try {
       console.log('Updating order status:', orderId, newStatus);
       
-      const response = await fetch(`${API_BASE_URL}/cod-orders/status/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
+      const response = await api.put(`/cod-orders/status/${orderId}`, {
+        status: newStatus,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       console.log('Update response:', result);
-      
+
       if (result.success) {
         // Update local state
         setCodOrders(orders => 
@@ -102,19 +90,8 @@ const CodOrders = () => {
     try {
       console.log('Deleting COD order:', orderId);
       
-      const response = await fetch(`${API_BASE_URL}/cod-orders/${orderId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
+      const response = await api.delete(`/cod-orders/${orderId}`);
+      const result = response.data;
       console.log('Delete response:', result);
       
       if (result.success) {

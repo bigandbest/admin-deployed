@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { format } from 'date-fns';
 import { FaBoxOpen, FaBell, FaEnvelope, FaExclamationCircle } from 'react-icons/fa';
-
-// Use same config as other services
-const RAW_API_BASE = import.meta.env.VITE_API_URL || 'https://big-best-backend.vercel.app/api';
-const API_BASE_URL = RAW_API_BASE.endsWith('/api') ? RAW_API_BASE : RAW_API_BASE.replace(/\/+$/, '') + '/api';
+import api from '../../utils/api';
 
 export default function OutOfStockEnquiries() {
   const [activeTab, setActiveTab] = useState('enquiries');
@@ -21,15 +17,17 @@ export default function OutOfStockEnquiries() {
     setLoading(true);
     try {
       if (activeTab === 'enquiries') {
-        const res = await axios.get(`${API_BASE_URL}/out-of-stock/enquiries`, {
+        const res = await api.get('/out-of-stock/enquiries', {
           withCredentials: true,
         });
-        if (res.data.success) setEnquiries(res.data.enquiries);
+        const data = res.data;
+        if (data.success) setEnquiries(data.enquiries);
       } else {
-        const res = await axios.get(`${API_BASE_URL}/out-of-stock/notify-requests`, {
+        const res = await api.get('/out-of-stock/notify-requests', {
           withCredentials: true,
         });
-        if (res.data.success) setNotifyRequests(res.data.requests);
+        const data = res.data;
+        if (data.success) setNotifyRequests(data.requests);
       }
     } catch (err) {
       console.error('Failed to fetch data', err);
