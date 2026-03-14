@@ -280,6 +280,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/product-enquiries",
           description: "Manage product enquiries and create bid offers",
         },
+        {
+          title: "Out of Stock Enquiries",
+          icon: <FaBoxOpen />,
+          path: "/out-of-stock-enquiries",
+          description: "Manage out of stock notify requests and enquiries",
+        },
       ],
     },
     // {

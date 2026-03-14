@@ -110,6 +110,7 @@ import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
 import FaqTemplates from "./Pages/FaqTemplates/FaqTemplates.jsx";
 import RiderPayoutRules from "./Pages/RiderManagement/RiderPayoutRules.jsx";
 import DocumentVerification from "./Pages/DocumentVerification/DocumentVerification.jsx";
+import OutOfStockEnquiries from "./Pages/OutOfStockEnquiries/index.jsx";
 
 // Seller Pages
 import SellerDashboard from "./Pages/Seller/Dashboard";
@@ -593,6 +594,10 @@ function App() {
         {
           path: "/document-verification",
           element: <DocumentVerification />,
+        },
+        {
+          path: "/out-of-stock-enquiries",
+          element: <OutOfStockEnquiries />,
         },
       ],
     },
