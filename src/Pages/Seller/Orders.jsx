@@ -17,7 +17,8 @@ import {
   Divider
 } from "@mantine/core";
 import { FaSearch, FaEye } from "react-icons/fa";
-import { getSellerOrders, getOrderDetails } from "../../utils/sellerApi";
+import { getSellerOrders, getOrderDetails, updateSellerOrderStatus } from "../../utils/sellerApi";
+import { notifications } from "@mantine/notifications";
 
 const statusColors = {
   PENDING: "yellow",
@@ -78,6 +79,32 @@ export default function SellerOrders() {
       }
     } catch (error) {
       console.error("Error fetching order details:", error);
+    }
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      const result = await updateSellerOrderStatus(orderId, newStatus);
+      if (result.success) {
+        notifications.show({
+          title: "Success",
+          message: `Order ${newStatus.toLowerCase()} successfully`,
+          color: "green"
+        });
+        fetchOrders(); // Refresh list
+      } else {
+        notifications.show({
+          title: "Error",
+          message: result.error || "Failed to update order status",
+          color: "red"
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: "Failed to update order status",
+        color: "red"
+      });
     }
   };
 
@@ -180,13 +207,25 @@ export default function SellerOrders() {
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <ActionIcon 
-                        variant="light" 
-                        color="blue"
-                        onClick={() => handleViewOrder(order.id)}
-                      >
-                        <FaEye size={16} />
-                      </ActionIcon>
+                      <Group gap="xs">
+                        <ActionIcon 
+                          variant="light" 
+                          color="blue"
+                          onClick={() => handleViewOrder(order.id)}
+                        >
+                          <FaEye size={16} />
+                        </ActionIcon>
+                        {order.status === 'PENDING' && (
+                          <ActionIcon 
+                            variant="filled" 
+                            color="green"
+                            onClick={() => handleUpdateStatus(order.id, 'CONFIRMED')}
+                            title="Accept Order"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          </ActionIcon>
+                        )}
+                      </Group>
                     </Table.Td>
                   </Table.Tr>
                 ))}

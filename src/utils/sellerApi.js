@@ -154,6 +154,19 @@ export const getOrderDetails = async (orderId) => {
   }
 };
 
+export const updateSellerOrderStatus = async (orderId, status) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/seller/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ status })
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 // Analytics & Dashboard
 export const getSellerDashboard = async () => {
   try {

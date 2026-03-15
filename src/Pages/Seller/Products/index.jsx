@@ -31,11 +31,20 @@ const statusColors = {
 };
 
 function VariantEditorCard({ variant, onSaved }) {
-  const [offerPrice, setOfferPrice] = useState(variant.seller_offer_price || 0);
+  const [offerPrice, setOfferPrice] = useState(variant.seller_offer_price || '');
   const [quantity, setQuantity] = useState(variant.stock_quantity || 0);
   const [submitting, setSubmitting] = useState(false);
 
+  // Seller can only edit when REJECTED or never submitted (no status)
+  const canEdit = variant.status !== 'PENDING_APPROVAL' && variant.status !== 'APPROVED';
+  const isApproved = variant.status === 'APPROVED';
+  const isPending = variant.status === 'PENDING_APPROVAL';
+
   const handleSave = async () => {
+    if (!offerPrice || parseFloat(offerPrice) <= 0) {
+      notifications.show({ title: "Error", message: "Please enter a valid offer price greater than 0", color: "red" });
+      return;
+    }
     try {
       setSubmitting(true);
       const payload = {
@@ -48,7 +57,7 @@ function VariantEditorCard({ variant, onSaved }) {
 
       const res = await addProductStock(payload);
       if (res.success) {
-        notifications.show({ title: "Success", message: "Variant updated and sent for approval", color: "green" });
+        notifications.show({ title: "Success", message: "Offer submitted and sent for admin approval", color: "green" });
         onSaved();
       } else {
         notifications.show({ title: "Error", message: res.error || "Failed to update variant", color: "red" });
@@ -62,39 +71,84 @@ function VariantEditorCard({ variant, onSaved }) {
 
   return (
     <Card withBorder>
-      <Group justify="space-between">
-        <Stack gap="xs">
-          <Text fw={600}>{variant.variant_name}</Text>
-          <Group>
-            <Badge color={statusColors[variant.status] || "gray"}>
-              {variant.status?.replace("_", " ")}
-            </Badge>
-            <Text size="xs" c="dimmed">SKU: {variant.sku}</Text>
-          </Group>
-        </Stack>
-        <Group>
-          <TextInput
-            label="Offer Price (₹)"
-            value={offerPrice}
-            onChange={(e) => setOfferPrice(e.target.value)}
-            disabled={variant.status === 'PENDING_APPROVAL'}
-          />
-          <TextInput
-            label="Quantity"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            disabled={variant.status === 'PENDING_APPROVAL'}
-          />
-          <Button
-            mt="lg"
-            onClick={handleSave}
-            loading={submitting}
-            disabled={variant.status === 'PENDING_APPROVAL'}
-          >
-            Save
-          </Button>
+      <Stack gap="xs">
+        <Group justify="space-between">
+          <Stack gap={4}>
+            <Text fw={600}>{variant.variant_name || 'Default Variant'}</Text>
+            <Group gap="xs">
+              <Badge color={statusColors[variant.status] || "gray"}>
+                {variant.status?.replace(/_/g, ' ')}
+              </Badge>
+              {variant.sku && <Text size="xs" c="dimmed">SKU: {variant.sku}</Text>}
+            </Group>
+          </Stack>
         </Group>
-      </Group>
+
+        {/* Price info row */}
+        <Group gap="xl">
+          {variant.mrp > 0 && (
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">MRP</Text>
+              <Text size="sm" td="line-through" c="dimmed">₹{Number(variant.mrp).toFixed(2)}</Text>
+            </Stack>
+          )}
+          {variant.seller_offer_price > 0 && (
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">Your Last Offer</Text>
+              <Text size="sm" fw={600}>₹{Number(variant.seller_offer_price).toFixed(2)}</Text>
+            </Stack>
+          )}
+          {isApproved && variant.admin_selling_price > 0 && (
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">Admin Selling Price</Text>
+              <Text size="sm" fw={700} c="green">₹{Number(variant.admin_selling_price).toFixed(2)}</Text>
+            </Stack>
+          )}
+        </Group>
+
+        {isPending && (
+          <Text size="xs" c="orange" fw={500}>
+            ⏳ Your offer is pending admin review. You can update it once admin responds.
+          </Text>
+        )}
+
+        {isApproved && (
+          <Text size="xs" c="green" fw={500}>
+            ✅ Approved! Admin has set the selling price above.
+          </Text>
+        )}
+
+        {/* Edit form — only when not pending/approved */}
+        {canEdit && (
+          <Group align="flex-end" gap="sm">
+            <TextInput
+              label="Your Offer Price (₹)"
+              value={offerPrice}
+              onChange={(e) => setOfferPrice(e.target.value)}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Enter your offer price"
+              style={{ flex: 1 }}
+            />
+            <TextInput
+              label="Stock Quantity"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              type="number"
+              min="0"
+              style={{ width: 120 }}
+            />
+            <Button
+              onClick={handleSave}
+              loading={submitting}
+              color={variant.status === 'REJECTED' ? 'orange' : 'blue'}
+            >
+              {variant.status === 'REJECTED' ? 'Re-submit Offer' : 'Submit Offer'}
+            </Button>
+          </Group>
+        )}
+      </Stack>
     </Card>
   );
 }

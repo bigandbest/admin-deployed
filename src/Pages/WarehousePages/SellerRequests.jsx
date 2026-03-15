@@ -26,10 +26,10 @@ const SellerRequests = () => {
             if (data.success) {
                 setRequests(data.data);
 
-                // Initialize default selling prices with seller's offer price
+                // Pre-fill admin price input with seller's offer price (only if > 0)
                 const initialPrices = {};
                 data.data.forEach(req => {
-                    if (req.status === 'PENDING_APPROVAL') {
+                    if (req.status === 'PENDING_APPROVAL' && req.seller_offer_price > 0) {
                         initialPrices[req.id] = req.seller_offer_price;
                     }
                 });
@@ -62,8 +62,8 @@ const SellerRequests = () => {
 
             const adminSellingPrice = sellingPrices[id];
 
-            if (action === 'approve' && !adminSellingPrice) {
-                alert('Please enter an Admin Selling Price.');
+            if (action === 'approve' && (adminSellingPrice === undefined || adminSellingPrice === null || adminSellingPrice === '')) {
+                alert('Please enter an Admin Selling Price before approving.');
                 setProcessingId(null);
                 return;
             }
@@ -151,7 +151,10 @@ const SellerRequests = () => {
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">{req.product?.name}</div>
                                         <div className="text-xs text-gray-500">Variant: {req.variant?.title || 'Default'}</div>
-                                        <div className="text-xs text-gray-500">Qty to add: <strong>{req.stock_quantity}</strong></div>
+                                        <div className="text-xs text-gray-500">
+                                            Qty offered: <strong className="text-blue-700">{req.stock_quantity}</strong>
+                                        </div>
+                                        <div className="text-xs text-gray-500">SKU: {req.variant?.sku || '—'}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">{req.seller?.business_name || req.seller?.name}</div>
@@ -164,26 +167,35 @@ const SellerRequests = () => {
                                     <td className="px-6 py-4">
                                         <div className="text-xs flex justify-between mb-1">
                                             <span className="text-gray-500">MRP:</span>
-                                            <span className="line-through">{req.mrp}</span>
+                                            <span className="line-through text-gray-400">
+                                                {req.mrp > 0 ? `₹${Number(req.mrp).toFixed(2)}` : '—'}
+                                            </span>
                                         </div>
                                         <div className="text-xs flex justify-between mb-2">
                                             <span className="text-gray-500">Seller Ask:</span>
-                                            <span className="font-bold">{req.seller_offer_price}</span>
+                                            <span className={`font-bold ${req.seller_offer_price > 0 ? 'text-gray-900' : 'text-red-400'}`}>
+                                                {req.seller_offer_price > 0 ? `₹${Number(req.seller_offer_price).toFixed(2)}` : 'Not set'}
+                                            </span>
                                         </div>
                                         {req.status === 'PENDING_APPROVAL' ? (
                                             <div>
-                                                <label className="text-[10px] text-gray-500 font-semibold uppercase">Set Admin Selling Price</label>
+                                                <label className="text-[10px] text-gray-500 font-semibold uppercase">Set Admin Selling Price (₹)</label>
                                                 <input
                                                     type="number"
-                                                    value={sellingPrices[req.id] || ''}
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={sellingPrices[req.id] ?? ''}
                                                     onChange={(e) => handlePriceChange(req.id, e.target.value)}
+                                                    placeholder={req.seller_offer_price > 0 ? `Seller asked ₹${req.seller_offer_price}` : 'Enter price...'}
                                                     className="w-full mt-1 border border-gray-300 rounded px-2 py-1 text-sm bg-blue-50 focus:ring-1 focus:ring-blue-500 outline-none"
                                                 />
                                             </div>
                                         ) : (
                                             <div className="text-xs flex justify-between mt-2 pt-1 border-t border-gray-200">
                                                 <span className="text-gray-500 font-semibold">Admin Set:</span>
-                                                <span className="font-bold text-green-600">{req.admin_selling_price || 'N/A'}</span>
+                                                <span className={`font-bold ${req.admin_selling_price > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                                    {req.admin_selling_price > 0 ? `₹${Number(req.admin_selling_price).toFixed(2)}` : 'N/A'}
+                                                </span>
                                             </div>
                                         )}
                                     </td>
