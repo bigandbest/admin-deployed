@@ -150,7 +150,9 @@ const SellerPincodeRequests = () => {
                                         {new Date(req.created_at).toLocaleString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="text-sm font-medium text-gray-900">{req.seller?.business_name || req.seller?.name || "N/A"}</div>
+                                        <div className="text-sm font-medium text-gray-900">{req.sellers?.business_name || req.sellers?.name || "N/A"}</div>
+                                        <div className="text-[10px] text-gray-500">{req.sellers?.users?.email}</div>
+                                        <div className="text-[10px] text-gray-500">{req.sellers?.users?.phone}</div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
                                         <div className="font-semibold text-gray-900">Pincode: {req.pincode}</div>

@@ -37,6 +37,8 @@ import SellerLayout from "./Components/Seller/SellerLayout";
 import Dashboard from "./Pages/Dashboard";
 import ProductsPage from "./Pages/Products";
 import AddProduct from "./Pages/Products/AddProduct";
+import ProductApprovals from "./Pages/Products/ProductApprovals";
+import ProductApprovalDetailView from "./Pages/Products/ProductApprovalDetails.jsx";
 import CategoriesPage from "./Pages/Categories";
 import CategoryMapping from "./Pages/CategoryMapping";
 import AddCategory from "./Pages/Categories/AddCategory";
@@ -426,6 +428,14 @@ function App() {
         {
           path: "/video-cards",
           element: <VideoCards />,
+        },
+        {
+          path: "/product-approvals",
+          element: <ProductApprovals />,
+        },
+        {
+          path: "/product-approvals/:id",
+          element: <ProductApprovalDetailView />,
         },
         {
           path: "/brands",

@@ -124,7 +124,7 @@ export default function AddProductForm({
 <p><strong>Country of Origin:</strong> India</p><p><br></p>
 <p><strong>Shelf Life:</strong> </p>`,
       vertical: "qwik",
-      source_type: "WAREHOUSE",
+      source_type: "DROP_SHIP",
       // brand_name removed
       hsn_code: "",
       sac_code: "",

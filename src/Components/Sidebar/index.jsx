@@ -110,6 +110,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/products",
         },
         {
+          title: "Product Approvals",
+          icon: <FaBoxOpen />,
+          path: "/product-approvals",
+        },
+        {
           title: "Categories",
           icon: <MdCategory />,
           path: "/categories",

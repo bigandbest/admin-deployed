@@ -99,7 +99,7 @@ export default function GeneralInformation({
               Product Source
             </Label>
             <Select
-              value={product.source_type || "WAREHOUSE"}
+              value={product.source_type || "DROP_SHIP"}
               onValueChange={(value) => handleChange("source_type", value)}
             >
               <SelectTrigger className="bg-muted/50 border-input">

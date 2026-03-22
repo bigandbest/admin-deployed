@@ -186,14 +186,7 @@ export default function AddProduct() {
             <Button onClick={handleSearch} loading={loading} size="md">
               Search
             </Button>
-            <Button
-              variant="light"
-              leftSection={<FaPlus />}
-              onClick={() => setRequestModalOpened(true)}
-              size="md"
-            >
-              Request New Product
-            </Button>
+            {/* Removed Request New Product as per instruction */}
           </Group>
 
           {/* Search Results */}
