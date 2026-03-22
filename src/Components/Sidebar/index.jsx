@@ -160,6 +160,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           description: "Configure handling, surge, and platform charges",
         },
         {
+          title: "Platform Fee Charges",
+          icon: <FaRupeeSign />,
+          path: "/platform-fee-charges",
+          description: "Manage hierarchy-based marketplace platform fee rules",
+        },
+        {
           title: "Rider Payout Rules",
           icon: <FaRupeeSign />,
           path: "/rider-payout-rules",

@@ -96,6 +96,7 @@ import UnifiedOrders from "./Pages/Orders/UnifiedOrders.jsx";
 import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
 import DeliveryCharges from "./Pages/DeliveryCharges/index.jsx";
 import ChargeSettings from "./Pages/ChargeSettings/index.jsx";
+import PlatformFeeManager from "./Pages/ChargeSettings/PlatformFeeManager.jsx";
 import WalletManagement from "./Pages/WalletManagement/index.jsx";
 import WalletTransactions from "./Pages/WalletTransactions/index.jsx";
 import SellerWithdrawalRequests from "./Pages/WalletManagement/SellerWithdrawalRequests.jsx";
@@ -537,6 +538,10 @@ function App() {
         {
           path: "/charge-settings",
           element: <ChargeSettings />,
+        },
+        {
+          path: "/platform-fee-charges",
+          element: <PlatformFeeManager />,
         },
         {
           path: "/wallet-management",

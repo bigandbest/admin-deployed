@@ -10,10 +10,39 @@ const SellerRequests = () => {
     const [processingId, setProcessingId] = useState(null);
     const [sellingPrices, setSellingPrices] = useState({});
 
+    const getAdminAccessToken = () => {
+        const candidates = [
+            localStorage.getItem('admin_token'),
+            localStorage.getItem('big-best-admin-auth-token'),
+        ].filter(Boolean);
+
+        for (const raw of candidates) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed?.access_token) return parsed.access_token;
+                if (typeof parsed === 'string' && parsed.trim()) {
+                    return parsed.replace(/^Bearer\s+/i, '');
+                }
+            } catch {
+                if (typeof raw === 'string' && raw.trim()) {
+                    return raw.replace(/^Bearer\s+/i, '');
+                }
+            }
+        }
+
+        return null;
+    };
+
     const fetchRequests = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('admin_token');
+            setError(null);
+            const token = getAdminAccessToken();
+            if (!token) {
+                setRequests([]);
+                setError("Admin session token not found. Please login again.");
+                return;
+            }
             const url = statusFilter
                 ? `${import.meta.env.VITE_API_BASE_URL}/admin/sellers/products/requests?status=${statusFilter}`
                 : `${import.meta.env.VITE_API_BASE_URL}/admin/sellers/products/requests`;
@@ -58,7 +87,12 @@ const SellerRequests = () => {
             if (!confirm(`Are you sure you want to ${action} this request?`)) return;
 
             setProcessingId(id);
-            const token = localStorage.getItem('admin_token');
+            const token = getAdminAccessToken();
+            if (!token) {
+                alert("Admin session expired. Please login again.");
+                setProcessingId(null);
+                return;
+            }
 
             const adminSellingPrice = sellingPrices[id];
 

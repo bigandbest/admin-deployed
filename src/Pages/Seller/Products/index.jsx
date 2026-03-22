@@ -35,13 +35,17 @@ function VariantEditorCard({ variant, onSaved }) {
   const [quantity, setQuantity] = useState(variant.stock_quantity || 0);
   const [submitting, setSubmitting] = useState(false);
 
-  // Seller can only edit when REJECTED or never submitted (no status)
-  const canEdit = variant.status !== 'PENDING_APPROVAL' && variant.status !== 'APPROVED';
+  const canEditPrice = variant.status !== 'PENDING_APPROVAL' && variant.status !== 'APPROVED';
+  const canUpdateStock = variant.status !== 'PENDING_APPROVAL';
   const isApproved = variant.status === 'APPROVED';
   const isPending = variant.status === 'PENDING_APPROVAL';
 
   const handleSave = async () => {
-    if (!offerPrice || parseFloat(offerPrice) <= 0) {
+    const effectivePrice = canEditPrice
+      ? parseFloat(offerPrice)
+      : parseFloat(variant.seller_offer_price || variant.admin_selling_price || 0);
+
+    if (!effectivePrice || effectivePrice <= 0) {
       notifications.show({ title: "Error", message: "Please enter a valid offer price greater than 0", color: "red" });
       return;
     }
@@ -51,13 +55,19 @@ function VariantEditorCard({ variant, onSaved }) {
         product_id: variant.product_id,
         variant_id: variant.variant_id,
         stock_quantity: parseInt(quantity, 10),
-        offer_price: parseFloat(offerPrice),
+        offer_price: effectivePrice,
         mrp: variant.mrp || null
       };
 
       const res = await addProductStock(payload);
       if (res.success) {
-        notifications.show({ title: "Success", message: "Offer submitted and sent for admin approval", color: "green" });
+        notifications.show({
+          title: "Success",
+          message: canEditPrice
+            ? "Offer submitted and sent for admin approval"
+            : "Stock updated successfully",
+          color: "green"
+        });
         onSaved();
       } else {
         notifications.show({ title: "Error", message: res.error || "Failed to update variant", color: "red" });
@@ -104,6 +114,24 @@ function VariantEditorCard({ variant, onSaved }) {
               <Text size="sm" fw={700} c="green">₹{Number(variant.admin_selling_price).toFixed(2)}</Text>
             </Stack>
           )}
+          <Stack gap={2}>
+            <Text size="xs" c="dimmed">Platform Fee</Text>
+            <Text size="sm" fw={600}>
+              {Number(variant.platform_fee_percentage || 0).toFixed(2)}%
+            </Text>
+          </Stack>
+          <Stack gap={2}>
+            <Text size="xs" c="dimmed">Fee Amount</Text>
+            <Text size="sm" fw={600}>
+              ₹{Number(variant.platform_fee_amount || 0).toFixed(2)}
+            </Text>
+          </Stack>
+          <Stack gap={2}>
+            <Text size="xs" c="dimmed">Your Earnings</Text>
+            <Text size="sm" fw={700} c="teal">
+              ₹{Number(variant.seller_earnings || 0).toFixed(2)}
+            </Text>
+          </Stack>
         </Group>
 
         {isPending && (
@@ -118,8 +146,7 @@ function VariantEditorCard({ variant, onSaved }) {
           </Text>
         )}
 
-        {/* Edit form — only when not pending/approved */}
-        {canEdit && (
+        {(canEditPrice || canUpdateStock) && (
           <Group align="flex-end" gap="sm">
             <TextInput
               label="Your Offer Price (₹)"
@@ -130,6 +157,8 @@ function VariantEditorCard({ variant, onSaved }) {
               step="0.01"
               placeholder="Enter your offer price"
               style={{ flex: 1 }}
+              disabled={!canEditPrice}
+              description={!canEditPrice ? "Price is locked after admin approval" : undefined}
             />
             <TextInput
               label="Stock Quantity"
@@ -142,9 +171,11 @@ function VariantEditorCard({ variant, onSaved }) {
             <Button
               onClick={handleSave}
               loading={submitting}
-              color={variant.status === 'REJECTED' ? 'orange' : 'blue'}
+              color={canEditPrice ? (variant.status === 'REJECTED' ? 'orange' : 'blue') : 'teal'}
             >
-              {variant.status === 'REJECTED' ? 'Re-submit Offer' : 'Submit Offer'}
+              {canEditPrice
+                ? (variant.status === 'REJECTED' ? 'Re-submit Offer' : 'Submit Offer')
+                : 'Update Stock'}
             </Button>
           </Group>
         )}
@@ -196,7 +227,33 @@ export default function SellerProducts() {
           return acc;
         }, {});
 
-        setProducts(Object.values(grouped));
+        const withSummary = Object.values(grouped).map((p) => {
+          const variantPrices = p.variants
+            .map((v) => Number(v.admin_selling_price ?? v.seller_offer_price ?? 0))
+            .filter((n) => Number.isFinite(n) && n > 0);
+          const minPrice = variantPrices.length ? Math.min(...variantPrices) : 0;
+          const maxPrice = variantPrices.length ? Math.max(...variantPrices) : 0;
+          const feePct = Number(p.variants?.[0]?.platform_fee_percentage || 0);
+          const feeAmountValues = p.variants
+            .map((v) => Number(v.platform_fee_amount || 0))
+            .filter((n) => Number.isFinite(n));
+          const earnValues = p.variants
+            .map((v) => Number(v.seller_earnings || 0))
+            .filter((n) => Number.isFinite(n));
+
+          return {
+            ...p,
+            minPrice,
+            maxPrice,
+            feePct,
+            minFeeAmount: feeAmountValues.length ? Math.min(...feeAmountValues) : 0,
+            maxFeeAmount: feeAmountValues.length ? Math.max(...feeAmountValues) : 0,
+            minEarnings: earnValues.length ? Math.min(...earnValues) : 0,
+            maxEarnings: earnValues.length ? Math.max(...earnValues) : 0,
+          };
+        });
+
+        setProducts(withSummary);
         setTotalPages(result.count ? Math.ceil(result.count / 10) : 1);
       }
     } catch (error) {
@@ -279,6 +336,9 @@ export default function SellerProducts() {
                   <Table.Th>Product Code</Table.Th>
                   <Table.Th>Product Name</Table.Th>
                   <Table.Th>Category</Table.Th>
+                  <Table.Th>Price</Table.Th>
+                  <Table.Th>Platform Fee</Table.Th>
+                  <Table.Th>Your Earnings</Table.Th>
                   <Table.Th>Source Type</Table.Th>
                   <Table.Th>Actions</Table.Th>
                 </Table.Tr>
@@ -295,6 +355,31 @@ export default function SellerProducts() {
                     </Table.Td>
                     <Table.Td>
                       <Text>{product.category || "N/A"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text fw={600}>
+                        ₹{Number(product.minPrice || 0).toFixed(2)}
+                        {product.maxPrice > product.minPrice
+                          ? ` - ₹${Number(product.maxPrice).toFixed(2)}`
+                          : ""}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text fw={600}>{Number(product.feePct || 0).toFixed(2)}%</Text>
+                      <Text size="xs" c="dimmed">
+                        ₹{Number(product.minFeeAmount || 0).toFixed(2)}
+                        {product.maxFeeAmount > product.minFeeAmount
+                          ? ` - ₹${Number(product.maxFeeAmount).toFixed(2)}`
+                          : ""}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text fw={700} c="teal">
+                        ₹{Number(product.minEarnings || 0).toFixed(2)}
+                        {product.maxEarnings > product.minEarnings
+                          ? ` - ₹${Number(product.maxEarnings).toFixed(2)}`
+                          : ""}
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       {product.source_type === "DROP_SHIP" ? (
