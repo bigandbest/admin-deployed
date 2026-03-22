@@ -258,6 +258,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/add-banner",
         },
         {
+          title: "Mobile Banners",
+          icon: <span>📱</span>,
+          path: "/mobile-banners",
+          description: "Manage banners exclusively for the mobile app",
+        },
+        {
           title: "Customer Reviews",
           icon: <FaStar />,
           path: "/customer-reviews",

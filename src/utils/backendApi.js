@@ -213,6 +213,74 @@ export async function toggleMobileBannerStatus(id, is_mobile) {
   }
 }
 
+// MOBILE BANNERS (mobile-app specific)
+export async function getAllMobileBanners() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/banner/mobile`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function addMobileBanner(banner, imageFile) {
+  try {
+    const formData = createFormData(
+      { ...banner, is_mobile: "true" },
+      "image",
+      imageFile
+    );
+    const response = await fetch(`${API_BASE_URL}/banner/add`, {
+      method: "POST",
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateMobileBanner(id, banner, imageFile) {
+  try {
+    const formData = createFormData(
+      { ...banner, is_mobile: "true" },
+      "image",
+      imageFile
+    );
+    const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteMobileBanner(id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/banner/delete/${id}`, {
+      method: "DELETE",
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function toggleMobileBannerActiveStatus(id, active) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active, is_mobile: true }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // USERS
 export async function getAllUsers() {
   try {

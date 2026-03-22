@@ -29,6 +29,13 @@ export const {
   toggleBannerStatus,
   toggleMobileBannerStatus,
 
+  // Mobile App Banners
+  getAllMobileBanners,
+  addMobileBanner,
+  updateMobileBanner,
+  deleteMobileBanner,
+  toggleMobileBannerActiveStatus,
+
   // Users
   getAllUsers,
   addUser,

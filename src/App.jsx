@@ -79,6 +79,7 @@ import SubStore from "./Pages/SubStore/SubStore.jsx";
 import AddBanner from "./Pages/AddBanners/AddBanner.jsx";
 import AddBannerGroup from "./Pages/AddBanners/AddBannerGroup.jsx";
 import AddBannerGroupProducts from "./Pages/AddBanners/AddBannerGroupProducts.jsx";
+import MobileBanners from "./Pages/MobileBanners/MobileBanners.jsx";
 import UniqueSection from "./Pages/UniqueSection/UniqueSection.jsx";
 import UniqueSectionProducts from "./Pages/UniqueSection/UniqueSectionProduct.jsx";
 import VideoCards from "./Pages/VideoCards/VideoCards.jsx";
@@ -424,6 +425,10 @@ function App() {
         {
           path: "/add-banner-group-products/:id",
           element: <AddBannerGroupProducts />,
+        },
+        {
+          path: "/mobile-banners",
+          element: <MobileBanners />,
         },
         {
           path: "/video-cards",
