@@ -296,7 +296,7 @@ const StoreSectionMapping = () => {
         size="md"
       >
         <div className="space-y-4" style={{ position: "relative" }}>
-          <LoadingOverlay visible={submitting} overlayBlur={2} />
+          <LoadingOverlay visible={submitting} overlayProps={{ blur: 2 }} />
           <Select
             label="Select Section"
             placeholder="Choose a section"

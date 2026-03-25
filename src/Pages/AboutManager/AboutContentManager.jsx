@@ -126,7 +126,7 @@ Join millions of satisfied customers who have made Big&Best Mart their go-to des
 
     return (
         <div className="p-6 mantine-bg min-h-screen">
-            <LoadingOverlay visible={loadingData} overlayBlur={2} />
+            <LoadingOverlay visible={loadingData} overlayProps={{ blur: 2 }} />
             <Card shadow="sm" p="lg" radius="md">
                 <Group position="apart" className="mb-6">
                     <Title order={2}>About Page Content Manager</Title>
