@@ -119,9 +119,8 @@ const ProductModal = ({
               }
             );
 
-            const warehouseProducts = response.data.products || response.data.data || [];
+            const warehouseProducts = response.data.data || [];
             if (response.data.success && warehouseProducts.length > 0) {
-              // Find this product in the warehouse
               const productInWarehouse = warehouseProducts.find(
                 p => p.product_id === data.selectedProductId || p.id === data.selectedProductId
               );
@@ -185,8 +184,8 @@ const ProductModal = ({
           `${API_BASE_URL}/variants/product/${data.selectedProductId}`
         );
 
-        if (response.data.success && response.data.data) {
-          const variants = response.data.data;
+        if (response.data.success && (response.data.data || response.data.variants)) {
+          const variants = response.data.data || response.data.variants;
           setProductVariants(variants);
 
           // Initialize variant stock config

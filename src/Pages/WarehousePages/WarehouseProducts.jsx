@@ -157,8 +157,9 @@ const ProductRow = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Calculate total stock from variants if available, else use item stock
-  const totalStock = item.variants?.reduce((sum, v) => sum + (v.stock_quantity || 0), 0) ?? item.stock_quantity;
+  const totalStock = item.variants?.length
+    ? item.variants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0)
+    : (item.stock_quantity || 0);
   const hasVariants = item.variants && item.variants.length > 0;
 
   return (
@@ -256,7 +257,7 @@ ProductRow.propTypes = {
     product_name: PropTypes.string.isRequired,
     product_price: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
       .isRequired,
-    stock_quantity: PropTypes.number.isRequired,
+    stock_quantity: PropTypes.number,
     delivery_type: PropTypes.string,
     variants: PropTypes.array,
   }).isRequired,
