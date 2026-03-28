@@ -37,6 +37,7 @@ import {
   updateProductSection,
   toggleProductSectionStatus,
   updateProductSectionOrder,
+  addCategoriesToSection,
   getCategoriesInSection,
   removeCategoryFromSection,
   getAllCategories,
@@ -114,6 +115,18 @@ const ProductSectionsManagement = () => {
   };
 
   // Removed fetchProductCounts and fetchCategoryCounts as they are now handled by getSectionCounts in fetchSections
+
+  const refreshSectionCounts = async () => {
+    try {
+      const countsResult = await getSectionCounts();
+      if (countsResult.success) {
+        setProductCounts(countsResult.data.products || {});
+        setCategoryCounts(countsResult.data.categories || {});
+      }
+    } catch (error) {
+      console.error("Error refreshing section counts:", error);
+    }
+  };
 
   // Fetch products in a section
   const fetchSectionProducts = async (sectionId) => {
@@ -214,12 +227,27 @@ const ProductSectionsManagement = () => {
       return;
     }
 
+    const productIds = [...new Set(
+      selectedProductIds
+        .map((productId) => parseInt(productId, 10))
+        .filter((productId) => Number.isInteger(productId) && productId > 0)
+    )];
+
+    if (productIds.length === 0) {
+      notifications.show({
+        title: "Warning",
+        message: "Please select valid products",
+        color: "yellow",
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
       const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
       const response = await axios.post(
         `${apiUrl}/product-sections/${selectedSection.id}/products`,
-        { product_ids: selectedProductIds }
+        { product_ids: productIds }
       );
 
       if (response.data.success) {
@@ -230,7 +258,7 @@ const ProductSectionsManagement = () => {
         });
         setSelectedProductIds([]);
         fetchSectionProducts(selectedSection.id);
-        fetchProductCounts(sections);
+        refreshSectionCounts();
       }
     } catch (error) {
       console.error("Error adding products:", error);
@@ -259,7 +287,7 @@ const ProductSectionsManagement = () => {
           color: "green",
         });
         fetchSectionProducts(selectedSection.id);
-        fetchProductCounts(sections);
+        refreshSectionCounts();
       }
     } catch (error) {
       console.error("Error removing product:", error);
@@ -294,7 +322,7 @@ const ProductSectionsManagement = () => {
         });
         setSelectedCategoryIds([]);
         fetchSectionCategories(selectedSection.id);
-        fetchCategoryCounts(sections);
+        refreshSectionCounts();
       }
     } catch (error) {
       console.error("Error adding categories:", error);
@@ -320,7 +348,7 @@ const ProductSectionsManagement = () => {
           color: "green",
         });
         fetchSectionCategories(selectedSection.id);
-        fetchCategoryCounts(sections);
+        refreshSectionCounts();
       }
     } catch (error) {
       console.error("Error removing category:", error);
@@ -632,7 +660,7 @@ const ProductSectionsManagement = () => {
         size="md"
       >
         <Stack spacing="md">
-          <LoadingOverlay visible={submitting} overlayBlur={2} />
+          <LoadingOverlay visible={submitting} overlayProps={{ blur: 2 }} />
           <TextInput
             label="Section Name"
             placeholder="Enter section display name"
