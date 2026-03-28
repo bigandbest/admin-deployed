@@ -407,6 +407,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           description: "Manage all orders (COD, Prepaid, Bulk, Returns)",
         },
         {
+          title: "Fulfillment Orders",
+          icon: <FaBoxOpen />,
+          path: "/fulfillment-orders",
+          description: "Track division & zonal warehouse sub-orders",
+        },
+        {
           title: "Returns & Refunds",
           icon: <FaHandshake />,
           path: "/return-orders",

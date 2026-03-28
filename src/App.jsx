@@ -93,6 +93,7 @@ import ProductSectionsManagement from "./Pages/ProductSections/index.jsx";
 import StoreSectionMapping from "./Pages/StoreSectionMapping/StoreSectionMapping.jsx";
 import CodOrders from "./Pages/CodOrders/CodOrders.jsx";
 import UnifiedOrders from "./Pages/Orders/UnifiedOrders.jsx";
+import FulfillmentOrders from "./Pages/FulfillmentOrders/index.jsx";
 import DeliveryZones from "./Pages/DeliveryZones/index.jsx";
 import DeliveryCharges from "./Pages/DeliveryCharges/index.jsx";
 import ChargeSettings from "./Pages/ChargeSettings/index.jsx";
@@ -406,6 +407,10 @@ function App() {
         {
           path: "/AdminOrders",
           element: <AdminOrders />,
+        },
+        {
+          path: "/fulfillment-orders",
+          element: <FulfillmentOrders />,
         },
         {
           path: "/return-orders",
