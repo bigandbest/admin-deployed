@@ -9,7 +9,7 @@ import {
     Image,
     LoadingOverlay,
 } from "@mantine/core";
-import { FaSave, FaUpload } from "react-icons/fa";
+import { FaSave } from "react-icons/fa";
 import axios from "axios";
 import { notifications } from "@mantine/notifications";
 

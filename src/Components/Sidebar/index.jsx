@@ -30,6 +30,7 @@ import {
   FaTicketAlt,
   FaClock,
   FaBoxOpen,
+  FaGift,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -486,6 +487,55 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
     //   icon: <FaTrademark />,
     //   path: "/youMayLikeProducts/:id",
     // },
+
+    {
+      title: "Refer & Earn",
+      icon: <FaGift />,
+      submenu: [
+        {
+          title: "Dashboard",
+          icon: <RiDashboardFill />,
+          path: "/referral",
+          description: "Referral program overview and stats",
+        },
+        {
+          title: "Configuration",
+          icon: <RiSettings4Fill />,
+          path: "/referral/config",
+          description: "Configure reward amounts and rules",
+        },
+        {
+          title: "Users",
+          icon: <FaUsers />,
+          path: "/referral/users",
+          description: "Manage referral profiles and block users",
+        },
+        {
+          title: "Transactions",
+          icon: <FaList />,
+          path: "/referral/transactions",
+          description: "View all referral transactions",
+        },
+        {
+          title: "Rewards",
+          icon: <FaGift />,
+          path: "/referral/rewards",
+          description: "Manage rewards, extend or cancel",
+        },
+        {
+          title: "Withdrawals",
+          icon: <FaMoneyBillWave />,
+          path: "/referral/withdrawals",
+          description: "Approve and process withdrawal requests",
+        },
+        {
+          title: "Fraud Logs",
+          icon: <FaRupeeSign />,
+          path: "/referral/fraud-logs",
+          description: "Review suspicious referral activity",
+        },
+      ],
+    },
 
     {
       title: "Settings",

@@ -116,6 +116,15 @@ import RiderPayoutRules from "./Pages/RiderManagement/RiderPayoutRules.jsx";
 import DocumentVerification from "./Pages/DocumentVerification/DocumentVerification.jsx";
 import OutOfStockEnquiries from "./Pages/OutOfStockEnquiries/index.jsx";
 
+// Referral Pages
+import ReferralAdminDashboard from "./Pages/Referral/Dashboard/index.jsx";
+import ReferralConfig from "./Pages/Referral/Config/index.jsx";
+import ReferralUsers from "./Pages/Referral/Users/index.jsx";
+import ReferralTransactions from "./Pages/Referral/Transactions/index.jsx";
+import ReferralRewards from "./Pages/Referral/Rewards/index.jsx";
+import ReferralWithdrawals from "./Pages/Referral/Withdrawals/index.jsx";
+import ReferralFraudLogs from "./Pages/Referral/FraudLogs/index.jsx";
+
 // Seller Pages
 import SellerDashboard from "./Pages/Seller/Dashboard";
 import SellerProducts from "./Pages/Seller/Products/index";
@@ -554,6 +563,35 @@ function App() {
         {
           path: "/wallet-management/seller-requests",
           element: <SellerWithdrawalRequests />,
+        },
+        // Referral Routes
+        {
+          path: "/referral",
+          element: <ReferralAdminDashboard />,
+        },
+        {
+          path: "/referral/config",
+          element: <ReferralConfig />,
+        },
+        {
+          path: "/referral/users",
+          element: <ReferralUsers />,
+        },
+        {
+          path: "/referral/transactions",
+          element: <ReferralTransactions />,
+        },
+        {
+          path: "/referral/rewards",
+          element: <ReferralRewards />,
+        },
+        {
+          path: "/referral/withdrawals",
+          element: <ReferralWithdrawals />,
+        },
+        {
+          path: "/referral/fraud-logs",
+          element: <ReferralFraudLogs />,
         },
         {
           path: "/enquiries/:id",
