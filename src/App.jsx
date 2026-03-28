@@ -118,6 +118,14 @@ import PayoutSlabs from "./Pages/PayoutSlabs/index.jsx";
 import DocumentVerification from "./Pages/DocumentVerification/DocumentVerification.jsx";
 import OutOfStockEnquiries from "./Pages/OutOfStockEnquiries/index.jsx";
 
+// Affiliate Pages
+import AffiliateDashboard from "./Pages/Affiliate/Dashboard/index.jsx";
+import AffiliateApplications from "./Pages/Affiliate/Applications/index.jsx";
+import AffiliateList from "./Pages/Affiliate/Affiliates/index.jsx";
+import AffiliateCommissionRates from "./Pages/Affiliate/CommissionRates/index.jsx";
+import AffiliatePayouts from "./Pages/Affiliate/Payouts/index.jsx";
+import AffiliateConfig from "./Pages/Affiliate/Config/index.jsx";
+
 // Referral Pages
 import ReferralAdminDashboard from "./Pages/Referral/Dashboard/index.jsx";
 import ReferralConfig from "./Pages/Referral/Config/index.jsx";
@@ -570,6 +578,14 @@ function App() {
           path: "/wallet-management/seller-requests",
           element: <SellerWithdrawalRequests />,
         },
+        // Affiliate Routes
+        { path: "/affiliate", element: <AffiliateDashboard /> },
+        { path: "/affiliate/applications", element: <AffiliateApplications /> },
+        { path: "/affiliate/affiliates", element: <AffiliateList /> },
+        { path: "/affiliate/commission-rates", element: <AffiliateCommissionRates /> },
+        { path: "/affiliate/payouts", element: <AffiliatePayouts /> },
+        { path: "/affiliate/config", element: <AffiliateConfig /> },
+
         // Referral Routes
         {
           path: "/referral",

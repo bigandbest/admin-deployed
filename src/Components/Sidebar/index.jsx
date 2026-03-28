@@ -502,6 +502,49 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
     // },
 
     {
+      title: "Affiliate",
+      icon: <FaHandshake />,
+      submenu: [
+        {
+          title: "Dashboard",
+          icon: <RiDashboardFill />,
+          path: "/affiliate",
+          description: "Affiliate program overview",
+        },
+        {
+          title: "Applications",
+          icon: <FaUsers />,
+          path: "/affiliate/applications",
+          description: "Review & approve applications",
+        },
+        {
+          title: "Affiliates",
+          icon: <FaList />,
+          path: "/affiliate/affiliates",
+          description: "Manage affiliate accounts",
+        },
+        {
+          title: "Commission Rates",
+          icon: <FaRupeeSign />,
+          path: "/affiliate/commission-rates",
+          description: "Set per-category commission rates",
+        },
+        {
+          title: "Payouts",
+          icon: <FaMoneyBillWave />,
+          path: "/affiliate/payouts",
+          description: "Process affiliate payouts",
+        },
+        {
+          title: "Settings",
+          icon: <RiSettings4Fill />,
+          path: "/affiliate/config",
+          description: "Program configuration",
+        },
+      ],
+    },
+
+    {
       title: "Refer & Earn",
       icon: <FaGift />,
       submenu: [
