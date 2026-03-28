@@ -72,14 +72,30 @@ const StatusBadge = ({ status }) => {
 const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
   const [updating, setUpdating] = useState(false);
   const [note, setNote] = useState("");
-  const nextStatuses = NEXT_STATUS[subOrder.fulfillment_status] || [];
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(true);
+
+  // Fetch full detail (includes events) on mount — list items don't carry events
+  useEffect(() => {
+    let cancelled = false;
+    setDetailLoading(true);
+    axios
+      .get(`${API_BASE_URL}/admin/fulfillment/sub-orders/${subOrder.id}`, { headers: authHeaders() })
+      .then((res) => { if (!cancelled && res.data.success) setDetail(res.data.data); })
+      .catch(() => {/* fall back to list-item data */})
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  }, [subOrder.id]);
+
+  const data = detail || subOrder;
+  const nextStatuses = NEXT_STATUS[data.fulfillment_status] || [];
 
   const handleStatusUpdate = async (newStatus) => {
     if (!window.confirm(`Update status to "${STATUS_CONFIG[newStatus]?.label}"?`)) return;
     setUpdating(true);
     try {
       await axios.patch(
-        `${API_BASE_URL}/admin/fulfillment/sub-orders/${subOrder.id}/status`,
+        `${API_BASE_URL}/admin/fulfillment/sub-orders/${data.id}/status`,
         { status: newStatus, note },
         { headers: authHeaders() }
       );
@@ -92,7 +108,7 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
     }
   };
 
-  const srcCfg = SOURCE_CONFIG[subOrder.source_type] || {};
+  const srcCfg = SOURCE_CONFIG[data.source_type] || {};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -104,10 +120,11 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
         <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
           <div>
             <h2 className="font-bold text-lg text-gray-900">Sub-Order Detail</h2>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">{subOrder.id}</p>
+            <p className="text-xs text-gray-500 font-mono mt-0.5">{data.id}</p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={subOrder.fulfillment_status} />
+            <StatusBadge status={data.fulfillment_status} />
+            {detailLoading && <span className="text-xs text-gray-400 animate-pulse">Loading…</span>}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl ml-2">✕</button>
           </div>
         </div>
@@ -118,11 +135,11 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${srcCfg.color}`}>
               {srcCfg.icon}{srcCfg.label}
             </span>
-            {subOrder.warehouse && (
+            {data.warehouse && (
               <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
                 <FaWarehouse className="text-xs" />
-                {subOrder.warehouse.name}
-                {subOrder.warehouse.location && <span className="text-gray-400 ml-1">· {subOrder.warehouse.location}</span>}
+                {data.warehouse.name}
+                {data.warehouse.location && <span className="text-gray-400 ml-1">· {data.warehouse.location}</span>}
               </span>
             )}
           </div>
@@ -131,35 +148,35 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl p-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Customer</p>
-              <p className="font-semibold text-gray-800">{subOrder.customer.name}</p>
-              <p className="text-sm text-gray-600">{subOrder.customer.phone}</p>
-              <p className="text-sm text-gray-500">{subOrder.customer.email}</p>
-              <p className="text-sm text-gray-600 mt-1">{subOrder.customer.address}</p>
-              <p className="text-sm font-medium text-blue-600 mt-1">Pincode: {subOrder.customer.pincode}</p>
+              <p className="font-semibold text-gray-800">{data.customer.name}</p>
+              <p className="text-sm text-gray-600">{data.customer.phone}</p>
+              <p className="text-sm text-gray-500">{data.customer.email}</p>
+              <p className="text-sm text-gray-600 mt-1">{data.customer.address}</p>
+              <p className="text-sm font-medium text-blue-600 mt-1">Pincode: {data.customer.pincode}</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Order Summary</p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Master Order</span>
-                  <span className="font-mono text-xs text-gray-700">{subOrder.parent_order_id?.slice(0, 8)}…</span>
+                  <span className="font-mono text-xs text-gray-700">{data.parent_order_id?.slice(0, 8)}…</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Payment</span>
-                  <span className="font-medium uppercase">{subOrder.order_summary.payment_method}</span>
+                  <span className="font-medium uppercase">{data.order_summary.payment_method}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Master Status</span>
-                  <span className="font-medium">{subOrder.order_summary.master_status}</span>
+                  <span className="font-medium">{data.order_summary.master_status}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Sub-Order Total</span>
-                  <span className="font-bold text-green-700">₹{subOrder.order_total.toFixed(2)}</span>
+                  <span className="font-bold text-green-700">₹{data.order_total.toFixed(2)}</span>
                 </div>
-                {subOrder.estimated_delivery_at && (
+                {data.estimated_delivery_at && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Est. Delivery</span>
-                    <span>{new Date(subOrder.estimated_delivery_at).toLocaleString("en-IN")}</span>
+                    <span>{new Date(data.estimated_delivery_at).toLocaleString("en-IN")}</span>
                   </div>
                 )}
               </div>
@@ -168,9 +185,9 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
 
           {/* Items */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items ({subOrder.items.length})</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items ({data.items.length})</p>
             <div className="divide-y border rounded-xl overflow-hidden">
-              {subOrder.items.map((item, i) => (
+              {data.items.map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 bg-white">
                   {item.product_image
                     ? <img src={item.product_image} alt={item.product_name} className="w-12 h-12 rounded-lg object-cover border" />
@@ -189,12 +206,12 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
             </div>
           </div>
 
-          {/* Events timeline */}
-          {subOrder.events.length > 0 && (
+          {/* Events timeline — only available after detail fetch */}
+          {(data.events?.length > 0) && (
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Fulfillment Timeline</p>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {subOrder.events.map((ev, i) => (
+                {data.events.map((ev, i) => (
                   <div key={i} className="flex gap-2 text-sm">
                     <span className="shrink-0 w-2 h-2 rounded-full bg-blue-400 mt-1.5" />
                     <div>
