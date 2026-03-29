@@ -84,7 +84,7 @@ import UniqueSection from "./Pages/UniqueSection/UniqueSection.jsx";
 import UniqueSectionProducts from "./Pages/UniqueSection/UniqueSectionProduct.jsx";
 import VideoCards from "./Pages/VideoCards/VideoCards.jsx";
 import BbmDost from "./Pages/BbmDost/BbmDost.jsx";
-import ReturnOrdersPage from "./Pages/ReturnOrdersPage.jsx";
+import ReturnRefundAdmin from "./Pages/ReturnRefund/index.jsx";
 import BulkOrderEnquiries from "./Components/BulkOrders/BulkOrderEnquiries.jsx";
 import WholesaleBulkOrders from "./Components/BulkOrders/WholesaleBulkOrders.jsx";
 import BulkProductSettings from "./Components/BulkProducts/BulkProductSettings.jsx";
@@ -423,7 +423,7 @@ function App() {
         },
         {
           path: "/return-orders",
-          element: <ReturnOrdersPage />,
+          element: <ReturnRefundAdmin />,
         },
         {
           path: "/VideoBannerManagement",
