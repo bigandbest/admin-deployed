@@ -425,6 +425,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/return-orders",
           description: "Manage return and cancellation requests",
         },
+        {
+          title: "COD Collections",
+          icon: <FaMoneyBillWave />,
+          path: "/cod-collections",
+          description: "Review and approve rider COD deposit proofs",
+        },
       ],
     },
 

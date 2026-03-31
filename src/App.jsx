@@ -144,6 +144,8 @@ import SellerNegotiations from "./Pages/Seller/Negotiations";
 import SellerEarnings from "./Pages/Seller/Earnings";
 import SellerNotifications from "./Pages/Seller/Notifications";
 
+import CodCollections from "./Pages/CodCollections/index.jsx";
+
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
@@ -549,6 +551,10 @@ function App() {
         {
           path: "/all-orders",
           element: <UnifiedOrders />,
+        },
+        {
+          path: "/cod-collections",
+          element: <CodCollections />,
         },
         {
           path: "/delivery-zones",
