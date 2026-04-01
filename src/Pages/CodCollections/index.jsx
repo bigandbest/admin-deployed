@@ -223,7 +223,7 @@ const CodCollections = () => {
                 : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
             }`}
           >
-            {status.replace('_', ' ')}
+            {status === 'PENDING_DEPOSIT' ? 'Pending Proof' : status === 'DEPOSIT_CLAIMED' ? 'Proof Submitted' : status.replace('_', ' ')}
           </button>
         ))}
       </div>
