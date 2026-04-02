@@ -117,6 +117,7 @@ import RiderPayoutRules from "./Pages/RiderManagement/RiderPayoutRules.jsx";
 import PayoutSlabs from "./Pages/PayoutSlabs/index.jsx";
 import DocumentVerification from "./Pages/DocumentVerification/DocumentVerification.jsx";
 import OutOfStockEnquiries from "./Pages/OutOfStockEnquiries/index.jsx";
+import BankAccountSettings from "./Pages/BankAccountSettings.jsx";
 
 // Affiliate Pages
 import AffiliateDashboard from "./Pages/Affiliate/Dashboard/index.jsx";
@@ -688,6 +689,10 @@ function App() {
         {
           path: "/out-of-stock-enquiries",
           element: <OutOfStockEnquiries />,
+        },
+        {
+          path: "/bank-account-settings",
+          element: <BankAccountSettings />,
         },
       ],
     },

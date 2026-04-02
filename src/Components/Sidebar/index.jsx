@@ -600,6 +600,12 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
     },
 
     {
+      title: "Bank Account Settings",
+      icon: <FaMoneyBillWave />,
+      path: "/bank-account-settings",
+      description: "Manage company bank accounts for COD deposits",
+    },
+    {
       title: "Settings",
       icon: <RiSettings4Fill />,
       path: "/settings",
