@@ -228,33 +228,71 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
           )}
 
           {/* Status Actions */}
-          {nextStatuses.length > 0 && (
-            <div className="border-t pt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Update Status</p>
-              <input
-                className="w-full border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                placeholder="Optional note..."
-                value={note}
-                onChange={e => setNote(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-2">
-                {nextStatuses.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusUpdate(s)}
-                    disabled={updating}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
-                      ${s === 'cancelled' || s === 'return_to_source'
-                        ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                      } disabled:opacity-50`}
-                  >
-                    {updating ? "…" : `→ ${STATUS_CONFIG[s]?.label || s}`}
-                  </button>
-                ))}
-              </div>
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Update Status</p>
+            <input
+              className="w-full border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="Optional note..."
+              value={note}
+              onChange={e => setNote(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              {/* Accepted — show for pending/rider_pending statuses */}
+              {['pending', 'rider_pending', 'dispatched_to_zonal_delivery'].includes(data.fulfillment_status) && (
+                <button
+                  onClick={() => handleStatusUpdate('confirmed')}
+                  disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all disabled:opacity-50"
+                >
+                  {updating ? "…" : "✓ Accepted"}
+                </button>
+              )}
+
+              {/* Out for Delivery — show for pending through picked statuses */}
+              {['pending', 'confirmed', 'picked', 'rider_pending', 'dispatched_to_zonal_delivery'].includes(data.fulfillment_status) && (
+                <button
+                  onClick={() => handleStatusUpdate('in_transit')}
+                  disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-all disabled:opacity-50"
+                >
+                  {updating ? "…" : "🛵 Out for Delivery"}
+                </button>
+              )}
+
+              {/* Delivered — show for in-transit and picked statuses */}
+              {['picked', 'in_transit'].includes(data.fulfillment_status) && (
+                <button
+                  onClick={() => handleStatusUpdate('delivered')}
+                  disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-all disabled:opacity-50"
+                >
+                  {updating ? "…" : "🎉 Delivered"}
+                </button>
+              )}
+
+              {/* Cancel — show for all non-terminal states */}
+              {!['delivered', 'cancelled', 'return_to_source'].includes(data.fulfillment_status) && (
+                <button
+                  onClick={() => handleStatusUpdate('cancelled')}
+                  disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-all disabled:opacity-50"
+                >
+                  {updating ? "…" : "✕ Cancel"}
+                </button>
+              )}
+
+              {/* Return to Source — show if order is in transit or later but not delivered/cancelled */}
+              {['in_transit', 'picked'].includes(data.fulfillment_status) && (
+                <button
+                  onClick={() => handleStatusUpdate('return_to_source')}
+                  disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-all disabled:opacity-50"
+                >
+                  {updating ? "…" : "↩️ Return"}
+                </button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
