@@ -74,8 +74,6 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
   const [note, setNote] = useState("");
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(true);
-  const [otpModalOpen, setOtpModalOpen] = useState(false);
-  const [otpInput, setOtpInput] = useState("");
 
   // Fetch full detail (includes events) on mount — list items don't carry events
   useEffect(() => {
@@ -129,32 +127,6 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
     }
   };
 
-  const handleOpenVerifyModal = () => {
-    setOtpModalOpen(true);
-    setOtpInput("");
-  };
-
-  const handleVerifyAndDeliver = async () => {
-    if (!otpInput.trim()) {
-      alert("Please enter the OTP");
-      return;
-    }
-    setUpdating(true);
-    try {
-      await axios.post(
-        `${API_BASE_URL}/admin/fulfillment/sub-orders/${data.id}/verify-otp`,
-        { delivery_otp: otpInput },
-        { headers: authHeaders() }
-      );
-      setOtpModalOpen(false);
-      onStatusUpdate();
-      onClose();
-    } catch (err) {
-      alert("Failed to verify OTP: " + (err.response?.data?.error || err.message));
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   const srcCfg = SOURCE_CONFIG[data.source_type] || {};
 
@@ -329,14 +301,14 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
                 </button>
               )}
 
-              {/* Delivered — show for in-transit, picked, and dispatched_to_zonal statuses, verify OTP */}
+              {/* Delivered — admin can mark delivered directly without OTP */}
               {['picked', 'in_transit', 'dispatched_to_zonal_delivery'].includes(data.fulfillment_status) && (
                 <button
-                  onClick={handleOpenVerifyModal}
+                  onClick={() => handleStatusUpdate('delivered')}
                   disabled={updating}
                   className="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-all disabled:opacity-50"
                 >
-                  {updating ? "…" : "🎉 Verify & Mark Delivered"}
+                  {updating ? "…" : "🎉 Mark Delivered"}
                 </button>
               )}
 
@@ -366,45 +338,6 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
         </div>
       </div>
 
-      {/* OTP Verification Modal */}
-      {otpModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4" onClick={() => !updating && setOtpModalOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">Verify Delivery OTP</h3>
-              <button onClick={() => setOtpModalOpen(false)} disabled={updating} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-gray-600">Enter the 6-digit OTP from the customer to confirm delivery</p>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength="6"
-                placeholder="000000"
-                value={otpInput}
-                onChange={e => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                className="w-full text-center text-3xl font-bold tracking-widest border-2 border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-600"
-              />
-              <div className="flex gap-2 pt-4">
-                <button
-                  onClick={() => setOtpModalOpen(false)}
-                  disabled={updating}
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleVerifyAndDeliver}
-                  disabled={updating || otpInput.length !== 6}
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-all disabled:opacity-50"
-                >
-                  {updating ? "…" : "Confirm"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
