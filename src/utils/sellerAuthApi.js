@@ -65,3 +65,17 @@ export const verifySellerToken = async (token) => {
     return { success: false, error: error.message };
   }
 };
+
+export const verifySellerFirebasePhone = async (idToken) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/seller-auth/firebase-phone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ idToken })
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};

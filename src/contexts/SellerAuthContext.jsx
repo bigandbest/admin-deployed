@@ -5,7 +5,9 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { sellerLogin, sellerLogout, getSellerMe } from "../utils/sellerAuthApi";
+import { sellerLogin, sellerLogout, getSellerMe, verifySellerFirebasePhone } from "../utils/sellerAuthApi";
+import { auth } from "../config/firebase";
+import { PhoneAuthProvider, signInWithCredential, RecaptchaVerifier } from "firebase/auth";
 
 // Create context
 const SellerAuthContext = createContext();
@@ -186,6 +188,80 @@ export const SellerAuthProvider = ({ children }) => {
     }
   };
 
+  // Phone OTP login with Firebase
+  const loginWithPhone = {
+    sendOTP: async (phone) => {
+      try {
+        setError(null);
+
+        // Create RecaptchaVerifier for the auth flow
+        const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: (token) => {
+            console.log('reCAPTCHA verified');
+          },
+          'expired-callback': () => {
+            setError('reCAPTCHA expired, please try again');
+          }
+        });
+
+        // Send OTP via Firebase
+        const phoneProvider = new PhoneAuthProvider(auth);
+        const verificationId = await phoneProvider.verifyPhoneNumber(
+          `+91${phone}`,
+          recaptchaVerifier
+        );
+
+        return { success: true, verificationId };
+      } catch (err) {
+        const errorMessage = err.message || "Failed to send OTP";
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    },
+
+    verifyOTP: async (verificationId, otp) => {
+      try {
+        setError(null);
+
+        // Verify OTP with Firebase to get credential
+        const credential = PhoneAuthProvider.credential(verificationId, otp);
+        const userCredential = await signInWithCredential(auth, credential);
+        const idToken = await userCredential.user.getIdToken();
+
+        // Verify Firebase ID token with our backend
+        const result = await verifySellerFirebasePhone(idToken);
+
+        if (result.success && result.token) {
+          // Store the token
+          localStorage.setItem("seller_token", result.token);
+
+          // Check if user has seller role
+          const hasSellerRole = result.user.role?.toLowerCase() === "seller" ||
+                               result.user.role?.toLowerCase() === "vendor";
+
+          if (hasSellerRole) {
+            setCurrentUser(result.user);
+            setIsSeller(true);
+            startSessionTimeout();
+            return { success: true, isSeller: true, user: result.user };
+          } else {
+            localStorage.removeItem("seller_token");
+            setError("You do not have seller access");
+            return { success: false, error: "You do not have seller access" };
+          }
+        } else {
+          setError(result.error || "OTP verification failed");
+          return { success: false, error: result.error || "OTP verification failed" };
+        }
+      } catch (err) {
+        const errorMessage = err.message || "OTP verification failed";
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    }
+  };
+
   const value = {
     currentUser,
     isSeller,
@@ -194,6 +270,7 @@ export const SellerAuthProvider = ({ children }) => {
     login,
     logout: logoutUser,
     setError,
+    loginWithPhone,
   };
 
   return (

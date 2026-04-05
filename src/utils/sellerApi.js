@@ -167,6 +167,30 @@ export const updateSellerOrderStatus = async (orderId, status) => {
   }
 };
 
+export const getSellerSubOrders = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams(filters);
+    const response = await fetch(`${API_BASE_URL}/seller/sub-orders?${params}`, {
+      headers: getAuthHeaders()
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const acceptSellerSubOrder = async (subOrderId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/seller/sub-orders/${subOrderId}/accept`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 // Analytics & Dashboard
 export const getSellerDashboard = async () => {
   try {
