@@ -11,15 +11,11 @@ import {
   LoadingOverlay,
   Badge,
   Tabs,
-  Select,
   TextInput,
-  Pagination,
-  Stack,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import {
-  FaBiking,
   FaRuler,
   FaCheck,
   FaToggleOn,
@@ -40,14 +36,6 @@ const PayoutSlabs = () => {
   const [previewKm, setPreviewKm] = useState(null);
   const [previewResult, setPreviewResult] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-
-  // ── Payouts state ────────────────────────────────────────────────────────
-  const [payouts, setPayouts] = useState([]);
-  const [payoutsLoading, setPayoutsLoading] = useState(false);
-  const [payoutStatusFilter, setPayoutStatusFilter] = useState("");
-  const [payoutSearch, setPayoutSearch] = useState("");
-  const [payoutPage, setPayoutPage] = useState(1);
-  const [payoutPagination, setPayoutPagination] = useState({ total: 0, pages: 1 });
 
   // ── Change History state ─────────────────────────────────────────────────
   const [history, setHistory] = useState([]);
@@ -87,29 +75,6 @@ const PayoutSlabs = () => {
     }
   };
 
-  // ── Fetch payouts ────────────────────────────────────────────────────────
-  const fetchPayouts = async () => {
-    setPayoutsLoading(true);
-    try {
-      const params = { page: payoutPage, limit: 20 };
-      if (payoutStatusFilter) params.status = payoutStatusFilter;
-      if (payoutSearch) params.rider_id = payoutSearch;
-      const response = await api.get("/admin/payout/payouts", { params });
-      if (response.data.success) {
-        setPayouts(response.data.data);
-        setPayoutPagination(response.data.pagination || { total: 0, pages: 1 });
-      }
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: "Failed to fetch payouts",
-        color: "red",
-      });
-    } finally {
-      setPayoutsLoading(false);
-    }
-  };
-
   // ── Fetch history ────────────────────────────────────────────────────────
   const fetchHistory = async () => {
     setHistoryLoading(true);
@@ -132,10 +97,6 @@ const PayoutSlabs = () => {
   useEffect(() => {
     fetchSlabs();
   }, []);
-
-  useEffect(() => {
-    fetchPayouts();
-  }, [payoutPage, payoutStatusFilter]);
 
   // ── Slab modal open/close ─────────────────────────────────────────────────
   const handleOpenSlabModal = (slab = null) => {
@@ -248,46 +209,6 @@ const PayoutSlabs = () => {
     }
   };
 
-  // ── Approve payout ────────────────────────────────────────────────────────
-  const handleApprovePayout = async (id) => {
-    setPayoutsLoading(true);
-    try {
-      await api.post(`/admin/payout/payouts/${id}/approve`);
-      notifications.show({
-        title: "Success",
-        message: "Payout approved and credited to rider wallet",
-        color: "green",
-      });
-      fetchPayouts();
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: error.response?.data?.error || "Failed to approve payout",
-        color: "red",
-      });
-    } finally {
-      setPayoutsLoading(false);
-    }
-  };
-
-  // ── Status badge helpers ──────────────────────────────────────────────────
-  const getPayoutStatusColor = (status) => {
-    switch (status) {
-      case "PAID":
-        return "green";
-      case "PENDING":
-        return "blue";
-      case "DISPUTED":
-        return "orange";
-      case "MANUAL_REVIEW":
-        return "grape";
-      case "APPROVED":
-        return "teal";
-      default:
-        return "gray";
-    }
-  };
-
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString("en-IN", {
@@ -329,9 +250,6 @@ const PayoutSlabs = () => {
         <Tabs.List mb="md">
           <Tabs.Tab value="slabs" leftSection={<FaRuler />}>
             Distance Slabs
-          </Tabs.Tab>
-          <Tabs.Tab value="payouts" leftSection={<FaBiking />}>
-            All Payouts
           </Tabs.Tab>
           <Tabs.Tab value="history" leftSection={<FaCheck />}>
             Change History
@@ -450,126 +368,6 @@ const PayoutSlabs = () => {
                 </div>
               )}
             </Card>
-          </div>
-        </Tabs.Panel>
-
-        {/* ── TAB 2: All Payouts ────────────────────────────────────────── */}
-        <Tabs.Panel value="payouts">
-          <div className="relative">
-            <LoadingOverlay visible={payoutsLoading} />
-
-            <Group mb="md" gap="sm">
-              <Select
-                placeholder="Filter by status"
-                data={[
-                  { value: "", label: "ALL" },
-                  { value: "PENDING", label: "Pending" },
-                  { value: "APPROVED", label: "Approved" },
-                  { value: "PAID", label: "Paid" },
-                  { value: "DISPUTED", label: "Disputed" },
-                  { value: "MANUAL_REVIEW", label: "Manual Review" },
-                ]}
-                value={payoutStatusFilter}
-                onChange={(val) => {
-                  setPayoutStatusFilter(val || "");
-                  setPayoutPage(1);
-                }}
-                clearable
-                style={{ width: 180 }}
-              />
-              <TextInput
-                placeholder="Search rider name / phone"
-                value={payoutSearch}
-                onChange={(e) => setPayoutSearch(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setPayoutPage(1);
-                    fetchPayouts();
-                  }
-                }}
-                style={{ width: 240 }}
-              />
-              <Button variant="light" onClick={() => { setPayoutPage(1); fetchPayouts(); }}>
-                Search
-              </Button>
-            </Group>
-
-            <Card shadow="sm" p="lg" radius="md" withBorder mb="md">
-              <Table striped highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Sub-Order ID</Table.Th>
-                    <Table.Th>Rider</Table.Th>
-                    <Table.Th>Route Type</Table.Th>
-                    <Table.Th>Distance</Table.Th>
-                    <Table.Th>Payout Amount</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Date</Table.Th>
-                    <Table.Th>Actions</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {payouts.length === 0 ? (
-                    <Table.Tr>
-                      <Table.Td colSpan={8} className="text-center text-gray-500 py-4">
-                        No payouts found
-                      </Table.Td>
-                    </Table.Tr>
-                  ) : (
-                    payouts.map((payout) => (
-                      <Table.Tr key={payout.id}>
-                        <Table.Td title={payout.sub_order_id}>
-                          {truncate(payout.sub_order_id, 12)}
-                        </Table.Td>
-                        <Table.Td>
-                          <div>{payout.rider_name || "—"}</div>
-                          <Text size="xs" color="dimmed">
-                            {payout.rider_phone || ""}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>{payout.route_type || "—"}</Table.Td>
-                        <Table.Td>
-                          {payout.total_km != null ? `${Number(payout.total_km).toFixed(2)} km` : "—"}
-                        </Table.Td>
-                        <Table.Td className="font-semibold">
-                          ₹{Number(payout.payout_amount).toFixed(2)}
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge color={getPayoutStatusColor(payout.status)}>
-                            {payout.status}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          {formatDate(payout.calculated_at)}
-                        </Table.Td>
-                        <Table.Td>
-                          {(payout.status === "PENDING" || payout.status === "MANUAL_REVIEW") && (
-                            <Button
-                              size="xs"
-                              color="green"
-                              leftSection={<FaCheck />}
-                              onClick={() => handleApprovePayout(payout.id)}
-                            >
-                              Approve
-                            </Button>
-                          )}
-                        </Table.Td>
-                      </Table.Tr>
-                    ))
-                  )}
-                </Table.Tbody>
-              </Table>
-            </Card>
-
-            {payoutPagination.pages > 1 && (
-              <Group justify="center">
-                <Pagination
-                  total={payoutPagination.pages}
-                  value={payoutPage}
-                  onChange={setPayoutPage}
-                />
-              </Group>
-            )}
           </div>
         </Tabs.Panel>
 

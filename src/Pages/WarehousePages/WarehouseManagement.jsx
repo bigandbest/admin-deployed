@@ -51,6 +51,8 @@ const WarehouseManagement = () => {
     type: "zonal",
     pincode: "",
     address: "",
+    latitude: "",
+    longitude: "",
     zone_ids: [],
     parent_warehouse_id: null,
     pincode_assignments: [], // For division warehouses
@@ -224,6 +226,8 @@ const WarehouseManagement = () => {
         type: "zonal",
         pincode: "",
         address: "",
+        latitude: "",
+        longitude: "",
         zone_ids: [],
         parent_warehouse_id: null,
         pincode_assignments: [],
@@ -610,6 +614,8 @@ const WarehouseManagement = () => {
               type: warehouse.type || "zonal",
               pincode: warehouse.pincode || "",
               address: warehouse.address || "",
+              latitude: warehouse.latitude != null ? String(warehouse.latitude) : "",
+              longitude: warehouse.longitude != null ? String(warehouse.longitude) : "",
               zone_ids: warehouse.zones ? warehouse.zones.map((z) => z.id) : [],
               pincode_assignments: warehouse.pincodes
                 ? warehouse.pincodes.map((p) => ({
@@ -632,6 +638,8 @@ const WarehouseManagement = () => {
               type: "zonal",
               pincode: "",
               address: "",
+              latitude: "",
+              longitude: "",
               zone_ids: [],
               parent_warehouse_id: null,
               pincode_assignments: [],
@@ -2041,6 +2049,38 @@ const WarehouseModal = ({
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter warehouse address"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Latitude
+              </label>
+              <input
+                type="number"
+                step="0.0000001"
+                value={data.latitude}
+                onChange={(e) => setData({ ...data, latitude: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 28.613939"
+              />
+              <p className="text-gray-500 text-xs mt-1">
+                Used for rider distance/payout calculation
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Longitude
+              </label>
+              <input
+                type="number"
+                step="0.0000001"
+                value={data.longitude}
+                onChange={(e) => setData({ ...data, longitude: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. 77.209021"
+              />
+            </div>
           </div>
         </div>
 

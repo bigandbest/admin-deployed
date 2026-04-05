@@ -19,6 +19,8 @@ const WarehouseList = () => {
     type: "zonal",
     pincode: "",
     address: "",
+    latitude: "",
+    longitude: "",
     zone_ids: [],
     parent_warehouse_id: null,
     pincode_assignments: [],
@@ -269,6 +271,8 @@ const WarehouseList = () => {
                           type: w.type || "zonal",
                           pincode: w.pincode || "",
                           address: w.address || "",
+                          latitude: w.latitude != null ? String(w.latitude) : "",
+                          longitude: w.longitude != null ? String(w.longitude) : "",
                           zone_ids: w.zones ? w.zones.map((z) => z.id) : [],
                           parent_warehouse_id: w.parent_warehouse_id || null,
                           pincode_assignments: w.pincodes
@@ -753,6 +757,38 @@ const WarehouseList = () => {
                   }
                 />
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Latitude
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0000001"
+                    placeholder="e.g. 28.613939"
+                    className="w-full border px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.latitude}
+                    onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Used for rider distance/payout calculation
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Longitude
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0000001"
+                    placeholder="e.g. 77.209021"
+                    className="w-full border px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.longitude}
+                    onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
@@ -764,6 +800,8 @@ const WarehouseList = () => {
                     type: "zonal",
                     pincode: "",
                     address: "",
+                    latitude: "",
+                    longitude: "",
                     zone_ids: [],
                     parent_warehouse_id: null,
                     pincode_assignments: [],
@@ -820,6 +858,8 @@ const WarehouseList = () => {
                       type: form.type,
                       pincode: form.type === "zonal" ? form.pincode : null,
                       address: form.address,
+                      latitude: form.latitude === "" ? null : Number(form.latitude),
+                      longitude: form.longitude === "" ? null : Number(form.longitude),
                       zone_ids: form.type === "zonal" ? form.zone_ids : [],
                       parent_warehouse_id:
                         form.type === "zonal" || form.type === "division"
@@ -858,6 +898,8 @@ const WarehouseList = () => {
                       type: "zonal",
                       pincode: "",
                       address: "",
+                      latitude: "",
+                      longitude: "",
                       zone_ids: [],
                       parent_warehouse_id: null,
                       pincode_assignments: [],

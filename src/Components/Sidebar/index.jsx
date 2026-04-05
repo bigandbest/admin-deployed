@@ -168,12 +168,6 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           description: "Manage hierarchy-based marketplace platform fee rules",
         },
         {
-          title: "Rider Payout Rules",
-          icon: <FaRupeeSign />,
-          path: "/rider-payout-rules",
-          description: "Manage rider per-km payout rates based on order value",
-        },
-        {
           title: "Payout Slabs",
           icon: <FaRuler />,
           path: "/payout-slabs",

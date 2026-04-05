@@ -113,7 +113,6 @@ import TeamManager from "./Pages/AboutManager/TeamManager.jsx";
 import Coupons from "./Pages/Coupons/index.jsx";
 import SchedulingManagement from "./Pages/SchedulingManagement/index.jsx";
 import FaqTemplates from "./Pages/FaqTemplates/FaqTemplates.jsx";
-import RiderPayoutRules from "./Pages/RiderManagement/RiderPayoutRules.jsx";
 import PayoutSlabs from "./Pages/PayoutSlabs/index.jsx";
 import DocumentVerification from "./Pages/DocumentVerification/DocumentVerification.jsx";
 import OutOfStockEnquiries from "./Pages/OutOfStockEnquiries/index.jsx";
@@ -673,10 +672,6 @@ function App() {
         {
           path: "/faq-templates",
           element: <FaqTemplates />,
-        },
-        {
-          path: "/rider-payout-rules",
-          element: <RiderPayoutRules />,
         },
         {
           path: "/payout-slabs",
