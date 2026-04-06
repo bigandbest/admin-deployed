@@ -37,6 +37,10 @@ const ProductModal = ({
   const [existingStock, setExistingStock] = useState({});
   const [loadingExistingStock, setLoadingExistingStock] = useState(false);
   const [hasSynced, setHasSynced] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Seller stock state (read-only display for dropshipping products)
+  const [sellerStock, setSellerStock] = useState(null);
 
   // Aggregate total stock across all warehouses
   const totalStockInfo = useMemo(() => {
@@ -64,25 +68,21 @@ const ProductModal = ({
       Object.entries(existingStock).forEach(([whId, whData]) => {
         const warehouseId = parseInt(whId);
 
-        // Add base stock if any
-        if (whData.baseStock > 0) {
-          initialAssignments.push({
-            warehouse_id: warehouseId,
-            stock_quantity: whData.baseStock,
-            variant_id: null
-          });
-        }
+        // Include all assignments, even those with 0 stock
+        initialAssignments.push({
+          warehouse_id: warehouseId,
+          stock_quantity: whData.baseStock || 0,
+          variant_id: null
+        });
 
         // Add variant stock
         if (whData.variantStock) {
           Object.entries(whData.variantStock).forEach(([vId, qty]) => {
-            if (qty > 0) {
-              initialAssignments.push({
-                warehouse_id: warehouseId,
-                stock_quantity: qty,
-                variant_id: vId
-              });
-            }
+            initialAssignments.push({
+              warehouse_id: warehouseId,
+              stock_quantity: qty || 0,
+              variant_id: vId
+            });
           });
         }
       });
@@ -163,6 +163,34 @@ const ProductModal = ({
 
     fetchExistingStock();
   }, [isEditing, data.selectedProductId, warehouses, isOpen]);
+
+  // Fetch seller stock when a dropshipping product is selected
+  useEffect(() => {
+    const fetchSellerStock = async () => {
+      if (!data.selectedProductId) {
+        setSellerStock(null);
+        return;
+      }
+      const selectedProduct = data.availableProducts?.find(p => p.id === data.selectedProductId);
+      if (!selectedProduct?.seller_id) {
+        setSellerStock(null);
+        return;
+      }
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/sellers/${selectedProduct.seller_id}/inventory`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } }
+        );
+        const inv = response.data?.data || response.data?.inventory || [];
+        const prodEntry = inv.find(i => i.product_id === data.selectedProductId || i.id === data.selectedProductId);
+        setSellerStock(prodEntry ? (prodEntry.stock_quantity ?? prodEntry.quantity ?? 0) : 0);
+      } catch {
+        // Fallback: try product's own seller_stock field
+        setSellerStock(selectedProduct.seller_stock ?? selectedProduct.stock_quantity ?? null);
+      }
+    };
+    fetchSellerStock();
+  }, [data.selectedProductId, data.availableProducts]);
 
   // Fetch variants when product is selected
   useEffect(() => {
@@ -256,23 +284,17 @@ const ProductModal = ({
     return grouped;
   }, [divisionWarehouses]);
 
+  // Count all warehouse assignments (including those with 0 stock)
   const zonalAssignmentCount = assignments.filter((assignment) => {
     const warehouse = warehouseMap.get(assignment.warehouse_id);
-    return (
-      warehouse?.type === "zonal" &&
-      Number.parseInt(assignment.stock_quantity, 10) > 0
-    );
+    return warehouse?.type === "zonal";
   }).length;
 
-  const totalAssignedWarehouses = assignments.filter(
-    (assignment) => Number.parseInt(assignment.stock_quantity, 10) > 0
-  ).length;
+  const totalAssignedWarehouses = assignments.length;
 
   const updateAssignment = (warehouseId, value, variantId = null) => {
-    const numericValue =
-      value === "" ? "" : Number.parseInt(value, 10) >= 0
-        ? Number.parseInt(value, 10)
-        : "";
+    // Allow empty string while typing, otherwise parse as integer (0 is valid)
+    const numericValue = value === "" ? "" : Math.max(0, Number.parseInt(value, 10) || 0);
 
     const currentAssignments = data.warehouse_assignments || [];
     const existingIndex = currentAssignments.findIndex(
@@ -281,7 +303,8 @@ const ProductModal = ({
         (assignment.variant_id || null) === variantId
     );
 
-    if (numericValue === "" || numericValue <= 0) {
+    // If clearing the input entirely (empty string), remove from assignments
+    if (numericValue === "") {
       if (existingIndex === -1) return;
       const filtered = currentAssignments.filter(
         (assignment) => !(assignment.warehouse_id === warehouseId && (assignment.variant_id || null) === variantId)
@@ -290,6 +313,7 @@ const ProductModal = ({
       return;
     }
 
+    // 0 is a valid stock value — keep the assignment
     const newAssignment = {
       warehouse_id: warehouseId,
       stock_quantity: numericValue,
@@ -333,6 +357,15 @@ const ProductModal = ({
     }));
   };
 
+  // A product is "dropshipping" when it has a seller_id assigned.
+  // Check both the product list (for new assignments) and data itself (for edits).
+  const selectedProductData = data.availableProducts?.find(
+    (p) => String(p.id) === String(data.selectedProductId)
+  );
+  const isDropshippingProduct = Boolean(
+    selectedProductData?.seller_id || data.seller_id
+  );
+
   const validateStep = (stepIndex) => {
     let errorMessage = "";
 
@@ -344,27 +377,10 @@ const ProductModal = ({
           errorMessage = "Select a delivery type";
         }
         break;
+      // Zonal and division steps are now optional — admin can assign to either or both with any stock value
       case "zonal":
-        if (
-          data.delivery_type === "nationwide" &&
-          zonalAssignmentCount === 0
-        ) {
-          errorMessage =
-            "Nationwide products should have at least one zonal assignment";
-        }
-        break;
       case "division":
-        if (totalAssignedWarehouses === 0) {
-          errorMessage =
-            "Assign stock to at least one zonal or division warehouse";
-        }
-        break;
       case "pricing":
-        if (totalAssignedWarehouses === 0) {
-          errorMessage =
-            "Assign stock to at least one warehouse before saving";
-        }
-        break;
       default:
         break;
     }
@@ -392,36 +408,49 @@ const ProductModal = ({
     setCurrentStep((step) => Math.max(step - 1, 0));
   };
 
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
     console.log("🟢 ProductModal handleFinalSubmit called!");
     console.log("Current step:", currentStep);
     console.log("Data:", data);
 
     if (validateStep(currentStep)) {
       console.log("✅ Validation passed, calling onSubmit");
-      onSubmit();
+      setIsSubmitting(true);
+      try {
+        await onSubmit();
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
       console.log("❌ Validation failed");
     }
   };
 
-  const renderVariantStockInputs = (warehouseId) => {
+  const renderVariantStockInputs = (warehouseId, frozen = false) => {
     const currentStock = existingStock[warehouseId];
 
     if (productVariants.length === 0) {
       // No variants - show single stock input
       return (
         <div>
-          <input
-            type="number"
-            min="0"
-            value={getAssignedStock(warehouseId)}
-            onChange={(event) =>
-              updateAssignment(warehouseId, event.target.value)
-            }
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Stock quantity"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              value={getAssignedStock(warehouseId)}
+              onChange={(event) =>
+                !frozen && updateAssignment(warehouseId, event.target.value)
+              }
+              readOnly={frozen}
+              className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                frozen ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 pr-8" : "border-gray-300"
+              }`}
+              placeholder="Stock quantity"
+            />
+            {frozen && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none" title="Seller-managed stock — read only">🔒</span>
+            )}
+          </div>
           {isEditing && currentStock && (
             <p className="text-xs text-gray-500 mt-1">
               Current stock: <span className="font-semibold text-blue-600">{currentStock.baseStock}</span> units
@@ -441,12 +470,17 @@ const ProductModal = ({
 
           return (
             <div key={variant.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-              <input
-                type="checkbox"
-                checked={isEnabled}
-                onChange={() => toggleVariant(variant.id)}
-                className="w-4 h-4"
-              />
+              {!frozen && (
+                <input
+                  type="checkbox"
+                  checked={isEnabled}
+                  onChange={() => toggleVariant(variant.id)}
+                  className="w-4 h-4"
+                />
+              )}
+              {frozen && (
+                <span className="text-gray-400 text-sm select-none" title="Seller-managed — read only">🔒</span>
+              )}
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-700">
                   {variant.title || variant.variant_name}
@@ -460,17 +494,22 @@ const ProductModal = ({
                   )}
                 </p>
               </div>
-              {isEnabled && (
-                <input
-                  type="number"
-                  min="0"
-                  value={getAssignedStock(warehouseId, variant.id)}
-                  onChange={(event) =>
-                    updateAssignment(warehouseId, event.target.value, variant.id)
-                  }
-                  className="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Stock"
-                />
+              {(isEnabled || frozen) && (
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    value={getAssignedStock(warehouseId, variant.id)}
+                    onChange={(event) =>
+                      !frozen && updateAssignment(warehouseId, event.target.value, variant.id)
+                    }
+                    readOnly={frozen}
+                    className={`w-24 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      frozen ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200" : "border-gray-300"
+                    }`}
+                    placeholder="Stock"
+                  />
+                </div>
               )}
             </div>
           );
@@ -567,16 +606,24 @@ const ProductModal = ({
                 <input
                   type="number"
                   min="0"
-                  value={data.initial_stock}
+                  value={isDropshippingProduct ? (sellerStock ?? data.initial_stock) : data.initial_stock}
                   onChange={(event) =>
-                    setData({ ...data, initial_stock: event.target.value })
+                    !isDropshippingProduct && setData({ ...data, initial_stock: event.target.value })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  readOnly={isDropshippingProduct}
+                  className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    isDropshippingProduct ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200" : "border-gray-300"
+                  }`}
                   placeholder="Enter initial stock quantity"
                 />
                 <p className="text-xs text-blue-600 mt-1 font-medium">
                   Total Current Stock across warehouses: {totalStockInfo.base} units
                 </p>
+                {isDropshippingProduct && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    This is a drop-shipping product. Admin cannot edit seller stock.
+                  </p>
+                )}
               </div>
             )}
 
@@ -608,7 +655,7 @@ const ProductModal = ({
               <div>
                 <h4 className="font-semibold text-gray-900">Zonal Warehouses</h4>
                 <p className="text-sm text-gray-600">
-                  Assign stock to zonal warehouses. {productVariants.length > 0 && "Set stock for each variant separately."}
+                  Assign stock to zonal warehouses (optional). You may leave stock as 0 if not using zonal. {productVariants.length > 0 && "Set stock for each variant separately."}
                 </p>
               </div>
               {zonalAssignmentCount > 0 && (
@@ -621,6 +668,17 @@ const ProductModal = ({
                 </button>
               )}
             </div>
+
+            {/* Seller stock (read-only) for dropshipping products */}
+            {isDropshippingProduct && sellerStock !== null && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs font-semibold text-amber-800 mb-1">🏪 Seller Stock (Read-Only)</p>
+                <p className="text-sm text-amber-700">
+                  This is a drop-shipping product. Seller manages their own stock. Admin cannot modify seller stock.
+                </p>
+                <p className="text-sm font-bold text-amber-900 mt-1">Seller inventory: {sellerStock} units</p>
+              </div>
+            )}
 
             {zonalWarehouses.length === 0 ? (
               <div className="p-4 bg-gray-50 border border-dashed rounded-lg text-center text-gray-500">
@@ -646,7 +704,7 @@ const ProductModal = ({
                         Zonal
                       </span>
                     </div>
-                    {renderVariantStockInputs(warehouse.id)}
+                    {renderVariantStockInputs(warehouse.id, isDropshippingProduct)}
                   </div>
                 ))}
               </div>
@@ -720,7 +778,7 @@ const ProductModal = ({
                                 {division.pincode || "No pincode"}
                               </span>
                             </div>
-                            {renderVariantStockInputs(division.id)}
+                            {renderVariantStockInputs(division.id, isDropshippingProduct)}
                           </div>
                         ))}
                       </div>
@@ -892,10 +950,13 @@ const ProductModal = ({
             ) : (
               <button
                 onClick={handleFinalSubmit}
-                disabled={totalAssignedWarehouses === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
               >
-                {isEditing ? "Update Product" : "Add to Warehouses"}
+                {isSubmitting && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                <span>{isEditing ? "Update Product" : "Add to Warehouses"}</span>
               </button>
             )}
           </div>

@@ -670,6 +670,7 @@ const WarehouseManagement = () => {
               initial_stock: product.initial_stock || 100,
               minimum_threshold: product.minimum_threshold || 10,
               cost_per_unit: product.cost_per_unit || 0,
+              seller_id: product.seller_id || null,
             });
             setShowProductModal(true);
           }}
