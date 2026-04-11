@@ -1,5 +1,6 @@
 // src/Pages/WalletTransactions/index.jsx
 import { useState, useEffect, useCallback } from "react";
+import { formatEmail } from "../../utils/formatEmail";
 import {
   getWalletTransactionsAdmin,
   getWalletAuditLogs,
@@ -416,7 +417,7 @@ const WalletTransactions = () => {
                         {transaction.wallet?.user?.name || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {transaction.wallet?.user?.email || "N/A"}
+                        {formatEmail(transaction.wallet?.user?.email) || transaction.wallet?.user?.phone || "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -516,7 +517,7 @@ const WalletTransactions = () => {
                         {log.wallet?.user?.name || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {log.wallet?.user?.email || "N/A"}
+                        {formatEmail(log.wallet?.user?.email) || log.wallet?.user?.phone || "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

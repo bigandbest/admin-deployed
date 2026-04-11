@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency, getStatusColor } from "../../utils/adminWalletApi";
+import { formatEmail } from "../../utils/formatEmail";
 
 const SellerWithdrawalRequests = () => {
     const [requests, setRequests] = useState([]);
@@ -130,7 +131,7 @@ const SellerWithdrawalRequests = () => {
                                     <tr key={req.id}>
                                         <td className="px-6 py-4">
                                             <div className="text-sm font-medium text-gray-900">{seller.business_name || req.user?.name}</div>
-                                            <div className="text-sm text-gray-500">{req.user?.email}</div>
+                                            <div className="text-sm text-gray-500">{formatEmail(req.user?.email) || req.user?.phone || "—"}</div>
                                         </td>
                                         <td className="px-6 py-4 font-bold text-gray-900">
                                             {formatCurrency(parseFloat(req.amount))}

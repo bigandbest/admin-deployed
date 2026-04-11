@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatEmail } from "../../utils/formatEmail";
 import {
   Card,
   Title,
@@ -522,7 +523,7 @@ const UsersPage = () => {
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {user.email}
+                          {formatEmail(user.email) || user.phone || "—"}
                         </Text>
                       </div>
                       {user.phone && (

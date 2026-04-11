@@ -1,5 +1,6 @@
 // src/Pages/Referral/Withdrawals/index.jsx
 import { useState, useEffect, useCallback } from "react";
+import { formatEmail } from "../../../utils/formatEmail";
 import { listWithdrawals, approveWithdrawal, rejectWithdrawal, processWithdrawal, formatCurrency, getStatusBadge } from "../../../utils/adminReferralApi";
 import { CheckCircle, XCircle, Zap, X } from "lucide-react";
 
@@ -92,7 +93,7 @@ export default function ReferralWithdrawals() {
                 <tr key={w.id} className={`hover:bg-gray-50/60 transition-colors ${w.status === "PENDING" ? "bg-orange-50/30" : ""}`}>
                   <td className="px-5 py-4">
                     <p className="font-medium text-gray-900 truncate max-w-[130px]">{w.user?.name || "Unknown"}</p>
-                    <p className="text-xs text-gray-400 truncate max-w-[130px]">{w.user?.email}</p>
+                    <p className="text-xs text-gray-400 truncate max-w-[130px]">{formatEmail(w.user?.email) || w.user?.phone || "—"}</p>
                   </td>
                   <td className="px-5 py-4 font-bold text-gray-900 text-base">{formatCurrency(w.requested_amount)}</td>
                   <td className="px-5 py-4">

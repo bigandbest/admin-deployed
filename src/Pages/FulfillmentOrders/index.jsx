@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { formatEmail } from "../../utils/formatEmail";
 import axios from "axios";
 import {
   FaTruck, FaWarehouse, FaBox, FaCheckCircle, FaClock,
@@ -170,7 +171,9 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Customer</p>
               <p className="font-semibold text-gray-800">{data.customer.name}</p>
               <p className="text-sm text-gray-600">{data.customer.phone}</p>
-              <p className="text-sm text-gray-500">{data.customer.email}</p>
+              {formatEmail(data.customer.email) && (
+                <p className="text-sm text-gray-500">{formatEmail(data.customer.email)}</p>
+              )}
               <p className="text-sm text-gray-600 mt-1">{data.customer.address}</p>
               <p className="text-sm font-medium text-blue-600 mt-1">Pincode: {data.customer.pincode}</p>
             </div>

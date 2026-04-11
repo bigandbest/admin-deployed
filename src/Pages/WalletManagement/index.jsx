@@ -1,5 +1,6 @@
 // src/Pages/WalletManagement/index.jsx
 import { useState, useEffect, useCallback } from "react";
+import { formatEmail } from "../../utils/formatEmail";
 import {
   getAllWallets,
   formatCurrency,
@@ -289,7 +290,7 @@ const WalletManagement = () => {
                         {wallet.user?.name || wallet.users?.name || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {wallet.user?.email || wallet.users?.email || "N/A"}
+                        {formatEmail(wallet.user?.email || wallet.users?.email) || wallet.user?.phone || wallet.users?.phone || "N/A"}
                       </div>
                       <div className="text-sm text-gray-500">
                         {wallet.user?.phone || wallet.users?.phone || "N/A"}
@@ -410,7 +411,7 @@ const WalletManagement = () => {
                   </div>
                   <div>
                     <span className="font-medium">Email:</span>{" "}
-                    {selectedWallet.user?.email || selectedWallet.users?.email || "N/A"}
+                    {formatEmail(selectedWallet.user?.email || selectedWallet.users?.email) || selectedWallet.user?.phone || selectedWallet.users?.phone || "N/A"}
                   </div>
                   <div>
                     <span className="font-medium">Phone:</span>{" "}

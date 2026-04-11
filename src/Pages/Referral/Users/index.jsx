@@ -1,5 +1,6 @@
 // src/Pages/Referral/Users/index.jsx
 import { useState, useEffect, useCallback } from "react";
+import { formatEmail } from "../../../utils/formatEmail";
 import { listUsers, blockUser, unblockUser, deactivateCode, reactivateCode, manualCreditReward, formatCurrency, getStatusBadge } from "../../../utils/adminReferralApi";
 import { Search, Ban, CheckCircle, Gift, ToggleLeft, ToggleRight, X } from "lucide-react";
 
@@ -101,7 +102,7 @@ export default function ReferralUsers() {
                 <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
                   <td className="px-5 py-4">
                     <p className="font-medium text-gray-900 truncate max-w-[140px]">{u.user?.name || "Unknown"}</p>
-                    <p className="text-xs text-gray-400 truncate max-w-[140px]">{u.user?.email}</p>
+                    <p className="text-xs text-gray-400 truncate max-w-[140px]">{formatEmail(u.user?.email) || u.user?.phone || "—"}</p>
                   </td>
                   <td className="px-5 py-4">
                     <span className="font-mono font-bold text-gray-900 text-xs bg-gray-100 px-2 py-1 rounded-lg">{u.referral_code}</span>

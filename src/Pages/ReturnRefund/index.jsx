@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../../utils/api";
+import { formatEmail } from "../../utils/formatEmail";
 import {
   FiRefreshCw, FiSearch, FiChevronDown, FiChevronUp,
   FiCheck, FiX, FiAlertCircle, FiCheckCircle, FiXCircle,
@@ -293,7 +294,7 @@ const ReturnRow = ({ item, onUpdate, onDelete }) => {
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Customer</p>
                 <p className="text-gray-800">{user?.name || "—"}</p>
-                <p className="text-gray-500 text-xs">{user?.email || "—"}</p>
+                <p className="text-gray-500 text-xs">{formatEmail(user?.email) || user?.phone || "—"}</p>
                 <p className="text-gray-500 text-xs">{user?.phone || "—"}</p>
               </div>
               <div>
@@ -403,7 +404,7 @@ const RefundRow = ({ item, onUpdate }) => {
               <div>
                 <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Customer</p>
                 <p className="text-gray-800">{user?.name || "—"}</p>
-                <p className="text-gray-500 text-xs">{user?.email || "—"}</p>
+                <p className="text-gray-500 text-xs">{formatEmail(user?.email) || user?.phone || "—"}</p>
                 <p className="text-gray-500 text-xs">{user?.phone || "—"}</p>
               </div>
               <div>

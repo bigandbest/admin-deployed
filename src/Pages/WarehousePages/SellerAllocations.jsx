@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatEmail } from "../../utils/formatEmail";
 import {
     Card, Table, Badge, Button, Group, Text, Title,
     TextInput, ActionIcon, Menu, Modal, Box, Alert, Loader
@@ -154,7 +155,7 @@ const SellerAllocations = () => {
                                         </td>
                                         <td>
                                             <Text size="sm">{seller.user?.name || 'N/A'}</Text>
-                                            <Text size="xs" c="dimmed">{seller.user?.email}</Text>
+                                            <Text size="xs" c="dimmed">{formatEmail(seller.user?.email) || seller.user?.phone || "—"}</Text>
                                             <Text size="xs" c="dimmed">{seller.user?.phone}</Text>
                                         </td>
                                         <td>
