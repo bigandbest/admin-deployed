@@ -6,6 +6,6 @@
 export function formatEmail(email) {
   if (!email) return null;
   const e = String(email).trim().toLowerCase();
-  if (e.endsWith("@bbm.local") || e.endsWith("@bigbestmart.com")) return null;
+  if (e.endsWith("@bbm.local") || e.endsWith("@riders.local") || e.endsWith("@bigbestmart.com")) return null;
   return email;
 }
