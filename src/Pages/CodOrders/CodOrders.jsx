@@ -168,7 +168,8 @@ const CodOrders = () => {
 
               <div>
                 <h3 className="font-semibold mb-2">Customer Information</h3>
-                <p><strong>Name:</strong> {order.user_name}</p>
+                <p><strong>Name:</strong> {order.user_name || 'N/A'}</p>
+                <p><strong>Phone:</strong> {order.user_mobile || order.mobile || 'N/A'}</p>
                 <p><strong>Email:</strong> {order.user_email || 'N/A'}</p>
                 <p><strong>Address:</strong> {order.user_address}</p>
                 <p><strong>Location:</strong> {order.user_location || 'N/A'}</p>
@@ -331,11 +332,14 @@ const CodOrders = () => {
                     <td className="px-6 py-6 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-green-600 font-bold text-sm">{order.user_name.charAt(0).toUpperCase()}</span>
+                          <span className="text-green-600 font-bold text-sm">{order.user_name?.charAt(0)?.toUpperCase() || '?'}</span>
                         </div>
                         <div>
                           <div className="text-base font-semibold text-gray-900 mb-1">
-                            {order.user_name}
+                            {order.user_name || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            📱 {order.user_mobile || order.mobile || 'No phone'}
                           </div>
                           <div className="text-sm text-gray-600">
                             📧 {order.user_email || 'No email provided'}

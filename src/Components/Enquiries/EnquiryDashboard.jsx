@@ -213,7 +213,7 @@ export default function EnquiryDashboard({ onViewEnquiry, onCreateBid }) {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-gray-900">
-                                            {enquiry.users?.name || enquiry.users?.email || 'N/A'}
+                                            {enquiry.users?.name || enquiry.users?.phone || enquiry.users?.email || 'N/A'}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">

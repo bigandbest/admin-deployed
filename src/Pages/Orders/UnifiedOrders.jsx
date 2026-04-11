@@ -284,7 +284,8 @@ const UnifiedOrders = () => {
                                                 <div>
                                                     <p className="text-sm text-gray-600">Customer</p>
                                                     <p className="font-semibold">{order.users?.name || order.user?.name || order.user_name || 'N/A'}</p>
-                                                    <p className="text-sm text-gray-600">{order.users?.email || order.user?.email || order.user_email || 'N/A'}</p>
+                                                    <p className="text-sm text-gray-600">📱 {order.users?.phone || order.user?.phone || order.mobile || 'N/A'}</p>
+                                                    <p className="text-sm text-gray-600">📧 {order.users?.email || order.user?.email || order.user_email || 'No email'}</p>
                                                     {order.company_name && (
                                                         <p className="text-xs text-gray-500 mt-1">
                                                             <span className="font-semibold">Co:</span> {order.company_name}
