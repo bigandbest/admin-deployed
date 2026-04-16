@@ -1731,10 +1731,10 @@ export async function addDealBanner(bannerData, imageFile) {
   try {
     const formData = createFormData(
       { ...bannerData, banner_type: "daily_deals" },
-      "image_url",
+      "image",
       imageFile,
     );
-    const response = await fetch(`${API_BASE_URL}/add-banner`, {
+    const response = await fetch(`${API_BASE_URL}/add-banner/add`, {
       method: "POST",
       body: formData,
     });
@@ -1748,10 +1748,10 @@ export async function updateDealBanner(id, bannerData, imageFile) {
   try {
     const formData = createFormData(
       { ...bannerData, banner_type: "daily_deals" },
-      "image_url",
+      "image",
       imageFile,
     );
-    const response = await fetch(`${API_BASE_URL}/add-banner/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/add-banner/update/${id}`, {
       method: "PUT",
       body: formData,
     });
@@ -1763,7 +1763,7 @@ export async function updateDealBanner(id, bannerData, imageFile) {
 
 export async function deleteDealBanner(id) {
   try {
-    const response = await fetch(`${API_BASE_URL}/add-banner/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/add-banner/delete/${id}`, {
       method: "DELETE",
     });
     return await handleResponse(response);
