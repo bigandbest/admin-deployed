@@ -11,9 +11,22 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
   const [sortOrder, setSortOrder] = useState(initialData?.sort_order || 0);
   const [active, setActive] = useState(initialData?.active ?? true);
   const [image, setImage] = useState(null);
-  const [bannerId, setBannerId] = useState(initialData?.banner_id || null);
+  const [bannerId, setBannerId] = useState(
+    initialData?.banner_id ? String(initialData.banner_id) : ""
+  );
   const [availableBanners, setAvailableBanners] = useState([]);
   const [selectedBanner, setSelectedBanner] = useState(null);
+
+  useEffect(() => {
+    setTitle(initialData?.title || "");
+    setDiscount(initialData?.discount || "");
+    setBadge(initialData?.badge || "");
+    setSortOrder(initialData?.sort_order || 0);
+    setActive(initialData?.active ?? true);
+    setBannerId(initialData?.banner_id ? String(initialData.banner_id) : "");
+    setSelectedBanner(null);
+    setImage(null);
+  }, [initialData]);
 
   // Fetch available banners on mount
   useEffect(() => {
@@ -27,7 +40,7 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
           // Set selected banner if editing
           if (initialData?.banner_id) {
             const selected = activeBanners.find(
-              (b) => b.id === initialData.banner_id
+              (b) => String(b.id) === String(initialData.banner_id)
             );
             setSelectedBanner(selected || null);
           }
@@ -40,9 +53,9 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
   }, [initialData]);
 
   const handleBannerChange = (e) => {
-    const id = e.target.value ? parseInt(e.target.value) : null;
+    const id = e.target.value;
     setBannerId(id);
-    const selected = availableBanners.find((b) => b.id === id);
+    const selected = availableBanners.find((b) => String(b.id) === id);
     setSelectedBanner(selected || null);
   };
 
@@ -54,7 +67,7 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
     formData.append("badge", badge);
     formData.append("sort_order", sortOrder);
     formData.append("active", active);
-    if (bannerId) {
+    if (bannerId !== "") {
       formData.append("banner_id", bannerId);
     }
     if (image) {
@@ -71,162 +84,186 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-      <div className="bg-white p-8 rounded-md shadow-lg w-96">
-        <h2 className="text-2xl font-bold mb-4">
-          {initialData ? "Edit Daily Deal" : "Add Daily Deal"}
-        </h2>
+    <div className="fixed inset-0 z-50 bg-black/50 p-4 overflow-y-auto flex items-center justify-center">
+      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-5 text-white flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">
+              {initialData
+                ? `Edit Daily Deal #${initialData.id}`
+                : "Add Daily Deal"}
+            </h2>
+            <p className="text-blue-100 text-sm mt-1">
+              Configure the deal details, media, and banner mapping.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-9 w-9 rounded-full hover:bg-blue-800 transition-colors text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="title"
-            >
-              Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="Deal Title"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="discount"
-            >
-              Discount
-            </label>
-            <input
-              type="text"
-              id="discount"
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="e.g., Up to 50% Off"
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="badge"
-            >
-              Badge
-            </label>
-            <input
-              type="text"
-              id="badge"
-              value={badge}
-              onChange={(e) => setBadge(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="e.g., HOT, NEW, SALE"
-            />
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="sortOrder"
-            >
-              Sort Order
-            </label>
-            <input
-              type="number"
-              id="sortOrder"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(parseInt(e.target.value))}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              min="0"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-                className="mr-2"
-              />
-              Active
-            </label>
-          </div>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="image"
-            >
-              Choose File
-            </label>
-            <input
-              type="file"
-              id="image"
-              onChange={(e) => setImage(e.target.files[0])}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-            {initialData && initialData.image_url && !image && (
-              <p className="text-sm text-gray-500 mt-2">
-                Current image selected.
-              </p>
-            )}
-          </div>
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-gray-700 text-sm font-bold">
-                Select Banner (Optional)
-              </label>
-              <a
-                href="/add-banner"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:underline"
-              >
-                Manage Banners →
-              </a>
-            </div>
-            <select
-              value={bannerId || ""}
-              onChange={handleBannerChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            >
-              <option value="">No Banner</option>
-              {availableBanners.map((banner) => (
-                <option key={banner.id} value={banner.id}>
-                  {banner.name}
-                </option>
-              ))}
-            </select>
-            {selectedBanner && selectedBanner.image_url && (
-              <div className="mt-2">
-                <p className="text-xs text-gray-500 mb-1">Banner Preview:</p>
-                <img
-                  src={selectedBanner.image_url}
-                  alt={selectedBanner.name}
-                  className="w-full h-20 object-cover rounded border"
+          <div className="p-6 max-h-[75vh] overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="title">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
+                  placeholder="Deal title"
+                  required
                 />
               </div>
-            )}
-            {availableBanners.length === 0 && (
-              <p className="text-xs text-gray-500 mt-2">
-                No banners available. Create banners with type "daily_deals" first.
-              </p>
-            )}
+
+              <div>
+                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="discount">
+                  Discount
+                </label>
+                <input
+                  type="text"
+                  id="discount"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
+                  placeholder="e.g., Up to 50% Off"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="badge">
+                  Badge
+                </label>
+                <input
+                  type="text"
+                  id="badge"
+                  value={badge}
+                  onChange={(e) => setBadge(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
+                  placeholder="e.g., HOT, NEW, SALE"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="sortOrder">
+                  Sort Order
+                </label>
+                <input
+                  type="number"
+                  id="sortOrder"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(Number.parseInt(e.target.value, 10) || 0)}
+                  className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
+                  min="0"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 mt-6">
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    onChange={(e) => setActive(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Active
+                </label>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="image">
+                  Deal Image
+                </label>
+                <input
+                  type="file"
+                  id="image"
+                  onChange={(e) => setImage(e.target.files[0])}
+                  className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  {initialData
+                    ? "Upload a new file only if you want to replace the current image."
+                    : "Upload a clear deal image (recommended landscape)."}
+                </p>
+                {initialData && initialData.image_url && !image && (
+                  <div className="mt-3 rounded-lg border border-gray-200 p-2 bg-white">
+                    <p className="text-xs text-gray-500 mb-2">Current Image Preview</p>
+                    <img
+                      src={initialData.image_url}
+                      alt={initialData.title || "Current daily deal"}
+                      className="w-full h-28 object-cover rounded-md"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="md:col-span-2 border rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-gray-700 text-sm font-semibold">
+                    Select Banner (Optional)
+                  </label>
+                  <a
+                    href="/add-banner"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Manage Banners →
+                  </a>
+                </div>
+                <select
+                  value={bannerId}
+                  onChange={handleBannerChange}
+                  className="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-gray-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none bg-white"
+                >
+                  <option value="">No Banner</option>
+                  {availableBanners.map((banner) => (
+                    <option key={banner.id} value={String(banner.id)}>
+                      {banner.name}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedBanner && selectedBanner.image_url && (
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-1">Banner Preview:</p>
+                    <img
+                      src={selectedBanner.image_url}
+                      alt={selectedBanner.name}
+                      className="w-full h-24 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+                {availableBanners.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    No banners available. Create banners with type &quot;daily_deals&quot; first.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
+
+          <div className="bg-gray-50 px-6 py-4 border-t flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onCancel}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors"
             >
-              {initialData ? "Update" : "Add"}
+              {initialData ? "Update Deal" : "Add Deal"}
             </button>
           </div>
         </form>
@@ -244,6 +281,7 @@ DailyDealForm.propTypes = {
     sort_order: PropTypes.number,
     active: PropTypes.bool,
     image_url: PropTypes.string,
+    banner_id: PropTypes.number,
   }),
   onSave: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
@@ -260,7 +298,21 @@ const DailyDealsPage = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [productSearch, setProductSearch] = useState("");
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [isMappingProduct, setIsMappingProduct] = useState(false);
+  const [productLoadError, setProductLoadError] = useState("");
+  const [productActionError, setProductActionError] = useState("");
+  const [mappingProductId, setMappingProductId] = useState(null);
+  const [unmappingProductId, setUnmappingProductId] = useState(null);
+
+  const getProductId = (product) =>
+    product?.id ?? product?.product_id ?? product?.products_id ?? null;
+
+  const extractProductArray = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.products)) return payload.products;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload?.data?.products)) return payload.data.products;
+    return [];
+  };
 
   const fetchDeals = async () => {
     try {
@@ -321,130 +373,172 @@ const DailyDealsPage = () => {
     setIsFormVisible(true);
   };
 
+  const normalizeDealProducts = (products = []) =>
+    products.map((product) => ({
+      product_id: product.id,
+      products: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        image: product.image,
+      },
+    }));
+
+  const fetchMappedProducts = async (dealId) => {
+    let response;
+    try {
+      response = await api.get(`/daily-deals-product/daily-deal/${dealId}`);
+    } catch {
+      response = await api.get(`/daily-deals/product/by-deal/${dealId}`);
+    }
+    const products = response.data.success
+      ? response.data.products || []
+      : response.data || [];
+    setDealProducts(normalizeDealProducts(products));
+  };
+
   const handleManageProducts = async (deal) => {
     setSelectedDeal(deal);
+    setIsProductModalVisible(true);
+    setProductSearch("");
+    setProductLoadError("");
+    setProductActionError("");
+    setDealProducts([]);
+    setAllProducts([]);
+    setMappingProductId(null);
+    setUnmappingProductId(null);
     setIsLoadingProducts(true);
     try {
-      const [productsResponse, allProductsResponse] = await Promise.all([
-        api.get(`/daily-deals-product/daily-deal/${deal.id}`),
-        api.get("/productsroute/allproducts"),
+      const [productsResponse, allProductsResponse] = await Promise.allSettled([
+        api
+          .get(`/daily-deals-product/daily-deal/${deal.id}`)
+          .catch(() => api.get(`/daily-deals/product/by-deal/${deal.id}`)),
+        api.get("/productsroute/allproducts?limit=200"),
       ]);
 
-      // Handle new response format with success wrapper
-      const dealProducts = productsResponse.data.success
-        ? productsResponse.data.products || []
-        : productsResponse.data || [];
+      if (productsResponse.status === "fulfilled") {
+        const mappedPayload = productsResponse.value?.data;
+        const mappedProducts = mappedPayload?.success
+          ? mappedPayload?.products || []
+          : extractProductArray(mappedPayload);
+        setDealProducts(normalizeDealProducts(mappedProducts));
+      } else {
+        console.error("Error fetching mapped products:", productsResponse.reason);
+        setProductLoadError("Unable to load mapped products right now.");
+      }
 
-      // Transform to match expected format for admin panel
-      const transformedDealProducts = dealProducts.map(product => ({
-        product_id: product.id,
-        products: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          category: product.category,
-          image: product.image,
-        }
-      }));
+      if (allProductsResponse.status === "fulfilled") {
+        const allProductsPayload = allProductsResponse.value?.data;
+        const rawProducts = extractProductArray(allProductsPayload);
 
-      // Use raw products first to transform correctly
-      const rawProducts = allProductsResponse.data.products || [];
+        const transformedAllProducts = rawProducts
+          .map((product) => {
+            const resolvedId = getProductId(product);
+            const defaultVariant =
+              product.variants?.find((v) => v.is_default) || product.variants?.[0];
+            const primaryMedia =
+              product.media?.find((m) => m.is_primary) || product.media?.[0];
 
-      const transformedAllProducts = rawProducts.map((product) => {
-        // Find default variant or first variant for price
-        const defaultVariant =
-          product.variants?.find((v) => v.is_default) || product.variants?.[0];
-        // Find primary media or first media for image
-        const primaryMedia =
-          product.media?.find((m) => m.is_primary) || product.media?.[0];
+            return {
+              ...product,
+              id: resolvedId,
+              name: product.name || product.product_name || "Unnamed Product",
+              price: defaultVariant?.price || product.price || "N/A",
+              image: primaryMedia?.url || product.image || null,
+            };
+          })
+          .filter((product) => product.id !== null);
 
-        return {
-          ...product,
-          price: defaultVariant?.price || "N/A",
-          image: primaryMedia?.url || null,
-        };
-      });
-
-      setDealProducts(transformedDealProducts);
-      setAllProducts(transformedAllProducts);
+        setAllProducts(transformedAllProducts);
+      } else {
+        console.error("Error fetching all products:", allProductsResponse.reason);
+        setProductLoadError((prev) =>
+          prev
+            ? `${prev} Unable to load product list.`
+            : "Unable to load product list right now."
+        );
+      }
     } catch (error) {
       console.error("Error fetching products:", error);
+      setProductLoadError("Unable to load products. Please try again.");
     } finally {
       setIsLoadingProducts(false);
     }
-    setIsProductModalVisible(true);
   };
 
   const handleMapProduct = async (productId) => {
-    setIsMappingProduct(true);
+    if (
+      !selectedDeal ||
+      !productId ||
+      mappingProductId !== null ||
+      unmappingProductId !== null
+    ) {
+      return;
+    }
+    setProductActionError("");
+    setMappingProductId(productId);
     try {
-      await api.post("/daily-deals-product/map", {
-        product_id: productId,
-        daily_deal_id: selectedDeal.id,
-      });
-      // Refresh products
-      const response = await api.get(
-        `/daily-deals-product/daily-deal/${selectedDeal.id}`
-      );
-
-      // Handle new response format
-      const dealProducts = response.data.success
-        ? response.data.products || []
-        : response.data || [];
-
-      const transformedDealProducts = dealProducts.map(product => ({
-        product_id: product.id,
-        products: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          category: product.category,
-          image: product.image,
-        }
-      }));
-
-      setDealProducts(transformedDealProducts);
+      try {
+        await api.post("/daily-deals-product/map", {
+          product_id: productId,
+          daily_deal_id: selectedDeal.id,
+        });
+      } catch {
+        await api.post("/daily-deals/product/map", {
+          product_id: productId,
+          daily_deal_id: selectedDeal.id,
+        });
+      }
+      await fetchMappedProducts(selectedDeal.id);
     } catch (error) {
       console.error("Error mapping product:", error);
+      setProductActionError(
+        error?.response?.data?.error ||
+          "Unable to add product to deal. Please try again."
+      );
     } finally {
-      setIsMappingProduct(false);
+      setMappingProductId(null);
     }
   };
 
   const handleUnmapProduct = async (productId) => {
-    setIsMappingProduct(true);
+    if (!selectedDeal || mappingProductId !== null || unmappingProductId !== null) {
+      return;
+    }
+    setProductActionError("");
+    setUnmappingProductId(productId);
     try {
-      await api.delete("/daily-deals-product/remove", {
-        data: { product_id: productId, daily_deal_id: selectedDeal.id },
-      });
-      // Refresh products
-      const response = await api.get(
-        `/daily-deals-product/daily-deal/${selectedDeal.id}`
-      );
-
-      // Handle new response format
-      const dealProducts = response.data.success
-        ? response.data.products || []
-        : response.data || [];
-
-      const transformedDealProducts = dealProducts.map(product => ({
-        product_id: product.id,
-        products: {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          category: product.category,
-          image: product.image,
-        }
-      }));
-
-      setDealProducts(transformedDealProducts);
+      try {
+        await api.delete("/daily-deals-product/remove", {
+          data: { product_id: productId, daily_deal_id: selectedDeal.id },
+        });
+      } catch {
+        await api.delete("/daily-deals/product/remove", {
+          data: { product_id: productId, daily_deal_id: selectedDeal.id },
+        });
+      }
+      await fetchMappedProducts(selectedDeal.id);
     } catch (error) {
       console.error("Error unmapping product:", error);
+      setProductActionError(
+        error?.response?.data?.error ||
+          "Unable to remove product from deal. Please try again."
+      );
     } finally {
-      setIsMappingProduct(false);
+      setUnmappingProductId(null);
     }
   };
+
+  const filteredProducts = allProducts.filter(
+    (product) =>
+      (product.name || "")
+        .toLowerCase()
+        .includes(productSearch.toLowerCase()) &&
+      !dealProducts.some(
+        (dp) => String(dp.product_id) === String(getProductId(product))
+      )
+  );
 
   return (
     <div className="p-8 bg-gray-100 min-h-screen">
@@ -564,9 +658,12 @@ const DailyDealsPage = () => {
                                     handleUnmapProduct(item.product_id);
                                   }
                                 }}
-                                disabled={isMappingProduct}
+                                disabled={
+                                  mappingProductId !== null ||
+                                  unmappingProductId === item.product_id
+                                }
                               >
-                                {isMappingProduct ? (
+                                {unmappingProductId === item.product_id ? (
                                   <div className="flex items-center">
                                     <div className="animate-spin rounded-full h-4 w-4 border-b border-white mr-1"></div>
                                     Removing...
@@ -589,7 +686,25 @@ const DailyDealsPage = () => {
                         <FaPlus className="mr-2 text-green-600" />
                         Add Products
                       </h3>
+                      <button
+                        type="button"
+                        onClick={() => handleManageProducts(selectedDeal)}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Refresh
+                      </button>
                     </div>
+
+                    {productLoadError && (
+                      <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+                        {productLoadError}
+                      </div>
+                    )}
+                    {productActionError && (
+                      <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">
+                        {productActionError}
+                      </div>
+                    )}
 
                     {/* Search Bar */}
                     <div className="mb-6">
@@ -621,19 +736,15 @@ const DailyDealsPage = () => {
 
                     {/* Products Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
-                      {allProducts
-                        .filter(
-                          (product) =>
-                            product.name
-                              .toLowerCase()
-                              .includes(productSearch.toLowerCase()) &&
-                            !dealProducts.some(
-                              (dp) => dp.product_id === product.id
-                            )
-                        )
-                        .map((product) => (
+                      {filteredProducts.map((product, index) => {
+                        const productId = getProductId(product);
+                        const isAdding =
+                          mappingProductId !== null &&
+                          String(mappingProductId) === String(productId);
+
+                        return (
                           <div
-                            key={product.id}
+                            key={productId ? `product-${productId}` : `product-${index}`}
                             className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all"
                           >
                             <div className="flex items-start space-x-3">
@@ -662,10 +773,19 @@ const DailyDealsPage = () => {
                                   </p>
                                   <button
                                     className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    onClick={() => handleMapProduct(product.id)}
-                                    disabled={isMappingProduct}
+                                    onClick={() => {
+                                      if (productId !== null) {
+                                        handleMapProduct(productId);
+                                      }
+                                    }}
+                                    disabled={
+                                      productId === null ||
+                                      mappingProductId !== null ||
+                                      unmappingProductId !== null ||
+                                      isAdding
+                                    }
                                   >
-                                    {isMappingProduct ? (
+                                    {isAdding ? (
                                       <div className="flex items-center">
                                         <div className="animate-spin rounded-full h-4 w-4 border-b border-white mr-1"></div>
                                         Adding...
@@ -678,16 +798,11 @@ const DailyDealsPage = () => {
                               </div>
                             </div>
                           </div>
-                        ))}
+                        );
+                      })}
                     </div>
 
-                    {allProducts.filter(
-                      (product) =>
-                        product.name
-                          .toLowerCase()
-                          .includes(productSearch.toLowerCase()) &&
-                        !dealProducts.some((dp) => dp.product_id === product.id)
-                    ).length === 0 && (
+                    {filteredProducts.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           <svg
                             className="mx-auto h-12 w-12 text-gray-400 mb-4"
@@ -702,7 +817,11 @@ const DailyDealsPage = () => {
                               d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-.966-5.618-2.479.048.092.1.184.152.274a7.962 7.962 0 005.316 2.195c2.34 0 4.29-.966 5.618-2.479-.048.092-.1.184-.152.274z"
                             />
                           </svg>
-                          <p>No products found matching your search.</p>
+                          <p>
+                            {allProducts.length === 0
+                              ? "No products loaded yet. Click Refresh to try again."
+                              : "No products found matching your search."}
+                          </p>
                         </div>
                       )}
                   </div>

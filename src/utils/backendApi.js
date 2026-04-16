@@ -584,7 +584,8 @@ export async function getProductsWithFilters(filters = {}, page = 1, limit = 20)
 // CATEGORIES
 export async function getAllCategories() {
   try {
-    const response = await fetch(`${API_BASE_URL}/categories/hierarchy`);
+    // Include inactive categories for admin view - pass includeInactive=true
+    const response = await fetch(`${API_BASE_URL}/categories/hierarchy?includeInactive=true`);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
