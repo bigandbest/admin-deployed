@@ -65,6 +65,7 @@ import AdminOrders from "./Pages/Orders/index.jsx";
 import ShippingBanner from "./Pages/ShippingBanner/ShippingBanner.jsx";
 import Notification from "./Pages/Notifications/Notification.jsx";
 import DailyDeals from "./Pages/B&b/DailyDeals.jsx";
+import DailyDealBanners from "./Pages/B&b/DailyDealBanners.jsx";
 import Brand from "./Pages/Brand/Brand.jsx";
 import BrandProducts from "./Pages/Brand/BrandProducts.jsx";
 import QuickPicksPage from "./Pages/QuickPicks/QuickPicks.jsx";
@@ -442,6 +443,10 @@ function App() {
         {
           path: "/daily-deals",
           element: <DailyDeals />,
+        },
+        {
+          path: "/daily-deal-banners",
+          element: <DailyDealBanners />,
         },
         {
           path: "/add-banner",

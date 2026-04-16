@@ -32,6 +32,7 @@ import {
   FaClock,
   FaBoxOpen,
   FaGift,
+  FaImage,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -130,6 +131,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           title: "Daily Deals",
           icon: <FaList />,
           path: "/daily-deals",
+        },
+        {
+          title: "Daily Deal Banners",
+          icon: <FaImage />,
+          path: "/daily-deal-banners",
         },
         {
           title: "Shop By Stores",
