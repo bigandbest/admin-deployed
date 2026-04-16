@@ -16,12 +16,21 @@ function BannerFormModal({ initialData, onSave, onCancel, isSaving }) {
   const [imageFile, setImageFile] = useState(null);
   const [preview, setPreview] = useState(initialData?.image_url || null);
   const fileRef = useRef();
+  const blobUrlRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    blobUrlRef.current = URL.createObjectURL(file);
     setImageFile(file);
-    setPreview(URL.createObjectURL(file));
+    setPreview(blobUrlRef.current);
   };
 
   const handleSubmit = (e) => {
