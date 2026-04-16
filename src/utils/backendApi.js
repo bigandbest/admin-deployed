@@ -1715,3 +1715,68 @@ export async function removeSubcategoryFromSection(sectionId, subcategoryId) {
     return { success: false, error: error.message };
   }
 }
+
+// ─── DAILY DEAL BANNERS ────────────────────────────────────────────────────
+
+export async function getDealBanners() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/add-banner/type/daily_deals`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function addDealBanner(bannerData, imageFile) {
+  try {
+    const formData = createFormData(
+      { ...bannerData, banner_type: "daily_deals" },
+      "image_url",
+      imageFile,
+    );
+    const response = await fetch(`${API_BASE_URL}/add-banner`, {
+      method: "POST",
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateDealBanner(id, bannerData, imageFile) {
+  try {
+    const formData = createFormData(
+      { ...bannerData, banner_type: "daily_deals" },
+      "image_url",
+      imageFile,
+    );
+    const response = await fetch(`${API_BASE_URL}/add-banner/${id}`, {
+      method: "PUT",
+      body: formData,
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteDealBanner(id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/add-banner/${id}`, {
+      method: "DELETE",
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getDailyDealsList() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/daily-deals/list`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
