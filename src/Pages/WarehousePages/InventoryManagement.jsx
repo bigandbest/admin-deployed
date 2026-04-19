@@ -21,6 +21,8 @@ import {
   MultiSelect,
   FileInput,
   Alert,
+  LoadingOverlay,
+  Loader,
 } from "@mantine/core";
 import {
   Edit,
@@ -33,6 +35,7 @@ import {
   Search,
   Download,
   Truck,
+  Eye,
 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
@@ -53,6 +56,7 @@ const InventoryManagement = () => {
   const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [editingStock, setEditingStock] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
 
   // Form states
   const [stockForm, setStockForm] = useState({
@@ -119,6 +123,49 @@ const InventoryManagement = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const [movements, setMovements] = useState([]);
+
+  const [productOptions, setProductOptions] = useState([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  const fetchProductsForSelect = async (query) => {
+    setLoadingProducts(true);
+    try {
+      const token = localStorage.getItem("admin_token");
+      const res = await axios.get(`${API_BASE_URL}/admin/products`, {
+        params: { search: query, limit: 10, source_type: "WAREHOUSE" },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data && res.data.products) {
+        // preserve the selected product if it's not in the new results
+        const newOptions = res.data.products.map(p => ({
+          value: p.id.toString(),
+          label: `${p.name} ${p.category?.name ? `(${p.category.name})` : ""}`
+        }));
+        
+        setProductOptions(currentOptions => {
+           const selectedOpt = currentOptions.find(o => o.value === stockForm.product_id);
+           if (selectedOpt && !newOptions.find(o => o.value === selectedOpt.value)) {
+              return [selectedOpt, ...newOptions];
+           }
+           return newOptions;
+        });
+      }
+    } catch(err) {
+      console.error("Failed to fetch products:", err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showStockModal || showMultiWarehouseModal || showTransferModal) {
+      const timeoutId = setTimeout(() => {
+        fetchProductsForSelect(productSearch);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [productSearch, showStockModal, showMultiWarehouseModal, showTransferModal]);
 
   // Fetch warehouses
   useEffect(() => {
@@ -427,8 +474,9 @@ const InventoryManagement = () => {
               onClick={() => setShowMultiWarehouseModal(true)}
               variant="light"
               color="violet"
+              disabled
             >
-              Multi-Warehouse Stock
+              Multi-Warehouse Stock (Coming Soon)
             </Button>
             <Button
               leftSection={<Plus size={16} />}
@@ -440,8 +488,9 @@ const InventoryManagement = () => {
               color="orange"
               leftSection={<TrendingUp size={16} />}
               onClick={() => setShowTransferModal(true)}
+              disabled
             >
-              Transfer Stock
+              Transfer Stock (Coming Soon)
             </Button>
           </Group>
         </div>
@@ -565,10 +614,9 @@ const InventoryManagement = () => {
                   />
                 </Card.Section>
 
-                <Card.Section inheritPadding>
-                  {loading ? (
-                    <Text>Loading inventory...</Text>
-                  ) : filteredInventory.length === 0 ? (
+                <Card.Section inheritPadding style={{ position: "relative", minHeight: loading ? "200px" : "auto" }}>
+                  <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
+                  {filteredInventory.length === 0 && !loading ? (
                     <Text color="dimmed">No inventory records found</Text>
                   ) : (
                     <Table striped highlightOnHover>
@@ -628,6 +676,17 @@ const InventoryManagement = () => {
                             </td>
                             <td>
                               <Group spacing={0}>
+                                <Tooltip label="View All Variants Stock">
+                                  <ActionIcon
+                                    color="green"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setViewProduct(item.product_id || item.products?.id || item.id);
+                                    }}
+                                  >
+                                    <Eye size={16} />
+                                  </ActionIcon>
+                                </Tooltip>
                                 <Tooltip label="Edit">
                                   <ActionIcon
                                     color="blue"
@@ -636,8 +695,8 @@ const InventoryManagement = () => {
                                       setStockForm({
                                         product_id: item.product_id,
                                         variant_id: item.variant_id || "",
-                                        stock_quantity: item.stock_quantity.toString(),
-                                        minimum_threshold: item.minimum_threshold.toString(),
+                                        stock_quantity: item.stock_quantity?.toString() || "",
+                                        minimum_threshold: item.minimum_threshold?.toString() || "",
                                         cost_per_unit: item.cost_per_unit?.toString() || "",
                                       });
                                       setShowStockModal(true);
@@ -694,8 +753,8 @@ const InventoryManagement = () => {
                                   setStockForm({
                                     product_id: item.product_id,
                                     variant_id: item.variant_id || "",
-                                    stock_quantity: item.minimum_threshold.toString(),
-                                    minimum_threshold: item.minimum_threshold.toString(),
+                                    stock_quantity: item.minimum_threshold?.toString() || "",
+                                    minimum_threshold: item.minimum_threshold?.toString() || "",
                                     cost_per_unit: item.cost_per_unit?.toString() || "",
                                   });
                                   setShowStockModal(true);
@@ -741,7 +800,7 @@ const InventoryManagement = () => {
                         inventory.forEach(item => {
                           if (!uniqueProducts.has(item.product_id)) {
                             uniqueProducts.set(item.product_id, {
-                              value: item.product_id,
+                              value: String(item.product_id),
                               label: `${item.product_name} (Total Stock: ${inventory
                                   .filter(i => i.product_id === item.product_id)
                                   .reduce((sum, i) => sum + (i.stock_quantity || 0), 0)
@@ -771,7 +830,7 @@ const InventoryManagement = () => {
                               });
                             }}
                             data={productVariants.map(item => ({
-                              value: item.variant_id || item.product_id,
+                              value: String(item.variant_id || item.product_id),
                               label: `${item.variant_name || 'Default'} (Stock: ${item.stock_quantity || 0})`,
                             }))}
                             searchable
@@ -951,17 +1010,22 @@ const InventoryManagement = () => {
         size="lg"
       >
         <Stack>
-          <TextInput
+          <Select
             label="Product ID"
-            placeholder="Enter Product ID"
+            placeholder="Search or Select Product"
+            data={productOptions}
             value={multiWarehouseForm.product_id}
-            onChange={(e) => setMultiWarehouseForm({ ...multiWarehouseForm, product_id: e.currentTarget.value })}
+            onChange={(val) => setMultiWarehouseForm({ ...multiWarehouseForm, product_id: val })}
+            searchable
+            onSearchChange={setProductSearch}
+            searchValue={productSearch}
+            nothingFound={loadingProducts ? "Loading..." : "No products found"}
+            required
           />
-          <TextInput
-            label="Variant ID (Optional)"
-            placeholder="Enter Variant ID"
+          <VariantSelector
+            productId={multiWarehouseForm.product_id}
             value={multiWarehouseForm.variant_id}
-            onChange={(e) => setMultiWarehouseForm({ ...multiWarehouseForm, variant_id: e.currentTarget.value })}
+            onChange={(val) => setMultiWarehouseForm({ ...multiWarehouseForm, variant_id: val })}
           />
 
           <Text weight={500} size="sm" mt="md">Select Warehouses & Stock</Text>
@@ -1019,22 +1083,27 @@ const InventoryManagement = () => {
       >
         <form onSubmit={handleStockTransfer}>
           <Stack>
-            <TextInput
-              label="Product ID"
-              placeholder="Enter Product ID"
-              required
+            <Select
+              label="Select Product"
+              placeholder="Search or Select Product"
+              data={productOptions}
               value={transferForm.product_id}
-              onChange={(e) =>
-                setTransferForm({ ...transferForm, product_id: e.currentTarget.value })
+              onChange={(val) =>
+                setTransferForm({ ...transferForm, product_id: val })
               }
+              searchable
+              onSearchChange={setProductSearch}
+              searchValue={productSearch}
+              nothingFound={loadingProducts ? "Loading..." : "No products found"}
+              required
             />
-            <TextInput
-              label="Variant ID (Optional)"
-              placeholder="Enter Variant ID"
+            <VariantSelector
+              productId={transferForm.product_id}
               value={transferForm.variant_id}
-              onChange={(e) =>
-                setTransferForm({ ...transferForm, variant_id: e.currentTarget.value })
+              onChange={(val) =>
+                setTransferForm({ ...transferForm, variant_id: val })
               }
+              warehouseId={transferForm.from_warehouse_id}
             />
             <Select
               label="From Warehouse"
@@ -1093,16 +1162,21 @@ const InventoryManagement = () => {
       >
         <form onSubmit={handleUpdateStock}>
           <Stack>
-            <TextInput
-              label="Product ID"
-              placeholder="Enter product ID"
+            <Select
+              label="Select Product"
+              placeholder="Search or Select Product"
+              data={productOptions}
               value={stockForm.product_id}
-              onChange={(e) =>
+              onChange={(val) =>
                 setStockForm({
                   ...stockForm,
-                  product_id: e.currentTarget.value,
+                  product_id: val,
                 })
               }
+              searchable
+              onSearchChange={setProductSearch}
+              searchValue={productSearch}
+              nothingFound={loadingProducts ? "Loading..." : "No products found"}
               required
             />
 
@@ -1115,6 +1189,7 @@ const InventoryManagement = () => {
                   variant_id: val,
                 })
               }
+              warehouseId={selectedWarehouse}
             />
 
             <NumberInput
@@ -1200,14 +1275,95 @@ const InventoryManagement = () => {
           </Button>
         </Stack>
       </Modal>
+
+      {/* View Variants Stock Modal */}
+      <Modal
+        opened={!!viewProduct}
+        onClose={() => setViewProduct(null)}
+        title="Product Variant Stock"
+        size="lg"
+      >
+        {viewProduct && (
+          <VariantStockViewer productId={viewProduct} warehouseId={selectedWarehouse} />
+        )}
+      </Modal>
     </div>
   );
 };
 
 export default InventoryManagement;
 
+// Helper component for Viewing Variants Stock
+const VariantStockViewer = ({ productId, warehouseId }) => {
+  const [productInfo, setProductInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`${API_BASE_URL}/products/${productId}`);
+        setProductInfo(response.data.product || response.data);
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (productId) fetchProduct();
+  }, [productId]);
+
+  if (loading) return <div className="flex justify-center items-center py-8"><Loader size="md" /></div>;
+  if (!productInfo) return null;
+
+  return (
+    <div>
+      <Text weight={700} size="lg" mb="sm">{productInfo.name}</Text>
+      
+      {(!productInfo.has_variants || !productInfo.variants || productInfo.variants.length === 0) ? (
+        <Alert color="blue" variant="light">This product has no variants.</Alert>
+      ) : (
+        <Table striped highlightOnHover>
+          <thead>
+            <tr>
+              <th>Variant</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Total Stock</th>
+              {warehouseId && <th>Warehouse Stock</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {productInfo.variants.map((v) => {
+              let totalStock = 0;
+              let whStock = 0;
+              if (v.inventory && Array.isArray(v.inventory)) {
+                 totalStock = v.inventory.reduce((sum, i) => sum + (i.stock_qty || 0), 0);
+                 if (warehouseId) {
+                   const whItem = v.inventory.find(i => i.warehouse_id?.toString() === warehouseId.toString());
+                   whStock = whItem ? (whItem.stock_qty || 0) : 0;
+                 }
+              }
+              const name = v.title || v.size || v.color || v.weight || v.sku || `Variant ${v.id.substring(0, 6)}`;
+              return (
+                <tr key={v.id}>
+                  <td>{name}</td>
+                  <td>{v.price ? `₹${v.price}` : "-"}</td>
+                  <td>{v.active === false ? <Badge color="red">Inactive</Badge> : <Badge color="green">Active</Badge>}</td>
+                  <td style={{ fontWeight: 600 }}>{totalStock}</td>
+                  {warehouseId && <td style={{ fontWeight: 600, color: 'var(--mantine-color-blue-6)' }}>{whStock}</td>}
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      )}
+    </div>
+  );
+};
+
 // Helper component for Variant Selection
-const VariantSelector = ({ productId, value, onChange }) => {
+const VariantSelector = ({ productId, value, onChange, warehouseId }) => {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -1251,13 +1407,26 @@ const VariantSelector = ({ productId, value, onChange }) => {
         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">Select Variant</option>
-        {variants.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.active === false ? "[Inactive] " : ""}
-            {v.title || v.size || v.color || v.weight || v.sku || `Variant ${v.id.substring(0, 6)}`}
-            {v.price ? ` - ₹${v.price}` : ""}
-          </option>
-        ))}
+        {variants.map((v) => {
+          let stockText = "";
+          if (v.inventory && Array.isArray(v.inventory)) {
+            if (warehouseId) {
+              const whStock = v.inventory.find((i) => i.warehouse_id?.toString() === warehouseId?.toString());
+              stockText = `(Stock: ${whStock ? (whStock.stock_qty || 0) : 0})`;
+            } else {
+              const totalStock = v.inventory.reduce((sum, i) => sum + (i.stock_qty || 0), 0);
+              stockText = `(Total Stock: ${totalStock})`;
+            }
+          }
+          return (
+            <option key={v.id} value={v.id}>
+              {v.active === false ? "[Inactive] " : ""}
+              {v.title || v.size || v.color || v.weight || v.sku || `Variant ${v.id.substring(0, 6)}`}
+              {v.price ? ` - ₹${v.price}` : ""}
+              {stockText ? ` ${stockText}` : ""}
+            </option>
+          );
+        })}
       </select>
     </div>
   );

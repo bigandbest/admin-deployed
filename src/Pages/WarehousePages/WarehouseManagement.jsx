@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ProductModal from "../../Components/Warehouse/ProductModal";
 import {
   getAllWarehouses,
@@ -186,9 +188,7 @@ const WarehouseManagement = () => {
   const handleWarehouseSubmit = async () => {
     // Validate warehouse type - only allow zonal and division
     if (!["zonal", "division"].includes(warehouseForm.type)) {
-      setError(
-        "Invalid warehouse type. Only zonal and division warehouses are allowed."
-      );
+      toast.error("Invalid warehouse type. Only zonal and division warehouses are allowed.");
       return;
     }
 
@@ -197,7 +197,7 @@ const WarehouseManagement = () => {
       warehouseForm.type === "division" &&
       !warehouseForm.parent_warehouse_id
     ) {
-      setError("Division warehouses must have a parent zonal warehouse.");
+      toast.error("Division warehouses must have a parent zonal warehouse.");
       return;
     }
 
@@ -208,15 +208,17 @@ const WarehouseManagement = () => {
           warehouseForm
         );
         if (!result.success) {
-          setError("Failed to update warehouse: " + result.error);
+          toast.error("Failed to update warehouse: " + result.error);
           return;
         }
+        toast.success("Warehouse updated successfully!");
       } else {
         const result = await createWarehouse(warehouseForm);
         if (!result.success) {
-          setError("Failed to create warehouse: " + result.error);
+          toast.error("Failed to create warehouse: " + result.error);
           return;
         }
+        toast.success("Warehouse created successfully!");
       }
 
       setShowWarehouseModal(false);
@@ -239,7 +241,7 @@ const WarehouseManagement = () => {
       await fetchWarehouseHierarchy();
       setError("");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save warehouse");
+      toast.error(err.response?.data?.message || "Failed to save warehouse");
       console.error(err);
     }
   };
@@ -252,12 +254,13 @@ const WarehouseManagement = () => {
       const result = await deleteWarehouse(warehouseId);
       if (result.success) {
         await fetchWarehouses();
+        toast.success("Warehouse deleted successfully!");
         setError("");
       } else {
-        setError("Failed to delete warehouse: " + result.error);
+        toast.error("Failed to delete warehouse: " + result.error);
       }
     } catch (err) {
-      setError("Failed to delete warehouse");
+      toast.error("Failed to delete warehouse");
       console.error(err);
     }
   };
@@ -269,7 +272,7 @@ const WarehouseManagement = () => {
       if (productForm.selectedProductId) {
         // Validate warehouse assignments
         if (!productForm.warehouse_assignments || productForm.warehouse_assignments.length === 0) {
-          setError("Please assign stock to at least one warehouse");
+          toast.error("Please assign stock to at least one warehouse");
           return;
         }
 
@@ -362,7 +365,7 @@ const WarehouseManagement = () => {
             }
           } catch (warehouseError) {
             console.error(`Failed to add product to warehouse ${warehouseId}:`, warehouseError);
-            setError(`Failed to add product to some warehouses: ${warehouseError.response?.data?.error || warehouseError.message}`);
+            toast.error(`Failed to add product to some warehouses: ${warehouseError.response?.data?.error || warehouseError.message}`);
           }
         }
 
@@ -391,10 +394,11 @@ const WarehouseManagement = () => {
 
         await fetchProducts();
         refreshZoneVisibility();
+        toast.success("Product saved successfully!");
         setError("");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save product");
+      toast.error(err.response?.data?.message || "Failed to save product");
       console.error(err);
     }
   };
@@ -408,12 +412,13 @@ const WarehouseManagement = () => {
       if (result.success) {
         await fetchProducts();
         refreshZoneVisibility();
+        toast.success("Product deleted successfully!");
         setError("");
       } else {
-        setError("Failed to delete product: " + result.error);
+        toast.error("Failed to delete product: " + result.error);
       }
     } catch (err) {
-      setError("Failed to delete product");
+      toast.error("Failed to delete product");
       console.error(err);
     }
   };
@@ -469,6 +474,7 @@ const WarehouseManagement = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
