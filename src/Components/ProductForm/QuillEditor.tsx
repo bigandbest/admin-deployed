@@ -15,6 +15,7 @@ export default function QuillEditor({
 }: QuillEditorProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const quillInstanceRef = useRef<Quill | null>(null);
+  const lastEditorHtmlRef = useRef<string>("");
 
   useEffect(() => {
     if (!wrapperRef.current) return;
@@ -53,7 +54,9 @@ export default function QuillEditor({
 
     quill.on("text-change", () => {
       const html = quill.root.innerHTML;
-      onChange(html === "<p><br></p>" ? "" : html);
+      const val = html === "<p><br></p>" ? "" : html;
+      lastEditorHtmlRef.current = val;
+      onChange(val);
     });
 
     return () => {
@@ -70,17 +73,17 @@ export default function QuillEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
-  // Update editor content when value prop changes externally
+  // Update editor content when value prop changes externally (not from user typing)
   useEffect(() => {
     const quill = quillInstanceRef.current;
-    // Check if quill is ready. Handle null/undefined value as empty string.
     const val = value || "";
 
     if (!quill) return;
 
-    const currentContent = quill.root.innerHTML;
+    // Skip if this value was just emitted by the editor itself (avoids sync loop)
+    if (val === lastEditorHtmlRef.current) return;
 
-    // Only update if content is different to avoid cursor jumps
+    const currentContent = quill.root.innerHTML;
     if (currentContent !== val) {
       quill.clipboard.dangerouslyPasteHTML(val);
     }

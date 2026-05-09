@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "../UI/button";
 import { ScrollArea } from "../UI/scroll-area";
 import GeneralInformation from "./general-information";
@@ -247,7 +247,7 @@ export default function AddProductForm({
   //   }
   // }, [category.brand_id]);
 
-  const handleSubmitProduct = () => {
+  const handleSubmitProduct = useCallback(() => {
     console.log("\n=== FRONTEND FORM: Current State Before Submit ===");
     console.log("Product State:", product);
     console.log("Category State:", category);
@@ -272,7 +272,7 @@ export default function AddProductForm({
     console.log("=== END Form Data ===");
 
     onSubmit(formData);
-  };
+  }, [product, variants, media, category, warehouse, faqs, onSubmit]);
 
   return (
     <div className="h-full flex flex-col bg-background">

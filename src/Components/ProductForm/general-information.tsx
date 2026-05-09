@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import { Input } from "../UI/input";
 import { Label } from "../UI/label";
@@ -19,13 +19,13 @@ interface GeneralInformationProps {
   setProduct: (product: any) => void;
 }
 
-export default function GeneralInformation({
+function GeneralInformation({
   product,
   setProduct,
 }: GeneralInformationProps) {
-  const handleChange = (field: string, value: any) => {
-    setProduct({ ...product, [field]: value });
-  };
+  const handleChange = useCallback((field: string, value: any) => {
+    setProduct((prev: any) => ({ ...prev, [field]: value }));
+  }, [setProduct]);
 
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -211,3 +211,5 @@ export default function GeneralInformation({
     </Card>
   );
 }
+
+export default memo(GeneralInformation);
