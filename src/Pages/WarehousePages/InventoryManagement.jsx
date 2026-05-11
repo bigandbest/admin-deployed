@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import PropTypes from "prop-types";
+import ConfirmModal from "../../Components/Warehouse/ConfirmModal";
 import {
   Card,
   Button,
@@ -50,6 +51,16 @@ const InventoryManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Inventory pagination + filter
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventoryTotalPages, setInventoryTotalPages] = useState(1);
+  const [sourceTypeFilter, setSourceTypeFilter] = useState("WAREHOUSE"); // WAREHOUSE | DROP_SHIP | ''
+  const [movementsPage, setMovementsPage] = useState(1);
+  const [movementsTotalPages, setMovementsTotalPages] = useState(1);
+  const [lowStockPage, setLowStockPage] = useState(1);
+  const [lowStockTotalPages, setLowStockTotalPages] = useState(1);
+  const INVENTORY_PAGE_SIZE = 25;
+
   // Modal states
   const [showStockModal, setShowStockModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
@@ -75,6 +86,13 @@ const InventoryManagement = () => {
     quantity: "",
     reason: "",
   });
+
+  // Confirmation modal
+  const [confirmModal, setConfirmModal] = useState({ show: false, type: "delete", title: "", message: "", onConfirm: null });
+  const showConfirm = ({ type, title, message, onConfirm }) =>
+    setConfirmModal({ show: true, type, title, message, onConfirm });
+  const hideConfirm = () =>
+    setConfirmModal({ show: false, type: "delete", title: "", message: "", onConfirm: null });
 
   const [showMultiWarehouseModal, setShowMultiWarehouseModal] = useState(false);
   const [multiWarehouseForm, setMultiWarehouseForm] = useState({
@@ -172,17 +190,20 @@ const InventoryManagement = () => {
     fetchWarehouses();
   }, []);
 
-  // Fetch inventory when warehouse changes
+  // Fetch inventory when warehouse changes — reset all pages
   useEffect(() => {
     if (!selectedWarehouse) return;
+    setInventoryPage(1);
+    setLowStockPage(1);
+    setMovementsPage(1);
 
     const fetchAllData = async () => {
       try {
         await Promise.all([
-          fetchInventory(),
+          fetchInventory(1, searchQuery, sourceTypeFilter),
           fetchAnalytics(),
-          fetchLowStockItems(),
-          fetchMovements(),
+          fetchLowStockItems(1),
+          fetchMovements(1),
         ]);
       } catch (error) {
         console.error("Error fetching warehouse data:", error);
@@ -208,13 +229,18 @@ const InventoryManagement = () => {
     }
   };
 
-  const fetchInventory = async () => {
+  const fetchInventory = async (page = inventoryPage, search = searchQuery, srcType = sourceTypeFilter) => {
     try {
       setLoading(true);
+      const params = { page, limit: INVENTORY_PAGE_SIZE };
+      if (search) params.search = search;
+      if (srcType) params.source_type = srcType;
       const response = await axios.get(
-        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}`
+        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}`,
+        { params }
       );
       setInventory(response.data.inventory || []);
+      setInventoryTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching inventory:", error);
     } finally {
@@ -233,23 +259,27 @@ const InventoryManagement = () => {
     }
   };
 
-  const fetchLowStockItems = async () => {
+  const fetchLowStockItems = async (page = lowStockPage) => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/low-stock`
+        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/low-stock`,
+        { params: { page, limit: INVENTORY_PAGE_SIZE } }
       );
       setLowStockItems(response.data.data || []);
+      setLowStockTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching low stock items:", error);
     }
   };
 
-  const fetchMovements = async () => {
+  const fetchMovements = async (page = movementsPage) => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/movements`
+        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/movements`,
+        { params: { page, limit: INVENTORY_PAGE_SIZE } }
       );
       setMovements(response.data.data || []);
+      setMovementsTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching movements:", error);
     }
@@ -432,25 +462,26 @@ const InventoryManagement = () => {
     }
   };
 
-  const handleDeleteStock = async (stockId) => {
-    if (!window.confirm("Are you sure you want to delete this stock record?"))
-      return;
-
-    try {
-      const token = localStorage.getItem("admin_token");
-      // Implement delete endpoint as needed
-      fetchInventory();
-    } catch (error) {
-      console.error("Error deleting stock:", error);
-    }
+  const handleDeleteStock = (stockId, productName) => {
+    showConfirm({
+      type: "delete",
+      title: "Delete Stock Record",
+      message: `Are you sure you want to delete the stock record for "${productName || "this item"}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem("admin_token");
+          // Implement delete endpoint as needed
+          console.log("Delete stock:", stockId, token);
+          fetchInventory();
+        } catch (error) {
+          console.error("Error deleting stock:", error);
+        }
+      },
+    });
   };
 
-  const filteredInventory = inventory.filter(
-    (item) =>
-      item.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.variant_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku?.includes(searchQuery)
-  );
+  // inventory is already filtered server-side; use directly
+  const filteredInventory = inventory;
 
   const warehouse = warehouses.find((w) => w.id.toString() === selectedWarehouse);
 
@@ -606,12 +637,32 @@ const InventoryManagement = () => {
             <Tabs.Panel value="overview" pt="xl">
               <Card withBorder radius="md">
                 <Card.Section inheritPadding py="md">
-                  <TextInput
-                    placeholder="Search by product name, variant, or SKU"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                    icon={<Package size={16} />}
-                  />
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <TextInput
+                      placeholder="Search by product name…"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.currentTarget.value);
+                        setInventoryPage(1);
+                        setTimeout(() => fetchInventory(1, e.currentTarget.value, sourceTypeFilter), 400);
+                      }}
+                      icon={<Search size={16} />}
+                      style={{ flex: 1 }}
+                    />
+                    <select
+                      value={sourceTypeFilter}
+                      onChange={(e) => {
+                        setSourceTypeFilter(e.target.value);
+                        setInventoryPage(1);
+                        fetchInventory(1, searchQuery, e.target.value);
+                      }}
+                      className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="WAREHOUSE">Warehouse Stock</option>
+                      <option value="DROP_SHIP">Drop-Ship Stock</option>
+                      <option value="">All Stock</option>
+                    </select>
+                  </div>
                 </Card.Section>
 
                 <Card.Section inheritPadding style={{ position: "relative", minHeight: loading ? "200px" : "auto" }}>
@@ -619,100 +670,167 @@ const InventoryManagement = () => {
                   {filteredInventory.length === 0 && !loading ? (
                     <Text color="dimmed">No inventory records found</Text>
                   ) : (
-                    <Table striped highlightOnHover>
-                      <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Variant</th>
-                          <th>SKU</th>
-                          <th>Stock</th>
-                          <th>Reserved</th>
-                          <th>Available</th>
-                          <th>Min. Threshold</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredInventory.map((item) => (
-                          <tr key={item.id}>
-                            <td>
-                              <Group spacing="xs">
-                                {item.product_image && (
-                                  <img
-                                    src={item.product_image}
-                                    alt={item.product_name}
-                                    className="w-8 h-8 rounded"
-                                  />
-                                )}
-                                <div>
-                                  <Text weight={500} size="sm">
-                                    {item.product_name}
-                                  </Text>
-                                  {item.category && (
-                                    <Text size="xs" color="dimmed">
-                                      {item.category.name}
-                                    </Text>
-                                  )}
-                                </div>
-                              </Group>
-                            </td>
-                            <td>{item.variant_name}</td>
-                            <td>
-                              <Badge variant="light">{item.sku}</Badge>
-                            </td>
-                            <td weight={500}>{item.stock_quantity}</td>
-                            <td>{item.reserved_quantity}</td>
-                            <td weight={700} color="green">
-                              {item.available_quantity}
-                            </td>
-                            <td>{item.minimum_threshold}</td>
-                            <td>
-                              {item.is_low_stock ? (
-                                <Badge color="red">Low Stock</Badge>
-                              ) : (
-                                <Badge color="green">OK</Badge>
-                              )}
-                            </td>
-                            <td>
-                              <Group spacing={0}>
-                                <Tooltip label="View All Variants Stock">
-                                  <ActionIcon
-                                    color="green"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setViewProduct(item.product_id || item.products?.id || item.id);
-                                    }}
-                                  >
-                                    <Eye size={16} />
-                                  </ActionIcon>
-                                </Tooltip>
-                                <Tooltip label="Edit">
-                                  <ActionIcon
-                                    color="blue"
-                                    onClick={() => {
-                                      setEditingStock(item);
-                                      setStockForm({
-                                        product_id: item.product_id,
-                                        variant_id: item.variant_id || "",
-                                        stock_quantity: item.stock_quantity?.toString() || "",
-                                        minimum_threshold: item.minimum_threshold?.toString() || "",
-                                        cost_per_unit: item.cost_per_unit?.toString() || "",
-                                      });
-                                      setShowStockModal(true);
-                                    }}
-                                  >
-                                    <Edit size={16} />
-                                  </ActionIcon>
-                                </Tooltip>
-                              </Group>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
+                    <>
+                      {/* Admin Stock Section */}
+                      {(() => {
+                        const adminStock = filteredInventory.filter(item => !item.seller_id);
+                        const sellerStock = filteredInventory.filter(item => !!item.seller_id);
+                        return (
+                          <>
+                            {adminStock.length > 0 && (
+                              <>
+                                <Text weight={600} size="sm" mb="xs" mt="sm" color="blue">
+                                  🏢 Admin Stock ({adminStock.length} records)
+                                </Text>
+                                <Table striped highlightOnHover mb="md">
+                                  <thead>
+                                    <tr>
+                                      <th>Product</th>
+                                      <th>Variant</th>
+                                      <th>SKU</th>
+                                      <th>Stock</th>
+                                      <th>Reserved</th>
+                                      <th>Available</th>
+                                      <th>Min. Threshold</th>
+                                      <th>Status</th>
+                                      <th>Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {adminStock.map((item) => (
+                                      <tr key={item.id}>
+                                        <td>
+                                          <Group spacing="xs">
+                                            {item.product_image && (
+                                              <img src={item.product_image} alt={item.product_name} className="w-8 h-8 rounded" />
+                                            )}
+                                            <div>
+                                              <Text weight={500} size="sm">{item.product_name}</Text>
+                                              {item.category && <Text size="xs" color="dimmed">{item.category.name}</Text>}
+                                            </div>
+                                          </Group>
+                                        </td>
+                                        <td>{item.variant_name}</td>
+                                        <td><Badge variant="light">{item.sku}</Badge></td>
+                                        <td>{item.stock_quantity}</td>
+                                        <td>{item.reserved_quantity}</td>
+                                        <td>{item.available_quantity}</td>
+                                        <td>{item.minimum_threshold}</td>
+                                        <td>{item.is_low_stock ? <Badge color="red">Low Stock</Badge> : <Badge color="green">OK</Badge>}</td>
+                                        <td>
+                                          <Group spacing={0}>
+                                            <Tooltip label="View All Variants Stock">
+                                              <ActionIcon color="green" onClick={(e) => { e.stopPropagation(); setViewProduct(item.product_id || item.products?.id || item.id); }}>
+                                                <Eye size={16} />
+                                              </ActionIcon>
+                                            </Tooltip>
+                                            <Tooltip label="Edit Stock">
+                                              <ActionIcon
+                                                color="blue"
+                                                onClick={() => {
+                                                  showConfirm({
+                                                    type: "update",
+                                                    title: "Edit Stock",
+                                                    message: `Update stock for "${item.product_name}"?`,
+                                                    onConfirm: () => {
+                                                      setEditingStock(item);
+                                                      setStockForm({
+                                                        product_id: item.product_id,
+                                                        variant_id: item.variant_id || "",
+                                                        stock_quantity: item.stock_quantity?.toString() || "",
+                                                        minimum_threshold: item.minimum_threshold?.toString() || "",
+                                                        cost_per_unit: item.cost_per_unit?.toString() || "",
+                                                      });
+                                                      setShowStockModal(true);
+                                                    },
+                                                  });
+                                                }}
+                                              >
+                                                <Edit size={16} />
+                                              </ActionIcon>
+                                            </Tooltip>
+                                          </Group>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </Table>
+                              </>
+                            )}
+
+                            {/* Seller Stock Section — read-only */}
+                            {sellerStock.length > 0 && (
+                              <>
+                                <Text weight={600} size="sm" mb="xs" mt="sm" color="orange">
+                                  🔒 Seller Stock ({sellerStock.length} records) — View Only
+                                </Text>
+                                <Table mb="md">
+                                  <thead>
+                                    <tr style={{ backgroundColor: "#fff8f0" }}>
+                                      <th>Product</th>
+                                      <th>Variant</th>
+                                      <th>SKU</th>
+                                      <th>Stock</th>
+                                      <th>Reserved</th>
+                                      <th>Available</th>
+                                      <th>Min. Threshold</th>
+                                      <th>Status</th>
+                                      <th>Seller</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {sellerStock.map((item) => (
+                                      <tr key={item.id} style={{ backgroundColor: "#fffbf5", opacity: 0.9 }}>
+                                        <td>
+                                          <Group spacing="xs">
+                                            {item.product_image && (
+                                              <img src={item.product_image} alt={item.product_name} className="w-8 h-8 rounded" />
+                                            )}
+                                            <div>
+                                              <Text weight={500} size="sm">{item.product_name}</Text>
+                                              {item.category && <Text size="xs" color="dimmed">{item.category.name}</Text>}
+                                            </div>
+                                          </Group>
+                                        </td>
+                                        <td>{item.variant_name}</td>
+                                        <td><Badge variant="light" color="orange">{item.sku}</Badge></td>
+                                        <td>{item.stock_quantity}</td>
+                                        <td>{item.reserved_quantity}</td>
+                                        <td>{item.available_quantity}</td>
+                                        <td>{item.minimum_threshold}</td>
+                                        <td>{item.is_low_stock ? <Badge color="red">Low Stock</Badge> : <Badge color="green">OK</Badge>}</td>
+                                        <td>
+                                          <Group spacing={4}>
+                                            <Tooltip label="Seller-managed stock. Admin cannot edit.">
+                                              <Badge color="orange" variant="outline" leftSection="🔒">
+                                                Seller
+                                              </Badge>
+                                            </Tooltip>
+                                            <Tooltip label="View All Variants Stock">
+                                              <ActionIcon color="green" size="sm" onClick={(e) => { e.stopPropagation(); setViewProduct(item.product_id || item.id); }}>
+                                                <Eye size={14} />
+                                              </ActionIcon>
+                                            </Tooltip>
+                                          </Group>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </Table>
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </>
                   )}
                 </Card.Section>
+                {/* Inventory Pagination */}
+                <InlinePager
+                  page={inventoryPage}
+                  totalPages={inventoryTotalPages}
+                  onPageChange={(p) => { setInventoryPage(p); fetchInventory(p); }}
+                />
               </Card>
             </Tabs.Panel>
 
@@ -738,14 +856,10 @@ const InventoryManagement = () => {
                       <tbody>
                         {lowStockItems.map((item) => (
                           <tr key={item.id}>
-                            <td weight={500}>{item.products?.name}</td>
-                            <td color="red" weight={700}>
-                              {item.stock_quantity}
-                            </td>
+                            <td>{item.product_name || item.products?.name}</td>
+                            <td>{item.stock_quantity}</td>
                             <td>{item.minimum_threshold}</td>
-                            <td color="red">
-                              {item.minimum_threshold - item.stock_quantity}
-                            </td>
+                            <td>{(item.minimum_threshold || 0) - (item.stock_quantity || 0)}</td>
                             <td>
                               <Button
                                 size="xs"
@@ -768,6 +882,11 @@ const InventoryManagement = () => {
                       </tbody>
                     </Table>
                   )}
+                  <InlinePager
+                    page={lowStockPage}
+                    totalPages={lowStockTotalPages}
+                    onPageChange={(p) => { setLowStockPage(p); fetchLowStockItems(p); }}
+                  />
                 </Card.Section>
               </Card>
             </Tabs.Panel>
@@ -968,15 +1087,7 @@ const InventoryManagement = () => {
                             <td>{new Date(m.created_at).toLocaleString()}</td>
                             <td>{m.product_name}</td>
                             <td>
-                              <Badge
-                                color={
-                                  m.movement_type === "add"
-                                    ? "green"
-                                    : m.movement_type === "remove"
-                                      ? "red"
-                                      : "blue"
-                                }
-                              >
+                              <Badge color={m.movement_type === "inbound" || m.movement_type === "add" ? "green" : m.movement_type === "outbound" || m.movement_type === "remove" ? "red" : "blue"}>
                                 {m.movement_type}
                               </Badge>
                             </td>
@@ -988,6 +1099,11 @@ const InventoryManagement = () => {
                       </tbody>
                     </Table>
                   )}
+                  <InlinePager
+                    page={movementsPage}
+                    totalPages={movementsTotalPages}
+                    onPageChange={(p) => { setMovementsPage(p); fetchMovements(p); }}
+                  />
                 </Card.Section>
               </Card>
             </Tabs.Panel>
@@ -996,8 +1112,19 @@ const InventoryManagement = () => {
       )}
 
       {/* Multi-Warehouse Stock Modal */}
+      {/* Global Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.show}
+        onClose={hideConfirm}
+        onConfirm={confirmModal.onConfirm || (() => {})}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+
       <Modal
         opened={showMultiWarehouseModal}
+        overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
         onClose={() => {
           setShowMultiWarehouseModal(false);
           setMultiWarehouseForm({
@@ -1080,6 +1207,7 @@ const InventoryManagement = () => {
         onClose={() => setShowTransferModal(false)}
         title="Transfer Stock"
         size="lg"
+        overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         <form onSubmit={handleStockTransfer}>
           <Stack>
@@ -1159,6 +1287,7 @@ const InventoryManagement = () => {
           setEditingStock(null);
         }}
         title={editingStock ? "Edit Stock" : "Add Stock"}
+        overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         <form onSubmit={handleUpdateStock}>
           <Stack>
@@ -1246,6 +1375,7 @@ const InventoryManagement = () => {
           setUploadProgress(0);
         }}
         title="Bulk Upload Inventory"
+        overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         <Stack>
           <Text size="sm" color="dimmed">
@@ -1282,6 +1412,7 @@ const InventoryManagement = () => {
         onClose={() => setViewProduct(null)}
         title="Product Variant Stock"
         size="lg"
+        overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         {viewProduct && (
           <VariantStockViewer productId={viewProduct} warehouseId={selectedWarehouse} />
@@ -1292,6 +1423,37 @@ const InventoryManagement = () => {
 };
 
 export default InventoryManagement;
+
+// Shared pagination bar for all tabs
+const InlinePager = ({ page, totalPages, onPageChange }) => {
+  if (!totalPages || totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 mt-2">
+      <span className="text-sm text-gray-500">
+        Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+      </span>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        >← Prev</button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1)
+          .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+          .reduce((acc, p, idx, arr) => { if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…"); acc.push(p); return acc; }, [])
+          .map((p, i) => p === "…"
+            ? <span key={`e${i}`} className="px-2 py-1 text-gray-400">…</span>
+            : <button key={p} onClick={() => onPageChange(p)} className={`px-3 py-1 text-sm border rounded ${p === page ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 hover:bg-gray-100"}`}>{p}</button>
+          )}
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        >Next →</button>
+      </div>
+    </div>
+  );
+};
 
 // Helper component for Viewing Variants Stock
 const VariantStockViewer = ({ productId, warehouseId }) => {

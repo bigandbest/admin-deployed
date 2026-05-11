@@ -562,6 +562,27 @@ export async function getAllProducts() {
   }
 }
 
+/**
+ * Fetch warehouse products (source_type=WAREHOUSE, excludes dropship) with pagination.
+ */
+export async function getAdminWarehouseProducts({ page = 1, limit = 20, search = "" } = {}) {
+  try {
+    const token = localStorage.getItem("admin_token");
+    const params = new URLSearchParams({
+      page,
+      limit,
+      source_type: "WAREHOUSE",
+      ...(search ? { search } : {}),
+    });
+    const response = await fetch(`${API_BASE_URL}/admin/products?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getProductsWithFilters(filters = {}, page = 1, limit = 20) {
   try {
     const params = new URLSearchParams();

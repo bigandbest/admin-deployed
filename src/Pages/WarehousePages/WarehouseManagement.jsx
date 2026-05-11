@@ -4,6 +4,7 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ProductModal from "../../Components/Warehouse/ProductModal";
+import ConfirmModal from "../../Components/Warehouse/ConfirmModal";
 import {
   getAllWarehouses,
   createWarehouse,
@@ -11,7 +12,7 @@ import {
   deleteWarehouse,
   getAllZones,
   getWarehouseHierarchy,
-  getAllProducts,
+  getAdminWarehouseProducts,
   addProduct,
   updateProduct,
   deleteProduct,
@@ -41,11 +42,40 @@ const WarehouseManagement = () => {
   const [stockMovements, setStockMovements] = useState([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
 
+  // Product pagination
+  const [productPage, setProductPage] = useState(1);
+  const [productTotalPages, setProductTotalPages] = useState(1);
+  const [productSearch, setProductSearch] = useState("");
+  const PRODUCT_PAGE_SIZE = 20;
+
+  // Warehouse pagination
+  const [warehousePage, setWarehousePage] = useState(1);
+  const WAREHOUSE_PAGE_SIZE = 15;
+
   // Modal states
   const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    show: false, type: "delete", title: "", message: "", onConfirm: null,
+  });
+  const showConfirm = ({ type, title, message, onConfirm }) =>
+    setConfirmModal({ show: true, type, title, message, onConfirm });
+  const hideConfirm = () =>
+    setConfirmModal({ show: false, type: "delete", title: "", message: "", onConfirm: null });
+
+  // Secure warehouse deletion state
+  const [deleteWarehouseModal, setDeleteWarehouseModal] = useState({
+    show: false,
+    warehouseId: null,
+    warehouseName: "",
+    confirmText: "",
+    step: 1, // 1: warning, 2: confirm name, 3: processing
+    loading: false,
+  });
 
   // Form data
   const [warehouseForm, setWarehouseForm] = useState({
@@ -94,17 +124,14 @@ const WarehouseManagement = () => {
     }
   }, []);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (page = 1, search = "") => {
     try {
-      const result = await getAllProducts();
+      const result = await getAdminWarehouseProducts({ page, limit: PRODUCT_PAGE_SIZE, search });
       if (result.success) {
         const productsList = result.products || result.data || [];
         setProducts(productsList);
-        // Update productForm with available products
-        setProductForm(prev => ({
-          ...prev,
-          availableProducts: productsList
-        }));
+        setProductTotalPages(result.totalPages || 1);
+        setProductForm(prev => ({ ...prev, availableProducts: productsList }));
       } else {
         setError("Failed to fetch products: " + result.error);
       }
@@ -112,7 +139,7 @@ const WarehouseManagement = () => {
       setError("Failed to fetch products");
       console.error(err);
     }
-  }, []);
+  }, [PRODUCT_PAGE_SIZE]);
 
   const fetchZones = useCallback(async () => {
     try {
@@ -246,23 +273,130 @@ const WarehouseManagement = () => {
     }
   };
 
-  const handleWarehouseDelete = async (warehouseId) => {
-    if (!window.confirm("Are you sure you want to delete this warehouse?"))
-      return;
+  const handleWarehouseDelete = (warehouseId) => {
+    const wh = warehouses.find((w) => w.id === warehouseId);
+    setDeleteWarehouseModal({
+      show: true,
+      warehouseId,
+      warehouseName: wh?.name || "Unknown",
+      confirmText: "",
+      step: 1,
+      loading: false,
+    });
+  };
 
-    try {
-      const result = await deleteWarehouse(warehouseId);
-      if (result.success) {
-        await fetchWarehouses();
-        toast.success("Warehouse deleted successfully!");
-        setError("");
-      } else {
-        toast.error("Failed to delete warehouse: " + result.error);
+  const handleSecureWarehouseDelete = async () => {
+    const { warehouseId, warehouseName, confirmText } = deleteWarehouseModal;
+
+    // Step 2: Validate name confirmation
+    if (deleteWarehouseModal.step === 2) {
+      if (confirmText !== warehouseName) {
+        toast.error("Warehouse name does not match. Please try again.");
+        return;
       }
-    } catch (err) {
-      toast.error("Failed to delete warehouse");
-      console.error(err);
+
+      // Move to step 3 (processing)
+      setDeleteWarehouseModal((prev) => ({
+        ...prev,
+        step: 3,
+        loading: true,
+      }));
+
+      const toastId = toast.loading("🔄 Starting deletion process...");
+
+      try {
+        // Step 1: Clear inventory
+        try {
+          toast.update(toastId, {
+            render: "📦 Clearing inventory records...",
+            type: "info",
+            isLoading: true,
+          });
+
+          const clearResponse = await axios.delete(
+            `${API_BASE_URL}/warehouses/${warehouseId}/inventory/clear`,
+            {
+              headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` },
+              timeout: 30000,
+            }
+          );
+
+          if (clearResponse.data.success) {
+            toast.update(toastId, {
+              render: `✓ Cleared ${clearResponse.data.message}`,
+              type: "success",
+              isLoading: false,
+              autoClose: 2000,
+            });
+          }
+        } catch (clearErr) {
+          console.error("Clear inventory error:", clearErr);
+          toast.update(toastId, {
+            render: `⚠️ Inventory clear: ${clearErr.response?.data?.error || clearErr.message}`,
+            type: "warning",
+            isLoading: false,
+            autoClose: 3000,
+          });
+          // Continue with deletion even if clear fails
+        }
+
+        // Step 2: Delete warehouse
+        toast.loading("🗑️ Deleting warehouse...");
+        const deleteResponse = await axios.delete(
+          `${API_BASE_URL}/warehouses/${warehouseId}`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` },
+            timeout: 30000,
+          }
+        );
+
+        if (deleteResponse.data.success) {
+          toast.dismiss();
+          toast.success("✅ Warehouse deleted successfully!");
+
+          // Close modal immediately
+          setDeleteWarehouseModal({
+            show: false,
+            warehouseId: null,
+            warehouseName: "",
+            confirmText: "",
+            step: 1,
+            loading: false,
+          });
+          setError("");
+
+          // Refresh in background
+          setTimeout(() => {
+            fetchWarehouses();
+          }, 500);
+        } else {
+          throw new Error(deleteResponse.data.error || "Delete failed");
+        }
+      } catch (err) {
+        console.error("Delete warehouse error:", err);
+        toast.dismiss();
+
+        const errorMsg = err.response?.data?.error || err.message || "Failed to delete warehouse";
+        toast.error(`❌ Error: ${errorMsg}`);
+
+        setDeleteWarehouseModal((prev) => ({
+          ...prev,
+          step: 2,
+          loading: false,
+        }));
+      }
     }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteWarehouseModal({
+      show: false,
+      warehouseId: null,
+      warehouseName: "",
+      confirmText: "",
+      step: 1,
+      loading: false,
+    });
   };
 
   // Handle product operations
@@ -403,23 +537,42 @@ const WarehouseManagement = () => {
     }
   };
 
-  const handleProductDelete = async (productId) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
-      return;
+  const handleProductDelete = (productId) => {
+    const prod = products.find((p) => p.id === productId);
+    showConfirm({
+      type: "delete",
+      title: "Delete Product",
+      message: `Are you sure you want to delete "${prod?.name || "this product"}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const result = await deleteProduct(productId);
+          if (result.success) {
+            await fetchProducts();
+            refreshZoneVisibility();
+            toast.success("Product deleted successfully!");
+            setError("");
+          } else {
+            toast.error("Failed to delete product: " + result.error);
+          }
+        } catch (err) {
+          toast.error("Failed to delete product");
+          console.error(err);
+        }
+      },
+    });
+  };
 
-    try {
-      const result = await deleteProduct(productId);
-      if (result.success) {
-        await fetchProducts();
-        refreshZoneVisibility();
-        toast.success("Product deleted successfully!");
-        setError("");
-      } else {
-        toast.error("Failed to delete product: " + result.error);
-      }
-    } catch (err) {
-      toast.error("Failed to delete product");
-      console.error(err);
+  // Warehouse submit with confirmation when editing
+  const handleWarehouseSubmitWithConfirm = () => {
+    if (editingWarehouse) {
+      showConfirm({
+        type: "update",
+        title: "Update Warehouse",
+        message: `Are you sure you want to update "${editingWarehouse.name}"?`,
+        onConfirm: handleWarehouseSubmit,
+      });
+    } else {
+      handleWarehouseSubmit();
     }
   };
 
@@ -429,14 +582,19 @@ const WarehouseManagement = () => {
       setLoading(true);
       await Promise.all([
         fetchWarehouses(),
-        fetchProducts(),
+        fetchProducts(1, ""),
         fetchZones(),
         fetchWarehouseHierarchy(),
       ]);
       setLoading(false);
     };
     loadData();
-  }, [fetchWarehouses, fetchProducts, fetchZones, fetchWarehouseHierarchy]);
+  }, [fetchWarehouses, fetchZones, fetchWarehouseHierarchy]);
+
+  // Re-fetch products when page or search changes
+  useEffect(() => {
+    fetchProducts(productPage, productSearch);
+  }, [productPage, productSearch, fetchProducts]);
 
   useEffect(() => {
     fetchZoneVisibility(selectedZoneId);
@@ -613,6 +771,9 @@ const WarehouseManagement = () => {
         <WarehousesTab
           warehouses={warehouses}
           warehouseHierarchy={warehouseHierarchy}
+          page={warehousePage}
+          pageSize={WAREHOUSE_PAGE_SIZE}
+          onPageChange={setWarehousePage}
           onEdit={(warehouse) => {
             setEditingWarehouse(warehouse);
             setWarehouseForm({
@@ -661,6 +822,11 @@ const WarehouseManagement = () => {
         <ProductsTab
           products={products}
           warehouses={warehouses}
+          page={productPage}
+          totalPages={productTotalPages}
+          onPageChange={setProductPage}
+          searchValue={productSearch}
+          onSearchChange={(v) => { setProductSearch(v); setProductPage(1); }}
           onEdit={(product) => {
             setEditingProduct(product);
             setProductForm({
@@ -739,7 +905,7 @@ const WarehouseManagement = () => {
           }}
           data={warehouseForm}
           setData={setWarehouseForm}
-          onSubmit={handleWarehouseSubmit}
+          onSubmit={handleWarehouseSubmitWithConfirm}
           zones={zones}
           warehouses={warehouses}
           isEditing={!!editingWarehouse}
@@ -761,6 +927,159 @@ const WarehouseManagement = () => {
           zones={zones}
           isEditing={!!editingProduct}
         />
+      )}
+
+      {/* Global Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.show}
+        onClose={hideConfirm}
+        onConfirm={confirmModal.onConfirm || (() => {})}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+
+      {/* Secure Warehouse Deletion Modal */}
+      {deleteWarehouseModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4">
+            {deleteWarehouseModal.step === 1 && (
+              <>
+                <div className="px-6 py-4 border-b border-red-200 bg-red-50">
+                  <div className="flex items-start space-x-3">
+                    <div className="text-3xl">⚠️</div>
+                    <div>
+                      <h2 className="text-xl font-bold text-red-700">
+                        Delete Warehouse?
+                      </h2>
+                      <p className="text-sm text-red-600 mt-1">
+                        This action is permanent and cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-700">
+                      <strong>Warehouse:</strong> {deleteWarehouseModal.warehouseName}
+                    </p>
+                    <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                      <li>✓ All inventory records will be cleared</li>
+                      <li>✓ The warehouse will be permanently deleted</li>
+                      <li>✓ You'll need to confirm the warehouse name</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={closeDeleteModal}
+                    className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteWarehouseModal((prev) => ({
+                        ...prev,
+                        step: 2,
+                      }));
+                    }}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            )}
+
+            {deleteWarehouseModal.step === 2 && (
+              <>
+                <div className="px-6 py-4 border-b border-red-200 bg-red-50">
+                  <h2 className="text-xl font-bold text-red-700">
+                    Confirm Warehouse Name
+                  </h2>
+                  <p className="text-sm text-red-600 mt-1">
+                    Type the warehouse name to confirm deletion
+                  </p>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Warehouse Name to Delete
+                    </label>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Enter: <strong>{deleteWarehouseModal.warehouseName}</strong>
+                    </p>
+                    <input
+                      type="text"
+                      value={deleteWarehouseModal.confirmText}
+                      onChange={(e) => {
+                        setDeleteWarehouseModal((prev) => ({
+                          ...prev,
+                          confirmText: e.target.value,
+                        }));
+                      }}
+                      placeholder="Type warehouse name here..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-700">
+                      ℹ️ This prevents accidental deletion. The name must match
+                      exactly.
+                    </p>
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setDeleteWarehouseModal((prev) => ({
+                        ...prev,
+                        step: 1,
+                        confirmText: "",
+                      }));
+                    }}
+                    className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSecureWarehouseDelete}
+                    disabled={
+                      deleteWarehouseModal.confirmText !==
+                        deleteWarehouseModal.warehouseName || deleteWarehouseModal.loading
+                    }
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                  >
+                    Delete Warehouse
+                  </button>
+                </div>
+              </>
+            )}
+
+            {deleteWarehouseModal.step === 3 && (
+              <>
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Processing Deletion...
+                  </h2>
+                </div>
+                <div className="px-6 py-8 flex flex-col items-center justify-center">
+                  <div className="animate-spin mb-4">
+                    <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full"></div>
+                  </div>
+                  <p className="text-gray-700 text-center text-sm font-medium mb-2">
+                    Step 1: Clearing inventory records...
+                  </p>
+                  <p className="text-gray-500 text-center text-xs">
+                    Step 2: Deleting warehouse (this may take a moment)
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -823,6 +1142,59 @@ const WarehouseHierarchyView = ({ warehouseHierarchy }) => {
   );
 };
 
+// Reusable Pagination Controls
+const PaginationBar = ({ page, totalPages, onPageChange }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+      <p className="text-sm text-gray-600">
+        Page <span className="font-medium">{page}</span> of{" "}
+        <span className="font-medium">{totalPages}</span>
+      </p>
+      <div className="flex space-x-2">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          ← Prev
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1)
+          .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+          .reduce((acc, p, idx, arr) => {
+            if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
+            acc.push(p);
+            return acc;
+          }, [])
+          .map((p, idx) =>
+            p === "..." ? (
+              <span key={`e-${idx}`} className="px-2 py-1 text-sm text-gray-500">…</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`px-3 py-1 text-sm border rounded ${
+                  p === page
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "border-gray-300 hover:bg-gray-100"
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Next →
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Warehouses Tab Component
 const WarehousesTab = ({
   warehouses,
@@ -830,7 +1202,13 @@ const WarehousesTab = ({
   onDelete,
   onAdd,
   warehouseHierarchy,
+  page,
+  pageSize,
+  onPageChange,
 }) => {
+  const totalPages = Math.ceil(warehouses.length / pageSize);
+  const pagedWarehouses = warehouses.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div>
       {/* Warehouse Hierarchy */}
@@ -885,7 +1263,7 @@ const WarehousesTab = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {warehouses.map((warehouse) => (
+                {pagedWarehouses.map((warehouse) => (
                   <tr key={warehouse.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -1021,8 +1399,9 @@ const WarehousesTab = ({
             </table>
           </div>
         )}
+        <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
       </div>
-    </div >
+    </div>
   );
 };
 
@@ -1060,6 +1439,15 @@ WarehousesTab.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onAdd: PropTypes.func.isRequired,
+  page: PropTypes.number.isRequired,
+  pageSize: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
+};
+
+PaginationBar.propTypes = {
+  page: PropTypes.number.isRequired,
+  totalPages: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
 };
 
 // Products Tab Component
@@ -1074,6 +1462,11 @@ const ProductsTab = ({
   zoneVisibility,
   zoneVisibilityLoading,
   zoneVisibilityError,
+  page,
+  totalPages,
+  onPageChange,
+  searchValue,
+  onSearchChange,
 }) => {
   const zonalWarehouses = useMemo(
     () => warehouses.filter((warehouse) => warehouse.type === "zonal"),
@@ -1204,10 +1597,18 @@ const ProductsTab = ({
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Products</h3>
             <p className="text-sm text-gray-600">
-              Manage zone-aware visibility and stock assignments.
+              Warehouse products only. Drop-ship products are excluded.
             </p>
           </div>
           <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            {/* Search */}
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search products…"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+            />
             {zonalWarehouses.length > 0 && (
               <select
                 value={selectedZoneId}
@@ -1242,14 +1643,17 @@ const ProductsTab = ({
         )}
       </div>
 
-      {products.length === 0 ? (
+      {/* Only show warehouse products — dropship products are excluded */}
+      {(() => {
+        const warehouseProducts = products.filter(p => p.delivery_type !== "dropship");
+        return warehouseProducts.length === 0 ? (
         <div className="p-8 text-center">
           <div className="text-gray-400 text-4xl mb-4">📦</div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No products found
+            No warehouse products found
           </h3>
           <p className="text-gray-500 mb-4">
-            Add products to start managing your inventory.
+            Add products to start managing your inventory. Drop-ship products are not shown here.
           </p>
           <button
             onClick={onAdd}
@@ -1278,7 +1682,7 @@ const ProductsTab = ({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
+              {warehouseProducts.map((product) => (
                 <tr key={product.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div>
@@ -1333,7 +1737,9 @@ const ProductsTab = ({
             </tbody>
           </table>
         </div>
-      )}
+      );
+      })()}
+      <PaginationBar page={page} totalPages={totalPages} onPageChange={onPageChange} />
     </div>
   );
 };
@@ -1364,6 +1770,11 @@ ProductsTab.propTypes = {
   zoneVisibility: PropTypes.object,
   zoneVisibilityLoading: PropTypes.bool,
   zoneVisibilityError: PropTypes.string,
+  page: PropTypes.number.isRequired,
+  totalPages: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
+  searchValue: PropTypes.string.isRequired,
+  onSearchChange: PropTypes.func.isRequired,
 };
 
 // Warehouse Modal Component
@@ -1468,7 +1879,7 @@ const WarehouseModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-gray-600/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-screen overflow-y-auto">
         <h3 className="text-lg font-semibold mb-4">
           {isEditing ? "Edit Warehouse" : "Add New Warehouse"}
