@@ -11,7 +11,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmLabel
   const isDelete = type === "delete";
 
   return (
-    <div className="fixed inset-0 bg-gray-600/40 flex items-center justify-center z-[200]" onClick={onClose}>
+    <div className="fixed inset-0 bg-gray-600/40 flex items-center justify-center z-[9999]" onClick={onClose}>
       <div
         className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4"
         onClick={(e) => e.stopPropagation()}

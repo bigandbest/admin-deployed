@@ -21,6 +21,7 @@ import {
   getZonalWarehouseAvailablePincodesDirect,
 } from "../../utils/supabaseApi";
 import { getZoneProductVisibility } from "../../utils/zoneApi";
+import { DeleteButton, EditButton } from "../../Components/Warehouse/ActionButtons";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
@@ -45,7 +46,9 @@ const WarehouseManagement = () => {
   // Product pagination
   const [productPage, setProductPage] = useState(1);
   const [productTotalPages, setProductTotalPages] = useState(1);
+  const [productTotal, setProductTotal] = useState(0);
   const [productSearch, setProductSearch] = useState("");
+  const [productWarehouseFilter, setProductWarehouseFilter] = useState("all");
   const PRODUCT_PAGE_SIZE = 20;
 
   // Warehouse pagination
@@ -124,13 +127,19 @@ const WarehouseManagement = () => {
     }
   }, []);
 
-  const fetchProducts = useCallback(async (page = 1, search = "") => {
+  const fetchProducts = useCallback(async (page = 1, search = "", warehouseId = "all") => {
     try {
-      const result = await getAdminWarehouseProducts({ page, limit: PRODUCT_PAGE_SIZE, search });
+      const result = await getAdminWarehouseProducts({
+        page,
+        limit: PRODUCT_PAGE_SIZE,
+        search,
+        warehouse_id: warehouseId !== "all" ? warehouseId : null,
+      });
       if (result.success) {
         const productsList = result.products || result.data || [];
         setProducts(productsList);
         setProductTotalPages(result.totalPages || 1);
+        setProductTotal(result.total || 0);
         setProductForm(prev => ({ ...prev, availableProducts: productsList }));
       } else {
         setError("Failed to fetch products: " + result.error);
@@ -576,13 +585,14 @@ const WarehouseManagement = () => {
     }
   };
 
-  // Load initial data
+  // Load initial data — fetchProducts is intentionally excluded here:
+  // the [productPage, productSearch, productWarehouseFilter] effect below handles it
+  // so we avoid a double API call on mount.
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([
+      await Promise.allSettled([
         fetchWarehouses(),
-        fetchProducts(1, ""),
         fetchZones(),
         fetchWarehouseHierarchy(),
       ]);
@@ -591,10 +601,10 @@ const WarehouseManagement = () => {
     loadData();
   }, [fetchWarehouses, fetchZones, fetchWarehouseHierarchy]);
 
-  // Re-fetch products when page or search changes
+  // Re-fetch products when page, search, or warehouse filter changes
   useEffect(() => {
-    fetchProducts(productPage, productSearch);
-  }, [productPage, productSearch, fetchProducts]);
+    fetchProducts(productPage, productSearch, productWarehouseFilter);
+  }, [productPage, productSearch, productWarehouseFilter, fetchProducts]);
 
   useEffect(() => {
     fetchZoneVisibility(selectedZoneId);
@@ -622,7 +632,7 @@ const WarehouseManagement = () => {
   });
 
   const getProductStats = () => ({
-    total: products.length,
+    total: productTotal,
     nationwide: products.filter((p) => p.delivery_type === "nationwide").length,
     zonal: products.filter((p) => p.delivery_type === "zonal").length,
   });
@@ -827,6 +837,8 @@ const WarehouseManagement = () => {
           onPageChange={setProductPage}
           searchValue={productSearch}
           onSearchChange={(v) => { setProductSearch(v); setProductPage(1); }}
+          warehouseFilter={productWarehouseFilter}
+          onWarehouseFilterChange={(v) => { setProductWarehouseFilter(v); setProductPage(1); }}
           onEdit={(product) => {
             setEditingProduct(product);
             setProductForm({
@@ -1356,12 +1368,10 @@ const WarehousesTab = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => onEdit(warehouse)}
-                          className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded"
-                        >
-                          Edit
-                        </button>
+                        <EditButton
+                          onConfirm={() => onEdit(warehouse)}
+                          label="Edit"
+                        />
 
                         {warehouse.type === "zonal" &&
                           warehouses.filter(
@@ -1467,6 +1477,8 @@ const ProductsTab = ({
   onPageChange,
   searchValue,
   onSearchChange,
+  warehouseFilter,
+  onWarehouseFilterChange,
 }) => {
   const zonalWarehouses = useMemo(
     () => warehouses.filter((warehouse) => warehouse.type === "zonal"),
@@ -1609,6 +1621,19 @@ const ProductsTab = ({
               placeholder="Search products…"
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
             />
+            {/* Warehouse filter */}
+            <select
+              value={warehouseFilter}
+              onChange={(e) => onWarehouseFilterChange(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Warehouses</option>
+              {warehouses.map((wh) => (
+                <option key={wh.id} value={wh.id}>
+                  {wh.name}
+                </option>
+              ))}
+            </select>
             {zonalWarehouses.length > 0 && (
               <select
                 value={selectedZoneId}
@@ -1718,18 +1743,15 @@ const ProductsTab = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => onEdit(product)}
-                        className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onDelete(product.id)}
-                        className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1 rounded"
-                      >
-                        Delete
-                      </button>
+                      <EditButton
+                        onConfirm={() => onEdit(product)}
+                        label="Edit"
+                      />
+                      <DeleteButton
+                        onConfirm={() => onDelete(product.id)}
+                        title="Delete Product"
+                        message={`Are you sure you want to delete "${product.name}"? This action cannot be undone.`}
+                      />
                     </div>
                   </td>
                 </tr>

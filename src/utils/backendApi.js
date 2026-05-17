@@ -565,7 +565,7 @@ export async function getAllProducts() {
 /**
  * Fetch warehouse products (source_type=WAREHOUSE, excludes dropship) with pagination.
  */
-export async function getAdminWarehouseProducts({ page = 1, limit = 20, search = "" } = {}) {
+export async function getAdminWarehouseProducts({ page = 1, limit = 20, search = "", warehouse_id = null } = {}) {
   try {
     const token = localStorage.getItem("admin_token");
     const params = new URLSearchParams({
@@ -573,6 +573,7 @@ export async function getAdminWarehouseProducts({ page = 1, limit = 20, search =
       limit,
       source_type: "WAREHOUSE",
       ...(search ? { search } : {}),
+      ...(warehouse_id ? { warehouse_id } : {}),
     });
     const response = await fetch(`${API_BASE_URL}/admin/products?${params}`, {
       headers: { Authorization: `Bearer ${token}` },

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { formatEmail } from "../../utils/formatEmail";
 import {
     Card, Table, Badge, Button, Group, Text, Title,
-    TextInput, ActionIcon, Menu, Modal, Box, Alert, Loader
+    TextInput, ActionIcon, Menu, Modal, Box, Alert
 } from '@mantine/core';
-import { IconSearch, IconDotsVertical, IconCheck, IconX, IconAlertCircle, IconFileDescription } from '@tabler/icons-react';
+import { TableSkeleton, EmptyState } from "../../Components/Warehouse/TableSkeleton";
+import { IconSearch, IconCheck, IconFileDescription } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 
 const SellerAllocations = () => {
@@ -126,14 +127,9 @@ const SellerAllocations = () => {
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center p-8">
-                        <Loader size="lg" />
-                    </div>
+                    <TableSkeleton rows={5} cols={5} />
                 ) : filteredSellers.length === 0 ? (
-                    <div className="text-center p-8">
-                        <IconAlertCircle size="3rem" className="mx-auto text-gray-400 mb-2" />
-                        <Text c="dimmed">No pending unallocated sellers found.</Text>
-                    </div>
+                    <EmptyState icon="🏪" title="No unallocated sellers" description="All sellers have been verified and assigned to a warehouse." />
                 ) : (
                     <div className="overflow-x-auto">
                         <Table striped highlightOnHover>

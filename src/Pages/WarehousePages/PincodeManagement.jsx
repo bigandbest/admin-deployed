@@ -28,6 +28,9 @@ import {
   Navigation,
   AlertCircle,
 } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import { TableSkeleton, EmptyState, Spinner } from "../../Components/Warehouse/TableSkeleton";
+import ConfirmModal from "../../Components/Warehouse/ConfirmModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
@@ -61,6 +64,8 @@ const PincodeManagement = () => {
 
   const [availablePincodes, setAvailablePincodes] = useState([]);
   const [activeTab, setActiveTab] = useState("pincodes");
+  const [savingPincode, setSavingPincode] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, pincode: null });
 
   // Fetch warehouses
   useEffect(() => {
@@ -76,7 +81,7 @@ const PincodeManagement = () => {
 
   const fetchWarehouses = async () => {
     try {
-      setLoading(true);
+      // Don't use the shared `loading` state here — that's for pincodes table
       const response = await axios.get(`${API_BASE_URL}/warehouses`);
       setWarehouses(response.data.data || []);
       if (response.data.data?.length > 0) {
@@ -84,8 +89,6 @@ const PincodeManagement = () => {
       }
     } catch (error) {
       console.error("Error fetching warehouses:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -121,63 +124,55 @@ const PincodeManagement = () => {
 
   const handleAddOrUpdatePincode = async (e) => {
     e.preventDefault();
-
+    setSavingPincode(true);
+    const toastId = toast.loading(editingPincode ? "Updating pincode..." : "Adding pincode...");
     try {
       const token = localStorage.getItem("admin_token");
-
       if (editingPincode) {
-        // Update logic
         await axios.put(
           `${API_BASE_URL}/warehouses/${selectedWarehouse}/pincodes/${pincodeForm.pincode}`,
           pincodeForm,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        // Add logic
         await axios.post(
           `${API_BASE_URL}/warehouses/${selectedWarehouse}/pincodes`,
           { pincodes: [pincodeForm] },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       }
-
+      toast.update(toastId, { render: editingPincode ? "Pincode updated" : "Pincode added", type: "success", isLoading: false, autoClose: 3000 });
       setShowPincodeModal(false);
       setEditingPincode(null);
-      setpincodeForm({
-        pincode: "",
-        city: "",
-        state: "",
-        delivery_days: "3",
-      });
+      setpincodeForm({ pincode: "", city: "", state: "", delivery_days: "3" });
       fetchPincodes();
     } catch (error) {
       console.error("Error saving pincode:", error);
-      alert("Failed to save pincode");
+      toast.update(toastId, { render: "Failed to save pincode", type: "error", isLoading: false, autoClose: 3000 });
+    } finally {
+      setSavingPincode(false);
     }
   };
 
+  const handleDeletePincode = (pincode) => {
+    setConfirmDelete({ open: true, pincode });
+  };
 
-  const handleDeletePincode = async (pincode) => {
-    if (!window.confirm(`Are you sure you want to delete pincode ${pincode}?`))
-      return;
-
+  const confirmDeletePincode = async () => {
+    const pincode = confirmDelete.pincode;
+    setConfirmDelete({ open: false, pincode: null });
+    const toastId = toast.loading("Deleting pincode...");
     try {
       const token = localStorage.getItem("admin_token");
       await axios.delete(
         `${API_BASE_URL}/warehouses/${selectedWarehouse}/pincodes/${pincode}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      toast.update(toastId, { render: "Pincode deleted", type: "success", isLoading: false, autoClose: 3000 });
       fetchPincodes();
     } catch (error) {
       console.error("Error deleting pincode:", error);
-      alert("Failed to delete pincode");
+      toast.update(toastId, { render: "Failed to delete pincode", type: "error", isLoading: false, autoClose: 3000 });
     }
   };
 
@@ -314,11 +309,9 @@ const PincodeManagement = () => {
 
                 <Card.Section inheritPadding>
                   {loading ? (
-                    <Text>Loading pincodes...</Text>
+                    <TableSkeleton rows={5} cols={6} />
                   ) : filteredPincodes.length === 0 ? (
-                    <Text color="dimmed">
-                      No pincodes assigned to this warehouse
-                    </Text>
+                    <EmptyState icon="📍" title="No pincodes assigned" description="Add pincodes to define the delivery area for this warehouse." />
                   ) : (
                     <Table striped highlightOnHover>
                       <thead>
@@ -466,6 +459,16 @@ const PincodeManagement = () => {
         </>
       )}
 
+      <ConfirmModal
+        isOpen={confirmDelete.open}
+        onClose={() => setConfirmDelete({ open: false, pincode: null })}
+        onConfirm={confirmDeletePincode}
+        title="Delete Pincode"
+        message={`Are you sure you want to remove pincode ${confirmDelete.pincode} from this warehouse?`}
+        type="delete"
+      />
+      <ToastContainer position="top-right" autoClose={3000} />
+
       {/* Add/Edit Pincode Modal */}
       <Modal
         opened={showPincodeModal}
@@ -531,7 +534,7 @@ const PincodeManagement = () => {
               max={30}
             />
 
-            <Button type="submit" fullWidth>
+            <Button type="submit" fullWidth loading={savingPincode} disabled={savingPincode}>
               {editingPincode ? "Update Pincode" : "Add Pincode"}
             </Button>
           </Stack>

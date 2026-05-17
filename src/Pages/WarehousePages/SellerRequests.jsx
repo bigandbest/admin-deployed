@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatCurrency } from "../../utils/adminWalletApi"; // Reusing format function
+import { toast, ToastContainer } from 'react-toastify';
+import { TableSkeleton, EmptyState, Spinner } from '../../Components/Warehouse/TableSkeleton';
+import ConfirmModal from '../../Components/Warehouse/ConfirmModal';
 
 const SellerRequests = () => {
     const [requests, setRequests] = useState([]);
@@ -9,6 +12,11 @@ const SellerRequests = () => {
 
     const [processingId, setProcessingId] = useState(null);
     const [sellingPrices, setSellingPrices] = useState({});
+    const [confirmModal, setConfirmModal] = useState({ show: false, type: 'delete', title: '', message: '', onConfirm: null });
+    const showConfirm = ({ type = 'delete', title, message, onConfirm }) =>
+        setConfirmModal({ show: true, type, title, message, onConfirm });
+    const hideConfirm = () =>
+        setConfirmModal({ show: false, type: 'delete', title: '', message: '', onConfirm: null });
 
     const getAdminAccessToken = () => {
         const candidates = [
@@ -82,47 +90,49 @@ const SellerRequests = () => {
         setSellingPrices(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleAction = async (id, action) => {
-        try {
-            if (!confirm(`Are you sure you want to ${action} this request?`)) return;
-
-            setProcessingId(id);
-            const token = getAdminAccessToken();
-            if (!token) {
-                alert("Admin session expired. Please login again.");
-                setProcessingId(null);
-                return;
-            }
-
+    const handleAction = (id, action) => {
+        if (action === 'approve') {
             const adminSellingPrice = sellingPrices[id];
-
-            if (action === 'approve' && (adminSellingPrice === undefined || adminSellingPrice === null || adminSellingPrice === '')) {
-                alert('Please enter an Admin Selling Price before approving.');
-                setProcessingId(null);
+            if (adminSellingPrice === undefined || adminSellingPrice === null || adminSellingPrice === '') {
+                toast.error('Please enter an Admin Selling Price before approving.');
                 return;
             }
-
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/sellers/products/requests/${id}/${action}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(action === 'approve' ? { adminSellingPrice } : {})
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                alert(`Request ${action}d successfully`);
-                fetchRequests();
-            } else {
-                alert(data.error || "Action failed");
-            }
-        } catch (err) {
-            alert(`Error: ${err.message}`);
-        } finally {
-            setProcessingId(null);
         }
+        const label = action === 'approve' ? 'Approve' : 'Reject';
+        showConfirm({
+            type: action === 'approve' ? 'update' : 'delete',
+            title: `${label} Request`,
+            message: `Are you sure you want to ${action} this seller product request?`,
+            onConfirm: async () => {
+                setProcessingId(id);
+                const token = getAdminAccessToken();
+                if (!token) {
+                    toast.error("Admin session expired. Please login again.");
+                    setProcessingId(null);
+                    return;
+                }
+                const adminSellingPrice = sellingPrices[id];
+                const toastId = toast.loading(`${label}ing request...`);
+                try {
+                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/sellers/products/requests/${id}/${action}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(action === 'approve' ? { adminSellingPrice } : {})
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        toast.update(toastId, { render: `Request ${action}d successfully`, type: 'success', isLoading: false, autoClose: 3000 });
+                        fetchRequests();
+                    } else {
+                        toast.update(toastId, { render: data.error || 'Action failed', type: 'error', isLoading: false, autoClose: 3000 });
+                    }
+                } catch (err) {
+                    toast.update(toastId, { render: err.message, type: 'error', isLoading: false, autoClose: 3000 });
+                } finally {
+                    setProcessingId(null);
+                }
+            }
+        });
     };
 
     return (
@@ -163,6 +173,11 @@ const SellerRequests = () => {
                 </div>
             )}
 
+            {loading && requests.length === 0 ? (
+                <TableSkeleton rows={5} cols={5} />
+            ) : requests.length === 0 ? (
+                <EmptyState icon="📦" title="No requests found" description="There are no seller product requests matching the current filter." />
+            ) : (
             <div className="bg-white rounded-lg shadow overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -175,12 +190,7 @@ const SellerRequests = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {loading && requests.length === 0 ? (
-                            <tr><td colSpan="5" className="px-6 py-4 text-center">Loading...</td></tr>
-                        ) : requests.length === 0 ? (
-                            <tr><td colSpan="5" className="px-6 py-4 text-center">No requests found.</td></tr>
-                        ) : (
-                            requests.map((req) => (
+                        {requests.map((req) => (
                                 <tr key={req.id}>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-gray-900">{req.product?.name}</div>
@@ -239,14 +249,15 @@ const SellerRequests = () => {
                                                 <button
                                                     disabled={processingId === req.id}
                                                     onClick={() => handleAction(req.id, 'approve')}
-                                                    className="bg-green-600 text-white text-xs px-3 py-1.5 rounded hover:bg-green-700 disabled:opacity-50"
+                                                    className="flex items-center justify-center gap-1.5 bg-green-600 text-white text-xs px-3 py-1.5 rounded hover:bg-green-700 disabled:opacity-50"
                                                 >
-                                                    {processingId === req.id ? '...' : 'Approve & Transfer Stock'}
+                                                    {processingId === req.id ? <Spinner size="sm" /> : null}
+                                                    {processingId === req.id ? 'Processing...' : 'Approve & Transfer Stock'}
                                                 </button>
                                                 <button
                                                     disabled={processingId === req.id}
                                                     onClick={() => handleAction(req.id, 'reject')}
-                                                    className="border border-red-600 text-red-600 text-xs px-3 py-1.5 rounded hover:bg-red-50 disabled:opacity-50"
+                                                    className="flex items-center justify-center gap-1.5 border border-red-600 text-red-600 text-xs px-3 py-1.5 rounded hover:bg-red-50 disabled:opacity-50"
                                                 >
                                                     Reject
                                                 </button>
@@ -259,11 +270,20 @@ const SellerRequests = () => {
                                         )}
                                     </td>
                                 </tr>
-                            ))
-                        )}
+                            ))}
                     </tbody>
                 </table>
             </div>
+            )}
+            <ConfirmModal
+                isOpen={confirmModal.show}
+                onClose={hideConfirm}
+                onConfirm={() => { hideConfirm(); confirmModal.onConfirm?.(); }}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+            />
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 };

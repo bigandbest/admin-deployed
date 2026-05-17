@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import PropTypes from "prop-types";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ConfirmModal from "../../Components/Warehouse/ConfirmModal";
+import { DeleteButton, EditButton } from "../../Components/Warehouse/ActionButtons";
 import {
   Card,
   Button,
@@ -86,6 +89,8 @@ const InventoryManagement = () => {
     quantity: "",
     reason: "",
   });
+
+  const [submittingStock, setSubmittingStock] = useState(false);
 
   // Confirmation modal
   const [confirmModal, setConfirmModal] = useState({ show: false, type: "delete", title: "", message: "", onConfirm: null });
@@ -198,16 +203,17 @@ const InventoryManagement = () => {
     setMovementsPage(1);
 
     const fetchAllData = async () => {
-      try {
-        await Promise.all([
-          fetchInventory(1, searchQuery, sourceTypeFilter),
-          fetchAnalytics(),
-          fetchLowStockItems(1),
-          fetchMovements(1),
-        ]);
-      } catch (error) {
-        console.error("Error fetching warehouse data:", error);
-      }
+      setLoading(true);
+      const results = await Promise.allSettled([
+        fetchInventory(1, searchQuery, sourceTypeFilter),
+        fetchAnalytics(),
+        fetchLowStockItems(1),
+        fetchMovements(1),
+      ]);
+      setLoading(false);
+      results.forEach((r, i) => {
+        if (r.status === "rejected") console.error(`Fetch #${i} failed:`, r.reason);
+      });
     };
 
     fetchAllData();
@@ -216,7 +222,6 @@ const InventoryManagement = () => {
 
   const fetchWarehouses = async () => {
     try {
-      setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/warehouses`);
       setWarehouses(response.data.data || []);
       if (response.data.data?.length > 0) {
@@ -224,14 +229,13 @@ const InventoryManagement = () => {
       }
     } catch (error) {
       console.error("Error fetching warehouses:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const fetchInventory = async (page = inventoryPage, search = searchQuery, srcType = sourceTypeFilter) => {
+  // setLoading controls the full-page skeleton; individual refreshes use their own state
+  const fetchInventory = async (page = inventoryPage, search = searchQuery, srcType = sourceTypeFilter, showPageLoader = false) => {
     try {
-      setLoading(true);
+      if (showPageLoader) setLoading(true);
       const params = { page, limit: INVENTORY_PAGE_SIZE };
       if (search) params.search = search;
       if (srcType) params.source_type = srcType;
@@ -244,7 +248,7 @@ const InventoryManagement = () => {
     } catch (error) {
       console.error("Error fetching inventory:", error);
     } finally {
-      setLoading(false);
+      if (showPageLoader) setLoading(false);
     }
   };
 
@@ -285,44 +289,57 @@ const InventoryManagement = () => {
     }
   };
 
-  const handleUpdateStock = async (e) => {
+  const handleUpdateStock = (e) => {
     e.preventDefault();
 
-    try {
-      const token = localStorage.getItem("admin_token");
-
-      await axios.post(
-        `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/update-stock`,
-        stockForm,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      // Run both fetches in parallel
-      await Promise.all([
-        fetchInventory(),
-        fetchAnalytics(),
-      ]);
-
-      setShowStockModal(false);
-      setStockForm({
-        product_id: "",
-        variant_id: "",
-        stock_quantity: "",
-        minimum_threshold: "",
-        cost_per_unit: "",
-      });
-    } catch (error) {
-      console.error("Error updating stock:", error);
-      alert("Failed to update stock");
+    if (!stockForm.variant_id) {
+      toast.error("Please select a product variant before updating stock.");
+      return;
     }
+
+    showConfirm({
+      type: "update",
+      title: editingStock ? "Update Stock" : "Add Stock",
+      message: `Are you sure you want to ${editingStock ? "update" : "add"} stock for this product? This will change current inventory levels.`,
+      onConfirm: async () => {
+        setSubmittingStock(true);
+        const toastId = toast.loading(editingStock ? "Updating stock..." : "Adding stock...");
+        try {
+          const token = localStorage.getItem("admin_token");
+          await axios.post(
+            `${API_BASE_URL}/inventory/warehouse/${selectedWarehouse}/update-stock`,
+            {
+              warehouse_id: parseInt(selectedWarehouse),
+              variant_id: stockForm.variant_id,
+              stock_quantity: parseInt(stockForm.stock_quantity),
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          await Promise.allSettled([fetchInventory(), fetchAnalytics()]);
+          setShowStockModal(false);
+          setEditingStock(null);
+          setStockForm({ product_id: "", variant_id: "", stock_quantity: "", minimum_threshold: "", cost_per_unit: "" });
+          toast.update(toastId, { render: editingStock ? "Stock updated!" : "Stock added!", type: "success", isLoading: false, autoClose: 3000 });
+        } catch (error) {
+          console.error("Error updating stock:", error);
+          toast.update(toastId, { render: error.response?.data?.message || "Failed to update stock", type: "error", isLoading: false, autoClose: 4000 });
+        } finally {
+          setSubmittingStock(false);
+        }
+      },
+    });
   };
 
 
   const handleStockTransfer = async (e) => {
     e.preventDefault();
 
+    if (transferForm.from_warehouse_id === transferForm.to_warehouse_id) {
+      toast.error("Source and destination warehouse must be different.");
+      return;
+    }
+
+    const toastId = toast.loading("Transferring stock...");
     try {
       const token = localStorage.getItem("admin_token");
       await axios.post(
@@ -330,37 +347,21 @@ const InventoryManagement = () => {
         {
           product_id: transferForm.product_id,
           variant_id: transferForm.variant_id || null,
-          from_warehouse_id: transferForm.from_warehouse_id,
-          to_warehouse_id: transferForm.to_warehouse_id,
+          from_warehouse_id: parseInt(transferForm.from_warehouse_id),
+          to_warehouse_id: parseInt(transferForm.to_warehouse_id),
           quantity: parseInt(transferForm.quantity),
           reason: transferForm.reason,
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      toast.update(toastId, { render: "Stock transferred successfully!", type: "success", isLoading: false, autoClose: 3000 });
       setShowTransferModal(false);
-      setTransferForm({
-        product_id: "",
-        variant_id: "",
-        from_warehouse_id: "",
-        to_warehouse_id: "",
-        quantity: "",
-        reason: "",
-      });
-
-      alert("Stock transferred successfully");
-
-      // Refresh data
-      await Promise.all([
-        fetchInventory(),
-        fetchAnalytics(),
-        fetchMovements()
-      ]);
+      setTransferForm({ product_id: "", variant_id: "", from_warehouse_id: "", to_warehouse_id: "", quantity: "", reason: "" });
+      await Promise.allSettled([fetchInventory(), fetchAnalytics(), fetchMovements()]);
     } catch (error) {
       console.error("Error transferring stock:", error);
-      alert(error.response?.data?.message || "Failed to transfer stock");
+      toast.update(toastId, { render: error.response?.data?.message || "Failed to transfer stock", type: "error", isLoading: false, autoClose: 4000 });
     }
   };
 
@@ -468,13 +469,18 @@ const InventoryManagement = () => {
       title: "Delete Stock Record",
       message: `Are you sure you want to delete the stock record for "${productName || "this item"}"? This action cannot be undone.`,
       onConfirm: async () => {
+        const toastId = toast.loading("Deleting stock record...");
         try {
           const token = localStorage.getItem("admin_token");
-          // Implement delete endpoint as needed
-          console.log("Delete stock:", stockId, token);
-          fetchInventory();
+          await axios.delete(
+            `${API_BASE_URL}/inventory/stock/${stockId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          await fetchInventory();
+          toast.update(toastId, { render: "Stock record deleted successfully!", type: "success", isLoading: false, autoClose: 3000 });
         } catch (error) {
           console.error("Error deleting stock:", error);
+          toast.update(toastId, { render: error.response?.data?.message || "Failed to delete stock record", type: "error", isLoading: false, autoClose: 4000 });
         }
       },
     });
@@ -487,6 +493,7 @@ const InventoryManagement = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold text-gray-800">
@@ -519,9 +526,8 @@ const InventoryManagement = () => {
               color="orange"
               leftSection={<TrendingUp size={16} />}
               onClick={() => setShowTransferModal(true)}
-              disabled
             >
-              Transfer Stock (Coming Soon)
+              Transfer Stock
             </Button>
           </Group>
         </div>
@@ -1124,6 +1130,7 @@ const InventoryManagement = () => {
 
       <Modal
         opened={showMultiWarehouseModal}
+        zIndex={300}
         overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
         onClose={() => {
           setShowMultiWarehouseModal(false);
@@ -1205,8 +1212,9 @@ const InventoryManagement = () => {
       <Modal
         opened={showTransferModal}
         onClose={() => setShowTransferModal(false)}
-        title="Transfer Stock"
+        title="Transfer Stock Between Warehouses"
         size="lg"
+        zIndex={300}
         overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         <form onSubmit={handleStockTransfer}>
@@ -1287,13 +1295,14 @@ const InventoryManagement = () => {
           setEditingStock(null);
         }}
         title={editingStock ? "Edit Stock" : "Add Stock"}
+        zIndex={300}
         overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         <form onSubmit={handleUpdateStock}>
           <Stack>
             <Select
               label="Select Product"
-              placeholder="Search or Select Product"
+              placeholder={loadingProducts ? "Loading products..." : "Search or Select Product"}
               data={productOptions}
               value={stockForm.product_id}
               onChange={(val) =>
@@ -1306,6 +1315,7 @@ const InventoryManagement = () => {
               onSearchChange={setProductSearch}
               searchValue={productSearch}
               nothingFound={loadingProducts ? "Loading..." : "No products found"}
+              rightSection={loadingProducts ? <Loader size="xs" /> : undefined}
               required
             />
 
@@ -1359,7 +1369,7 @@ const InventoryManagement = () => {
               precision={2}
             />
 
-            <Button type="submit" fullWidth>
+            <Button type="submit" fullWidth loading={submittingStock}>
               {editingStock ? "Update Stock" : "Add Stock"}
             </Button>
           </Stack>
@@ -1375,6 +1385,7 @@ const InventoryManagement = () => {
           setUploadProgress(0);
         }}
         title="Bulk Upload Inventory"
+        zIndex={300}
         overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         <Stack>
@@ -1412,6 +1423,7 @@ const InventoryManagement = () => {
         onClose={() => setViewProduct(null)}
         title="Product Variant Stock"
         size="lg"
+        zIndex={300}
         overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}
       >
         {viewProduct && (
@@ -1464,7 +1476,7 @@ const VariantStockViewer = ({ productId, warehouseId }) => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/products/${productId}`);
+        const response = await axios.get(`${API_BASE_URL}/admin/products/${productId}`);
         setProductInfo(response.data.product || response.data);
       } catch (error) {
         console.error("Failed to fetch product:", error);
@@ -1538,12 +1550,16 @@ const VariantSelector = ({ productId, value, onChange, warehouseId }) => {
     const fetchVariants = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/products/${productId}`);
+        const response = await axios.get(`${API_BASE_URL}/admin/products/${productId}`);
         const product = response.data.product || response.data;
-        if (product.has_variants && product.variants?.length > 0) {
-          setVariants(product.variants);
-        } else {
-          setVariants([]);
+        const variantList = product.variants || [];
+        setVariants(variantList);
+        // Auto-select if there's only one variant (or a default one) so the form always has variant_id
+        if (variantList.length === 1) {
+          onChange(variantList[0].id);
+        } else if (variantList.length > 1) {
+          const defaultV = variantList.find(v => v.is_default) || variantList[0];
+          if (defaultV && !value) onChange(defaultV.id);
         }
       } catch (error) {
         console.error("Failed to fetch variants:", error);
@@ -1556,12 +1572,23 @@ const VariantSelector = ({ productId, value, onChange, warehouseId }) => {
   }, [productId]);
 
   if (loading) return <div className="text-sm text-gray-500">Loading variants...</div>;
+  // Single variant — auto-selected, show as read-only badge
+  if (variants.length === 1) {
+    const v = variants[0];
+    return (
+      <div className="mb-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        Variant: <strong>{v.title || v.sku || "Default"}</strong>
+        {v.price ? ` — ₹${v.price}` : ""}
+        <span className="ml-2 text-green-600 text-xs">(auto-selected)</span>
+      </div>
+    );
+  }
   if (variants.length === 0) return null;
 
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-1">
-        Variant
+        Variant <span className="text-red-500">*</span>
       </label>
       <select
         value={value || ""}

@@ -9,6 +9,9 @@ import {
   getAvailableProductsForWarehouse,
   addProductToWarehouse,
 } from "../../utils/supabaseApi";
+import { toast, ToastContainer } from "react-toastify";
+import { TableSkeleton, Spinner } from "../../Components/Warehouse/TableSkeleton";
+import ConfirmModal from "../../Components/Warehouse/ConfirmModal";
 
 // ProductVariantRow Component for individual variant stock management
 const ProductVariantRow = ({
@@ -277,7 +280,9 @@ const WarehouseProducts = () => {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
   const [loading, setLoading] = useState(true);
+  const [addingProduct, setAddingProduct] = useState(false);
   const [error, setError] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState({ open: false, productId: null });
 
   // Fetch warehouse info
   const fetchWarehouse = useCallback(async () => {
@@ -329,27 +334,27 @@ const WarehouseProducts = () => {
 
   const handleAddProduct = async () => {
     if (!selectedProductId || !stockQuantity || parseInt(stockQuantity) <= 0) {
-      setError("Please select a product and enter valid stock quantity");
+      toast.error("Please select a product and enter valid stock quantity");
       return;
     }
-
+    setAddingProduct(true);
+    const toastId = toast.loading("Adding product to warehouse...");
     try {
-      const result = await addProductToWarehouse(
-        id,
-        selectedProductId,
-        parseInt(stockQuantity)
-      );
+      const result = await addProductToWarehouse(id, selectedProductId, parseInt(stockQuantity));
       if (result.success) {
+        toast.update(toastId, { render: "Product added to warehouse", type: "success", isLoading: false, autoClose: 3000 });
         setSelectedProductId("");
         setStockQuantity("");
         setError("");
         await fetchWarehouseProducts();
       } else {
-        setError("Failed to add product to warehouse: " + result.error);
+        toast.update(toastId, { render: result.error || "Failed to add product", type: "error", isLoading: false, autoClose: 3000 });
       }
     } catch (err) {
-      setError("Failed to add product to warehouse");
+      toast.update(toastId, { render: "Failed to add product to warehouse", type: "error", isLoading: false, autoClose: 3000 });
       console.error(err);
+    } finally {
+      setAddingProduct(false);
     }
   };
 
@@ -389,22 +394,23 @@ const WarehouseProducts = () => {
     }
   };
 
-  const handleRemoveProduct = async (productId) => {
-    const confirmRemove = window.confirm(
-      "Are you sure you want to remove this product from the warehouse?"
-    );
-    if (!confirmRemove) return;
+  const handleRemoveProduct = (productId) => {
+    setConfirmRemove({ open: true, productId });
+  };
 
+  const doRemoveProduct = async (productId) => {
+    const toastId = toast.loading("Removing product...");
     try {
       const result = await removeProductFromWarehouse(id, productId);
       if (result.success) {
+        toast.update(toastId, { render: "Product removed from warehouse", type: "success", isLoading: false, autoClose: 3000 });
         setError("");
         await fetchWarehouseProducts();
       } else {
-        setError("Failed to remove product: " + result.error);
+        toast.update(toastId, { render: result.error || "Failed to remove product", type: "error", isLoading: false, autoClose: 3000 });
       }
     } catch (err) {
-      setError("Failed to remove product");
+      toast.update(toastId, { render: "Failed to remove product", type: "error", isLoading: false, autoClose: 3000 });
       console.error(err);
     }
   };
@@ -431,12 +437,10 @@ const WarehouseProducts = () => {
 
   if (loading)
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        </div>
+      <div className="p-6 max-w-7xl mx-auto space-y-4">
+        <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse" />
+        <div className="h-24 bg-gray-200 rounded-lg animate-pulse" />
+        <TableSkeleton rows={6} cols={6} />
       </div>
     );
 
@@ -601,10 +605,11 @@ const WarehouseProducts = () => {
           <div className="flex items-end">
             <button
               onClick={handleAddProduct}
-              disabled={!selectedProductId || !stockQuantity}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              disabled={!selectedProductId || !stockQuantity || addingProduct}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
-              Add Product
+              {addingProduct && <Spinner size="sm" color="white" />}
+              {addingProduct ? "Adding..." : "Add Product"}
             </button>
           </div>
         </div>
@@ -672,6 +677,15 @@ const WarehouseProducts = () => {
           </div>
         )}
       </div>
+      <ConfirmModal
+        isOpen={confirmRemove.open}
+        onClose={() => setConfirmRemove({ open: false, productId: null })}
+        onConfirm={() => { const pid = confirmRemove.productId; setConfirmRemove({ open: false, productId: null }); doRemoveProduct(pid); }}
+        title="Remove Product"
+        message="Are you sure you want to remove this product from the warehouse? Stock records will be deleted."
+        type="delete"
+      />
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };

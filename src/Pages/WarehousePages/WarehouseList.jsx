@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   getAllWarehouses,
   createWarehouse,
@@ -9,6 +11,8 @@ import {
   getZonalWarehouseAvailablePincodes,
   getZonalWarehouseAvailablePincodesDirect,
 } from "../../utils/supabaseApi";
+import { DeleteButton, EditButton } from "../../Components/Warehouse/ActionButtons";
+import { TableSkeleton, EmptyState } from "../../Components/Warehouse/TableSkeleton";
 
 const WarehouseList = () => {
   const navigate = useNavigate();
@@ -35,20 +39,17 @@ const WarehouseList = () => {
   const [loadingPincodes, setLoadingPincodes] = useState(false);
 
   const handleDeleteWarehouse = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this warehouse?"
-    );
-    if (!confirmDelete) return;
-
+    const toastId = toast.loading("Deleting warehouse...");
     try {
       const result = await deleteWarehouse(id);
       if (result.success) {
         await fetchWarehouses();
+        toast.update(toastId, { render: "Warehouse deleted successfully!", type: "success", isLoading: false, autoClose: 3000 });
       } else {
-        alert("Failed to delete warehouse: " + result.error);
+        toast.update(toastId, { render: "Failed to delete: " + result.error, type: "error", isLoading: false, autoClose: 4000 });
       }
     } catch (err) {
-      alert("Failed to delete warehouse");
+      toast.update(toastId, { render: "Failed to delete warehouse", type: "error", isLoading: false, autoClose: 4000 });
       console.error(err);
     }
   };
@@ -129,19 +130,21 @@ const WarehouseList = () => {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Warehouses</h1>
-
-      <button
-        onClick={() => setShowModal(true)}
-        className="bg-blue-600 text-white px-4 py-2 rounded mb-6"
-      >
-        ➕ Add Warehouse
-      </button>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Warehouses</h1>
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+        >
+          <span>➕</span> Add Warehouse
+        </button>
+      </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading warehouses...</p>
+        <TableSkeleton rows={5} cols={7} />
       ) : warehouses.length === 0 ? (
-        <p className="text-gray-500">No warehouses found.</p>
+        <EmptyState icon="🏢" title="No warehouses found" description="Add your first warehouse to get started." />
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white rounded shadow text-sm md:text-base">
@@ -261,10 +264,10 @@ const WarehouseList = () => {
                       w.address || "-"
                     )}
                   </td>
-                  <td className="py-2 px-4 space-x-2">
-                    <button
-                      className="bg-yellow-500 text-white px-3 py-1 rounded"
-                      onClick={() => {
+                  <td className="py-2 px-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                    <EditButton
+                      onConfirm={() => {
                         setEditingWarehouse(w);
                         setForm({
                           name: w.name || "",
@@ -285,25 +288,20 @@ const WarehouseList = () => {
                         });
                         setShowModal(true);
                       }}
-                    >
-                      ✏️
-                    </button>
-
+                      label="Edit"
+                    />
+                    <DeleteButton
+                      onConfirm={() => handleDeleteWarehouse(w.id)}
+                      title="Delete Warehouse"
+                      message={`Are you sure you want to delete "${w.name}"? This cannot be undone.`}
+                    />
                     <button
-                      className="bg-red-600 text-white px-3 py-1 rounded"
-                      onClick={() => handleDeleteWarehouse(w.id)}
-                    >
-                      🗑️
-                    </button>
-
-                    <button
-                      className="bg-green-600 text-white px-3 py-1 rounded"
-                      onClick={() =>
-                        navigate(`/warehouseproducts/${w.id}/products`)
-                      }
+                      className="px-3 py-1.5 text-sm font-medium text-green-700 border border-green-300 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                      onClick={() => navigate(`/warehouseproducts/${w.id}/products`)}
                     >
                       📦 Products
                     </button>
+                    </div>
                   </td>
                 </tr>
               ))}
