@@ -424,13 +424,16 @@ const ProductSectionsManagement = () => {
     }
   };
 
-  // Update display order
+  // Update display order — only active sections get new sequential display_orders;
+  // inactive sections are excluded so their DB position is preserved for when they're reactivated.
   const updateSectionOrder = async (updatedSections) => {
     try {
-      const sectionsWithOrder = updatedSections.map((section, index) => ({
-        id: section.id,
-        display_order: index + 1,
-      }));
+      const sectionsWithOrder = updatedSections
+        .filter((s) => s.is_active)
+        .map((section, index) => ({
+          id: section.id,
+          display_order: index + 1,
+        }));
 
       const result = await updateProductSectionOrder(sectionsWithOrder);
 
@@ -455,25 +458,26 @@ const ProductSectionsManagement = () => {
     }
   };
 
-  // Move section up/down
+  // Move section up — skips over inactive sections to avoid displacing them
   const moveSectionUp = (index) => {
     if (!Array.isArray(sections) || index === 0) return;
+    let targetIndex = index - 1;
+    while (targetIndex >= 0 && !sections[targetIndex].is_active) targetIndex--;
+    if (targetIndex < 0) return;
     const newSections = [...sections];
-    [newSections[index - 1], newSections[index]] = [
-      newSections[index],
-      newSections[index - 1],
-    ];
+    [newSections[targetIndex], newSections[index]] = [newSections[index], newSections[targetIndex]];
     setSections(newSections);
     updateSectionOrder(newSections);
   };
 
+  // Move section down — skips over inactive sections to avoid displacing them
   const moveSectionDown = (index) => {
     if (!Array.isArray(sections) || index === sections.length - 1) return;
+    let targetIndex = index + 1;
+    while (targetIndex < sections.length && !sections[targetIndex].is_active) targetIndex++;
+    if (targetIndex >= sections.length) return;
     const newSections = [...sections];
-    [newSections[index], newSections[index + 1]] = [
-      newSections[index + 1],
-      newSections[index],
-    ];
+    [newSections[index], newSections[targetIndex]] = [newSections[targetIndex], newSections[index]];
     setSections(newSections);
     updateSectionOrder(newSections);
   };
