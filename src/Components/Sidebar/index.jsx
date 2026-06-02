@@ -118,6 +118,11 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
           path: "/product-approvals",
         },
         {
+          title: "Bulk Price Update",
+          icon: <FaRupeeSign />,
+          path: "/bulk-price-update",
+        },
+        {
           title: "Categories",
           icon: <MdCategory />,
           path: "/categories",
