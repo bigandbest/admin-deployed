@@ -39,6 +39,7 @@ import ProductsPage from "./Pages/Products";
 import AddProduct from "./Pages/Products/AddProduct";
 import ProductApprovals from "./Pages/Products/ProductApprovals";
 import ProductApprovalDetailView from "./Pages/Products/ProductApprovalDetails.jsx";
+import BulkPriceUpdate from "./Pages/Products/BulkPriceUpdate";
 import CategoriesPage from "./Pages/Categories";
 import CategoryMapping from "./Pages/CategoryMapping";
 import AddCategory from "./Pages/Categories/AddCategory";
@@ -472,6 +473,10 @@ function App() {
         {
           path: "/product-approvals/:id",
           element: <ProductApprovalDetailView />,
+        },
+        {
+          path: "/bulk-price-update",
+          element: <BulkPriceUpdate />,
         },
         {
           path: "/brands",
