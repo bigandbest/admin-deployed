@@ -17,6 +17,8 @@ import {
   Pagination,
   TextInput,
   Switch,
+  Modal,
+  Stack,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
@@ -150,14 +152,18 @@ const DeliveryZones = () => {
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
-  // Handle delete zone
-  const handleDeleteZone = async (zoneId, zoneName) => {
-    if (
-      !window.confirm(`Are you sure you want to delete zone "${zoneName}"?`)
-    ) {
-      return;
-    }
+  // Confirmation modal states
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, zoneId: null, zoneName: null });
+  const [editConfirm, setEditConfirm] = useState({ open: false, zone: null });
 
+  // Handle delete zone
+  const handleDeleteZone = (zoneId, zoneName) => {
+    setDeleteConfirm({ open: true, zoneId, zoneName });
+  };
+
+  const confirmDeleteZone = async () => {
+    const { zoneId, zoneName } = deleteConfirm;
+    setDeleteConfirm({ open: false, zoneId: null, zoneName: null });
     try {
       const response = await deleteZone(zoneId);
       if (response.success) {
@@ -249,8 +255,14 @@ const DeliveryZones = () => {
     }
   };
 
-  // Handle edit zone
-  const handleEditZone = async (zone) => {
+  // Handle edit zone — show confirmation first
+  const handleEditZone = (zone) => {
+    setEditConfirm({ open: true, zone });
+  };
+
+  const confirmEditZone = async () => {
+    const zone = editConfirm.zone;
+    setEditConfirm({ open: false, zone: null });
     try {
       setEditingId(zone.id);
       const response = await fetchZoneById(zone.id);
@@ -555,6 +567,52 @@ const DeliveryZones = () => {
           onClose={closeDetailsModal}
           zone={selectedZone}
         />
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          opened={deleteConfirm.open}
+          onClose={() => setDeleteConfirm({ open: false, zoneId: null, zoneName: null })}
+          title={<Text weight={600} color="red">Delete Zone</Text>}
+          size="sm"
+          centered
+        >
+          <Stack>
+            <Text size="sm">
+              Are you sure you want to delete zone <strong>&quot;{deleteConfirm.zoneName}&quot;</strong>? This action cannot be undone and will remove all associated pincode mappings.
+            </Text>
+            <Group position="right" mt="sm">
+              <Button variant="default" onClick={() => setDeleteConfirm({ open: false, zoneId: null, zoneName: null })}>
+                Cancel
+              </Button>
+              <Button color="red" leftSection={<IconTrash size={14} />} onClick={confirmDeleteZone}>
+                Delete Zone
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+
+        {/* Edit Confirmation Modal */}
+        <Modal
+          opened={editConfirm.open}
+          onClose={() => setEditConfirm({ open: false, zone: null })}
+          title={<Text weight={600}>Edit Zone</Text>}
+          size="sm"
+          centered
+        >
+          <Stack>
+            <Text size="sm">
+              You are about to edit zone <strong>&quot;{editConfirm.zone?.display_name || editConfirm.zone?.name}&quot;</strong>. Changes will affect delivery availability for all associated pincodes.
+            </Text>
+            <Group position="right" mt="sm">
+              <Button variant="default" onClick={() => setEditConfirm({ open: false, zone: null })}>
+                Cancel
+              </Button>
+              <Button color="orange" leftSection={<IconEdit size={14} />} onClick={confirmEditZone}>
+                Yes, Edit Zone
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
       </motion.div>
     </Container>
   );

@@ -16,17 +16,22 @@ import {
   Paper,
   Collapse,
   Badge,
+  MultiSelect,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { IconCheck, IconX, IconInfoCircle, IconPlus, IconTrash, IconEdit } from "@tabler/icons-react";
-import { createZone, updateZone } from "../../utils/zoneApi";
+import { createZone, updateZone, getZoneWarehouses } from "../../utils/zoneApi";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [pincodes, setPincodes] = useState([]);
   const [showPincodeForm, setShowPincodeForm] = useState(false);
   const [editingPincodeIndex, setEditingPincodeIndex] = useState(null);
+  const [allWarehouses, setAllWarehouses] = useState([]);
+  const [selectedWarehouseIds, setSelectedWarehouseIds] = useState([]);
   const isEdit = Boolean(zone);
 
   const form = useForm({
@@ -87,6 +92,21 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
     },
   });
 
+  // Fetch all warehouses for the MultiSelect
+  useEffect(() => {
+    if (!opened) return;
+    fetch(`${API_BASE_URL}/warehouses`)
+      .then(r => r.json())
+      .then(data => {
+        const list = (data.data || []).map(w => ({
+          value: String(w.id),
+          label: `${w.name} (${w.type})`,
+        }));
+        setAllWarehouses(list);
+      })
+      .catch(() => {});
+  }, [opened]);
+
   // Update form when zone prop changes
   useEffect(() => {
     if (zone) {
@@ -116,9 +136,21 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
           is_active: p.is_active !== undefined ? p.is_active : true,
         })));
       }
+
+      // Load current warehouse assignments
+      if (zone.id) {
+        getZoneWarehouses(zone.id).then(res => {
+          if (res.success) {
+            setSelectedWarehouseIds((res.warehouses || []).map(w => String(w.id)));
+          }
+        });
+      } else if (zone.warehouse_zones) {
+        setSelectedWarehouseIds(zone.warehouse_zones.map(wz => String(wz.warehouse_id)));
+      }
     } else {
       form.reset();
       setPincodes([]);
+      setSelectedWarehouseIds([]);
     }
   }, [zone]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -200,6 +232,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
       const zoneData = {
         ...values,
         pincodes: values.is_nationwide ? [] : pincodes,
+        warehouse_ids: selectedWarehouseIds.map(Number),
       };
 
       let result;
@@ -219,6 +252,7 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
 
         form.reset();
         setPincodes([]);
+        setSelectedWarehouseIds([]);
         onSuccess();
         onClose();
       } else {
@@ -314,6 +348,19 @@ const ZoneForm = ({ opened, onClose, zone, onSuccess }) => {
               </Text>
             </Alert>
           )}
+
+          {/* Warehouse Assignment */}
+          <Divider label="Warehouse Assignment" labelPosition="center" />
+          <MultiSelect
+            label="Assigned Warehouses"
+            description="Select which warehouses serve this delivery zone"
+            placeholder="Select warehouses..."
+            data={allWarehouses}
+            value={selectedWarehouseIds}
+            onChange={setSelectedWarehouseIds}
+            searchable
+            clearable
+          />
 
           {/* Pincode Management */}
           {!form.values.is_nationwide && (

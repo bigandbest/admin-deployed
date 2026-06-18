@@ -79,6 +79,19 @@ export const fetchZoneById = async (zoneId) => {
 };
 
 /**
+ * Get warehouses assigned to a zone
+ */
+export const getZoneWarehouses = async (zoneId) => {
+  try {
+    const response = await api.get(`/zones/${zoneId}/warehouses`);
+    return response.data;
+  } catch (error) {
+    console.error("Get zone warehouses error:", error);
+    return { success: false, warehouses: [] };
+  }
+};
+
+/**
  * Create new zone
  */
 export const createZone = async (zoneData) => {
