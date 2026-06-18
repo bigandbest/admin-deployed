@@ -1,21 +1,16 @@
 import { useState, useEffect } from "react";
 import { ActionIcon, Group, Indicator } from "@mantine/core";
 import { IconBell } from "@tabler/icons-react";
-import { supabase } from "../utils/supabase";
+import { getAllNotifications } from "../utils/backendApi";
 
 const AdminNotificationBell = ({ onClick }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchUnreadCount = async () => {
     try {
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .or("notification_type.eq.admin,user_id.is.null")
-        .eq("is_read", false);
-
-      if (error) throw error;
-      setUnreadCount(count || 0);
+      const notifications = await getAllNotifications();
+      const unread = (notifications || []).filter((n) => !n.is_read);
+      setUnreadCount(unread.length);
     } catch (error) {
       console.error("Error fetching admin notification count:", error);
     }
@@ -24,25 +19,11 @@ const AdminNotificationBell = ({ onClick }) => {
   useEffect(() => {
     fetchUnreadCount();
 
-    // Set up real-time subscription for new admin notifications
-    const subscription = supabase
-      .channel("admin-notification-count")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: "notification_type=eq.admin",
-        },
-        () => {
-          fetchUnreadCount();
-        }
-      )
-      .subscribe();
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
 
     return () => {
-      subscription.unsubscribe();
+      clearInterval(interval);
     };
   }, []);
 

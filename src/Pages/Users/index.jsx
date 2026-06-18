@@ -43,7 +43,6 @@ import {
   deleteAdminUser,
   toggleAdminUserStatus,
 } from "../../utils/userManagementApi";
-import { supabase } from "../../utils/supabase";
 import { formatDateOnlyIST } from "../../utils/dateUtils";
 import UserAddressManager from "../../Components/UserAddressManager";
 
@@ -242,26 +241,7 @@ const UsersPage = () => {
 
   // Handle send password reset
   const handleSendPasswordReset = async (email) => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (!error) {
-        showNotification(`Password reset email sent to ${email}`);
-      } else {
-        showNotification(
-          `Failed to send password reset: ${error.message}`,
-          false
-        );
-      }
-    } catch (error) {
-      console.error("Error sending password reset:", error);
-      showNotification(`An error occurred: ${error.message}`, false);
-    } finally {
-      setLoading(false);
-    }
+    alert('Password reset is handled through backend');
   };
 
   // We no longer need client-side filtering and pagination

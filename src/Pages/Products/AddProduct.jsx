@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import AddProductForm from "../../Components/ProductForm/AddProductForm";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, Pencil, X } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -25,6 +25,7 @@ const AddProduct = () => {
   const [loading, setLoading] = useState(false);
   const [initialData, setInitialData] = useState(null);
   const [optionsLoading, setOptionsLoading] = useState(true);
+  const [editConfirmed, setEditConfirmed] = useState(!isEditMode); // skip confirmation for add mode
 
   // Options state
   const [categories, setCategories] = useState([]);
@@ -588,6 +589,47 @@ const AddProduct = () => {
     );
   }
 
+  // Show confirmation screen before allowing edits
+  if (isEditMode && !editConfirmed) {
+    const productName = initialData?.product?.name || "this product";
+    return (
+      <>
+        <ToastContainer position="top-right" autoClose={3000} />
+        <div className="flex h-screen items-center justify-center bg-gray-50">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md w-full mx-4">
+            <div className="flex flex-col items-center text-center gap-5">
+              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Edit Product?</h2>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  You are about to edit <span className="font-medium text-gray-700">"{productName}"</span>. Changes will affect the live product visible to customers. Make sure your edits are accurate before saving.
+                </p>
+              </div>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={() => navigate("/products")}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setEditConfirmed(true)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Yes, Edit Product
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   console.log("Rendering AddProductForm with:", {
     categoriesCount: categories.length,
     subcategoriesCount: subcategories.length,
@@ -612,8 +654,6 @@ const AddProduct = () => {
         onClose={() => navigate("/products")}
         isLoading={loading}
       />
-      {/* Debug: Check if initialData propagates */}
-      {/* {console.log("AddProduct Render - initialData passed:", initialData)} */}
     </>
   );
 };

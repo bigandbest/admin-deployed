@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../utils/supabase';
+import { getAllPromoBanners, addPromoBanner, updatePromoBanner, deletePromoBanner, togglePromoBannerStatus } from '../../utils/backendApi';
 
 const PromoBannerManager = () => {
   const [banners, setBanners] = useState([]);
@@ -27,12 +27,7 @@ const PromoBannerManager = () => {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('promo_banners')
-        .select('*')
-        .order('display_order');
-      
-      if (error) throw error;
+      const data = await getAllPromoBanners();
       setBanners(data || []);
     } catch (error) {
       console.error('Error fetching banners:', error);
@@ -48,20 +43,11 @@ const PromoBannerManager = () => {
     try {
       if (editingBanner) {
         // Update existing banner
-        const { error } = await supabase
-          .from('promo_banners')
-          .update(formData)
-          .eq('id', editingBanner.id);
-        
-        if (error) throw error;
+        await updatePromoBanner(editingBanner.id, formData);
         alert('Banner updated successfully!');
       } else {
         // Add new banner
-        const { error } = await supabase
-          .from('promo_banners')
-          .insert(formData);
-        
-        if (error) throw error;
+        await addPromoBanner(formData);
         alert('Banner added successfully!');
       }
       
@@ -83,12 +69,7 @@ const PromoBannerManager = () => {
     if (!confirm('Are you sure you want to delete this banner?')) return;
     
     try {
-      const { error } = await supabase
-        .from('promo_banners')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      await deletePromoBanner(id);
       alert('Banner deleted successfully!');
       fetchBanners();
     } catch (error) {
@@ -99,12 +80,7 @@ const PromoBannerManager = () => {
 
   const toggleStatus = async (id, currentStatus) => {
     try {
-      const { error } = await supabase
-        .from('promo_banners')
-        .update({ active: !currentStatus })
-        .eq('id', id);
-      
-      if (error) throw error;
+      await togglePromoBannerStatus(id);
       fetchBanners();
     } catch (error) {
       console.error('Error toggling status:', error);

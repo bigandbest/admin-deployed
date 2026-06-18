@@ -391,6 +391,17 @@ export async function getSingleBrand(id) {
   return getBrand(id);
 }
 
+export async function toggleBrand(id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/brands/toggle/${id}`, {
+      method: "PATCH",
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // BANNER GROUPS
 export async function getAllBannerGroups() {
   try {
@@ -508,7 +519,7 @@ export async function getProductsForBannerGroup(bannerGroupId) {
 // BRAND PRODUCTS
 export async function mapProductToBrand(productId, brandId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand-product/map`, {
+    const response = await fetch(`${API_BASE_URL}/product-brand/map`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ product_id: productId, brand_id: brandId }),
@@ -521,7 +532,7 @@ export async function mapProductToBrand(productId, brandId) {
 
 export async function removeProductFromBrand(productId, brandId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand-product/remove`, {
+    const response = await fetch(`${API_BASE_URL}/product-brand/remove`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ product_id: productId, brand_id: brandId }),
@@ -535,7 +546,7 @@ export async function removeProductFromBrand(productId, brandId) {
 export async function getBrandsForProduct(productId) {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/brand-product/product/${productId}`
+      `${API_BASE_URL}/product-brand/product/${productId}`
     );
     return await handleResponse(response);
   } catch (error) {
@@ -545,7 +556,7 @@ export async function getBrandsForProduct(productId) {
 
 export async function getProductsForBrand(brandId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/brand-product/${brandId}`);
+    const response = await fetch(`${API_BASE_URL}/product-brand/${brandId}`);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { supabaseAdmin } from "../../utils/supabase"; // 👈 import your supabase client
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export default function Notification() {
   const [notifications, setNotifications] = useState([]);
@@ -29,26 +28,23 @@ export default function Notification() {
     fetchNotifications();
   }, []);
 
-  // ✅ Upload image to Supabase
+  // ✅ Upload image to backend
   const uploadImage = async (file) => {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}_${Math.random()
-      .toString(36)
-      .slice(2)}.${fileExt}`;
+    const formData = new FormData();
+    formData.append("image", file);
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("notifications") // 👈 bucket name in Supabase
-      .upload(fileName, file);
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError.message);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/upload/image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.success) {
+        return res.data.imageUrl;
+      }
+      return null;
+    } catch (err) {
+      console.error("Upload error:", err);
       return null;
     }
-
-    const { data } = supabaseAdmin.storage
-      .from("notifications")
-      .getPublicUrl(fileName);
-    return data.publicUrl; // 👈 return public URL
   };
 
   // ✅ Handle form submit (create or update)

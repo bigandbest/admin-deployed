@@ -27,7 +27,6 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import axios from "axios";
-import { supabase } from "../../utils/supabase";
 
 const AdminRefundManagement = () => {
   const [refundRequests, setRefundRequests] = useState([]);
@@ -59,23 +58,13 @@ const AdminRefundManagement = () => {
   const API_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
-  // Get auth headers using Supabase session
+  // Get auth headers using localStorage token
   const getAuthHeaders = useCallback(async () => {
     try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        throw new Error("Failed to get session");
-      }
-
-      const token = session?.access_token;
+      const token = localStorage.getItem('admin_token');
 
       if (!token) {
-        console.error("No access token found in session");
+        console.error("No access token found in localStorage");
         throw new Error("No access token found. Please login again.");
       }
 

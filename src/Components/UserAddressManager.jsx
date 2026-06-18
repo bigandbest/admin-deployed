@@ -30,7 +30,6 @@ import {
   deleteUserAddress,
   setAddressAsDefault,
 } from "../utils/supabaseApi";
-import { supabaseAdmin } from "../utils/supabase";
 
 /**
  * Component to manage a user's multiple addresses
@@ -78,19 +77,6 @@ const UserAddressManager = ({ userId, onAddressChange }) => {
     setError(null);
 
     try {
-      // Try admin client first (bypasses RLS)
-      const { data: adminData, error: adminError } = await supabaseAdmin
-        .from("user_addresses")
-        .select("*")
-        .eq("user_id", userId)
-        .order("is_default", { ascending: false });
-
-      if (!adminError) {
-        setAddresses(adminData || []);
-        return;
-      }
-
-      // Fallback to API function
       const result = await getUserAddresses(userId);
 
       if (result.success) {

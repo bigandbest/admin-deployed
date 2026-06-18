@@ -34,7 +34,6 @@ import {
   toggleBannerStatus,
   toggleMobileBannerStatus,
 } from "../../utils/supabaseApi";
-import { supabase } from "../../utils/supabase";
 import { notifications } from "@mantine/notifications";
 
 const BannersPage = () => {
@@ -55,16 +54,6 @@ const BannersPage = () => {
   const itemsPerPage = 5;
 
   useEffect(() => {
-    async function getBanners() {
-      const { data: banners, error } = await supabase.from("banners").select();
-      console.log(banners);
-      if (error) {
-        showNotification(error.message, "red");
-      } else if (banners && banners.length > 0) {
-        setBanners(banners);
-      }
-    }
-    getBanners();
     const fetchBanners = async () => {
       try {
         const result = await getAllBanners();

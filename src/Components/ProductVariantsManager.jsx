@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../utils/supabase';
 import { Button, TextInput, NumberInput, Select, Switch, Group, Text, Badge, ActionIcon, FileInput } from '@mantine/core';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 import { FaTrash, FaPlus, FaUpload } from 'react-icons/fa';
 
 const ProductVariantsManager = ({ product }) => {
@@ -84,44 +85,33 @@ const ProductVariantsManager = ({ product }) => {
 
       // Upload variant image if provided
       if (variantImageFile) {
-        const fileExt = variantImageFile.name.split('.').pop();
-        const fileName = `variant_${Date.now()}.${fileExt}`;
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(`variants/${fileName}`, variantImageFile);
-
-        if (uploadError) {
-          console.error('Error uploading variant image:', uploadError);
+        const formData = new FormData();
+        formData.append('image', variantImageFile);
+        const uploadResponse = await fetch(`${API_BASE_URL}/upload/image`, {
+          method: 'POST',
+          body: formData,
+        });
+        const uploadData = await uploadResponse.json();
+        if (uploadData.success) {
+          variantImageUrl = uploadData.imageUrl;
         } else {
-          const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(uploadData.path);
-          variantImageUrl = publicUrl;
+          console.error('Error uploading variant image:', uploadData.error);
         }
       }
 
-      // If this variant is set as default, remove default from other variants
-      if (newVariant.is_default) {
-        await supabase
-          .from('product_variants')
-          .update({ is_default: false })
-          .eq('product_id', product.id);
-      }
-
-      const { data, error } = await supabase
-        .from('product_variants')
-        .insert({
-          product_id: product.id,
+      const response = await fetch(`${API_BASE_URL}/variants/product/${product.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           ...newVariant,
           variant_price: parseFloat(newVariant.variant_price),
           variant_old_price: newVariant.variant_old_price ? parseFloat(newVariant.variant_old_price) : null,
           variant_stock: parseInt(newVariant.variant_stock),
-          variant_image: variantImageUrl
-        })
-        .select();
-
-      if (error) throw error;
+          variant_image: variantImageUrl,
+        }),
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Failed to add variant');
 
       // Refresh variants list to show updated default status
       fetchVariants();
@@ -147,12 +137,11 @@ const ProductVariantsManager = ({ product }) => {
     if (!confirm('Are you sure you want to delete this variant?')) return;
 
     try {
-      const { error } = await supabase
-        .from('product_variants')
-        .delete()
-        .eq('id', variantId);
-
-      if (error) throw error;
+      const response = await fetch(`${API_BASE_URL}/variants/${variantId}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Failed to delete variant');
       setVariants(variants.filter(v => v.id !== variantId));
     } catch (error) {
       console.error('Error deleting variant:', error);
@@ -162,19 +151,13 @@ const ProductVariantsManager = ({ product }) => {
 
   const handleSetDefault = async (variantId) => {
     try {
-      // First, remove default from all variants of this product
-      await supabase
-        .from('product_variants')
-        .update({ is_default: false })
-        .eq('product_id', product.id);
-
-      // Then set the selected variant as default
-      const { error } = await supabase
-        .from('product_variants')
-        .update({ is_default: true })
-        .eq('id', variantId);
-
-      if (error) throw error;
+      const response = await fetch(`${API_BASE_URL}/variants/${variantId}/set-default`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: product.id }),
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Failed to set default variant');
 
       // Refresh the variants list
       fetchVariants();

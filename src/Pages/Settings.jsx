@@ -33,7 +33,6 @@ import {
   IconHome,
 } from "@tabler/icons-react";
 import { useAdminAuth } from "../contexts/AdminAuthContext";
-import { supabase } from "../utils/supabase";
 import { showNotification } from "@mantine/notifications";
 
 export default function Settings() {
@@ -90,162 +89,26 @@ export default function Settings() {
     }
   }, [currentUser]);
 
-  // Fetch detailed profile from database
-  const fetchDbProfile = async () => {
-    if (!currentUser?.id) return;
-
-    setDbProfileLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", currentUser.id)
-        .single();
-
-      if (error) {
-        setError("Failed to load profile data");
-      } else {
-        setDbProfile(data);
-        // Update profile state with database values for editing
-        setProfile((prev) => ({
-          ...prev,
-          phone: data?.phone || "",
-          houseNumber: data?.house_number || "",
-          streetAddress: data?.street_address || "",
-          suiteUnitFloor: data?.suite_unit_floor || "",
-          locality: data?.locality || "",
-          area: data?.area || "",
-          city: data?.city || "",
-          state: data?.state || "",
-          postalCode: data?.postal_code || "",
-          country: data?.country || "India",
-          landmark: data?.landmark || "",
-        }));
-      }
-    } catch (error) {
-      setError("Failed to load profile data");
-    } finally {
-      setDbProfileLoading(false);
-    }
+  // Profile fetch from database is unavailable (no backend API equivalent)
+  const fetchDbProfile = () => {
+    setDbProfileLoading(false);
   };
 
-  // Profile update handler - update both auth metadata and database profile
-  const handleProfileSave = async () => {
-    setProfileLoading(true);
-    try {
-      // 1. Update auth user metadata
-      const { error: authError } = await supabase.auth.updateUser({
-        data: {
-          name: profile.name,
-          displayName: profile.name,
-        },
-      });
-
-      if (authError) {
-        showNotification({
-          message: authError.message,
-          color: "red",
-        });
-        return;
-      }
-
-      // 2. Update database profile with detailed fields
-      const { error: dbError } = await supabase
-        .from("users")
-        .update({
-          name: profile.name,
-          phone: profile.phone || null,
-          house_number: profile.houseNumber || null,
-          street_address: profile.streetAddress || null,
-          suite_unit_floor: profile.suiteUnitFloor || null,
-          locality: profile.locality || null,
-          area: profile.area || null,
-          city: profile.city || null,
-          state: profile.state || null,
-          postal_code: profile.postalCode || null,
-          country: profile.country || "India",
-          landmark: profile.landmark || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", currentUser.id);
-
-      if (dbError) {
-        showNotification({
-          message: dbError.message,
-          color: "red",
-        });
-      } else {
-        showNotification({
-          message: "Profile updated successfully!",
-          color: "green",
-        });
-        setProfileEdit(false);
-        // Refresh the database profile
-        fetchDbProfile();
-      }
-    } catch (error) {
-      showNotification({
-        message: "Failed to update profile.",
-        color: "red",
-      });
-    } finally {
-      setProfileLoading(false);
-    }
+  // Profile update is unavailable (no backend API equivalent for admin profile updates)
+  const handleProfileSave = () => {
+    showNotification({
+      message: "Profile update is currently unavailable. No backend API endpoint exists for this feature.",
+      color: "orange",
+    });
+    setProfileEdit(false);
   };
 
-  // Password change handler
-  const handlePasswordChange = async () => {
-    if (!passwords.new || !passwords.confirm) {
-      showNotification({
-        message: "Please fill in all password fields.",
-        color: "red",
-      });
-      return;
-    }
-
-    if (passwords.new !== passwords.confirm) {
-      showNotification({
-        message: "New passwords do not match.",
-        color: "red",
-      });
-      return;
-    }
-
-    if (passwords.new.length < 6) {
-      showNotification({
-        message: "Password must be at least 6 characters long.",
-        color: "red",
-      });
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      // Update password using Supabase
-      const { error } = await supabase.auth.updateUser({
-        password: passwords.new,
-      });
-
-      if (error) {
-        showNotification({
-          message: error.message,
-          color: "red",
-        });
-      } else {
-        showNotification({
-          message: "Password updated successfully!",
-          color: "green",
-        });
-        setPasswords({ current: "", new: "", confirm: "" });
-      }
-    } catch (error) {
-      showNotification({
-        message: "Failed to change password.",
-        color: "red",
-      });
-    } finally {
-      setPasswordLoading(false);
-    }
+  // Password change is unavailable (no backend API equivalent for password updates)
+  const handlePasswordChange = () => {
+    showNotification({
+      message: "Password change is currently unavailable. No backend API endpoint exists for this feature.",
+      color: "orange",
+    });
   };
 
   const resetProfileChanges = () => {

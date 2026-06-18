@@ -68,14 +68,13 @@ export default function VariantEditor({
   }, [variant.price, variant.old_price]);
 
   const handleChange = (field: string, value: any) => {
-    // Validate old_price when it changes
+    // Validate old_price when it changes (show error but still allow typing)
     if (field === "old_price") {
       const oldPrice = Number(value);
       const currentPrice = Number(variant.price);
 
       if (oldPrice && currentPrice && oldPrice < currentPrice) {
         setPriceError("Old price cannot be less than current price");
-        return; // Don't update if validation fails
       } else {
         setPriceError("");
       }

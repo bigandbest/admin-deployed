@@ -30,7 +30,6 @@ import {
   deleteShippingBanner,
   toggleShippingBannerStatus,
 } from "../../utils/supabaseApi";
-import { supabase } from "../../utils/supabase";
 
 const ShippingBanner = () => {
   const [banners, setBanners] = useState([]);

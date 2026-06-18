@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 // Removed direct Supabase import - using backend API endpoints instead
 import { useNavigate } from "react-router-dom";
 
@@ -19,8 +19,6 @@ import {
   CloseButton,
   Menu,
   Checkbox,
-  Pagination,
-  NativeSelect,
 } from "@mantine/core";
 import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload, FaChevronDown, FaFilter, FaLayerGroup } from "react-icons/fa";
 
@@ -393,11 +391,15 @@ const ProductsPage = () => {
   const [subcategoryFilter, setSubcategoryFilter] = useState(null);
   const [groupFilter, setGroupFilter] = useState(null);
   const [activeFilter, setStatusFilter] = useState(null);
-  // Server-side pagination state
+  // Infinite scroll state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const itemsPerPage = 25;
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const sentinelRef = useRef(null);
 
   // Column-specific filters
   const [brandFilter, setBrandFilter] = useState([]);
@@ -450,15 +452,19 @@ const ProductsPage = () => {
     }
   };
 
-  // Fetch products from backend API with server-side pagination
-  const fetchProducts = useCallback(async (page = currentPage, limit = itemsPerPage) => {
-    setLoading(true);
+  // Fetch products — append=true for infinite scroll, false to reset
+  const fetchProducts = useCallback(async (page = 1, append = false) => {
+    if (append) {
+      setIsFetchingMore(true);
+    } else {
+      setLoading(true);
+    }
     setError("");
 
     try {
       const params = new URLSearchParams();
       params.append('page', String(page));
-      params.append('limit', String(limit));
+      params.append('limit', String(itemsPerPage));
 
       if (categoryFilter) params.append('category_id', categoryFilter);
       if (searchQuery) params.append('search', searchQuery);
@@ -470,9 +476,15 @@ const ProductsPage = () => {
       const result = await response.json();
 
       if (result.success && result.products) {
-        setProducts(result.products);
+        if (append) {
+          setProducts(prev => [...prev, ...result.products]);
+        } else {
+          setProducts(result.products);
+        }
         setTotalProducts(result.total || 0);
-        setTotalPages(result.totalPages || Math.ceil((result.total || 0) / limit));
+        const pages = result.totalPages || Math.ceil((result.total || 0) / itemsPerPage);
+        setTotalPages(pages);
+        setHasMore(page < pages);
       } else {
         setError(result.error || "Failed to fetch products");
       }
@@ -481,13 +493,37 @@ const ProductsPage = () => {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
+      setIsFetchingMore(false);
     }
-  }, [currentPage, itemsPerPage, categoryFilter, searchQuery, activeFilter]);
+  }, [itemsPerPage, categoryFilter, searchQuery, activeFilter]);
 
-  // Fetch on mount and when page/filters change
+  // Reset and refetch when filters change (fetchProducts identity changes)
   useEffect(() => {
-    fetchProducts(currentPage, itemsPerPage);
-  }, [currentPage, itemsPerPage, fetchProducts]);
+    setCurrentPage(1);
+    setProducts([]);
+    setHasMore(false);
+    fetchProducts(1, false);
+  }, [fetchProducts]);
+
+  // Load next page when sentinel enters viewport
+  const loadMore = useCallback(() => {
+    if (isFetchingMore || !hasMore) return;
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    fetchProducts(nextPage, true);
+  }, [isFetchingMore, hasMore, currentPage, fetchProducts]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollContainerRef.current;
+    if (!sentinel || !container) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { root: container, threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   // Initialize category/subcategory/group dropdowns on mount
   useEffect(() => {
@@ -642,11 +678,6 @@ const ProductsPage = () => {
   // Display filtered products (client-side filters on server-paginated data)
   const displayedProducts = filteredProducts;
 
-  // Reset to page 1 when server-side filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [categoryFilter, activeFilter, searchQuery]);
-
   // Auto-clear dependent filters when parent filters change
   useEffect(() => {
     // If category filter changes, clear subcategory and group filters
@@ -743,7 +774,7 @@ const ProductsPage = () => {
             <p className="text-gray-600">
               {loading
                 ? "Loading..."
-                : `${displayedProducts.length} of ${totalProducts} products (page ${currentPage} of ${totalPages})`}
+                : `${products.length} of ${totalProducts} products loaded`}
               {(searchQuery ||
                 categoryFilter ||
                 subcategoryFilter ||
@@ -927,6 +958,7 @@ const ProductsPage = () => {
         </div>
 
         <div
+          ref={scrollContainerRef}
           className="overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
           style={{ maxHeight: "70vh" }}
         >
@@ -1611,35 +1643,16 @@ const ProductsPage = () => {
             </div>
           )}
 
-          {/* Pagination Controls */}
-          {totalProducts > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4 px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
-              <Text size="sm" color="dimmed">
-                Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, totalProducts)} of {totalProducts} products
-              </Text>
-
-              <Pagination
-                total={totalPages}
-                value={currentPage}
-                onChange={(page) => setCurrentPage(page)}
-                color="blue"
-                radius="md"
-                withEdges
-              />
-
-              <div className="flex items-center gap-2">
-                <Text size="sm" color="dimmed">Per page:</Text>
-                <NativeSelect
-                  value={String(itemsPerPage)}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  data={["25", "50", "100"]}
-                  size="xs"
-                  style={{ width: 70 }}
-                />
-              </div>
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} className="py-1" />
+          {isFetchingMore && (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+          {!hasMore && products.length > 0 && !loading && (
+            <div className="text-center py-3 text-gray-400 text-sm">
+              All {totalProducts} products loaded
             </div>
           )}
         </div>

@@ -46,7 +46,10 @@ const statusColors = {
   rejected: "red",
 };
 
-import { supabase } from "../../utils/supabase";
+import {
+  getAllPrintRequests,
+  updatePrintRequestStatus,
+} from "../../utils/backendApi";
 import { formatDateIST } from "../../utils/dateUtils";
 
 // Helper function to construct full address from enhanced address fields
@@ -103,23 +106,11 @@ export default function PrintRequests() {
       setLoading(true);
       setError("");
       try {
-        const { data: printRequests, error } = await supabase
-          .from("print_requests")
-          .select(
-            `
-            *, 
-            users:user_id (
-              id, email, name, avatar, phone,
-              house_number, street_address, suite_unit_floor,
-              locality, area, city, state, postal_code, country, landmark
-            )
-          `
-          )
-          .order("created_at", { ascending: false });
-        if (error) {
-          setError(error.message);
+        const result = await getAllPrintRequests();
+        if (result.success) {
+          setPrintRequests(result.printRequests || result.data || []);
         } else {
-          setPrintRequests(printRequests || []);
+          setError(result.error || "Failed to load print requests");
         }
       } catch (error) {
         setError(error.message || "Failed to load print requests");
@@ -156,18 +147,16 @@ export default function PrintRequests() {
     setStatusUpdateError("");
     setStatusUpdateSuccess(false);
     try {
-      const { error } = await supabase
-        .from("print_requests")
-        .update({
-          status: newStatus,
-          admin_note: adminNote,
-          estimated_price: estimatedPrice,
-          final_price: finalPrice,
-          price_notes: priceNotes,
-        })
-        .eq("id", selectedRequest.id);
+      const result = await updatePrintRequestStatus(
+        selectedRequest.id,
+        newStatus,
+        adminNote,
+        estimatedPrice,
+        finalPrice,
+        priceNotes
+      );
 
-      if (!error) {
+      if (result.success) {
         setStatusUpdateSuccess(true);
         setPrintRequests((prevRequests) =>
           prevRequests.map((req) =>
@@ -187,7 +176,7 @@ export default function PrintRequests() {
           setStatusUpdateModalOpen(false);
         }, 1500);
       } else {
-        setStatusUpdateError(error.message || "Failed to update status");
+        setStatusUpdateError(result.error || "Failed to update status");
       }
     } catch (error) {
       console.error("Error updating request status:", error);

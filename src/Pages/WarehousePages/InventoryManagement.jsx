@@ -312,6 +312,7 @@ const InventoryManagement = () => {
               warehouse_id: parseInt(selectedWarehouse),
               variant_id: stockForm.variant_id,
               stock_quantity: parseInt(stockForm.stock_quantity),
+              mode: editingStock ? 'set' : 'add',
             },
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -518,14 +519,24 @@ const InventoryManagement = () => {
             </Button>
             <Button
               leftSection={<Plus size={16} />}
-              onClick={() => setShowStockModal(true)}
+              onClick={() => {
+                setEditingStock(null);
+                setStockForm({ product_id: "", variant_id: "", stock_quantity: "", minimum_threshold: "", cost_per_unit: "" });
+                setShowStockModal(true);
+              }}
             >
               Add Stock
             </Button>
             <Button
               color="orange"
               leftSection={<TrendingUp size={16} />}
-              onClick={() => setShowTransferModal(true)}
+              onClick={() => {
+                setTransferForm(prev => ({
+                  ...prev,
+                  from_warehouse_id: selectedWarehouse?.toString() || "",
+                }));
+                setShowTransferModal(true);
+              }}
             >
               Transfer Stock
             </Button>
@@ -747,6 +758,16 @@ const InventoryManagement = () => {
                                                         minimum_threshold: item.minimum_threshold?.toString() || "",
                                                         cost_per_unit: item.cost_per_unit?.toString() || "",
                                                       });
+                                                      // Ensure this product appears in the dropdown immediately
+                                                      const editingOption = {
+                                                        value: item.product_id?.toString(),
+                                                        label: `${item.product_name}${item.category?.name ? ` (${item.category.name})` : ""}`,
+                                                      };
+                                                      setProductOptions(prev =>
+                                                        prev.find(o => o.value === editingOption.value)
+                                                          ? prev
+                                                          : [editingOption, ...prev]
+                                                      );
                                                       setShowStockModal(true);
                                                     },
                                                   });
@@ -1300,40 +1321,69 @@ const InventoryManagement = () => {
       >
         <form onSubmit={handleUpdateStock}>
           <Stack>
-            <Select
-              label="Select Product"
-              placeholder={loadingProducts ? "Loading products..." : "Search or Select Product"}
-              data={productOptions}
-              value={stockForm.product_id}
-              onChange={(val) =>
-                setStockForm({
-                  ...stockForm,
-                  product_id: val,
-                })
-              }
-              searchable
-              onSearchChange={setProductSearch}
-              searchValue={productSearch}
-              nothingFound={loadingProducts ? "Loading..." : "No products found"}
-              rightSection={loadingProducts ? <Loader size="xs" /> : undefined}
-              required
-            />
-
-            <VariantSelector
-              productId={stockForm.product_id}
-              value={stockForm.variant_id}
-              onChange={(val) =>
-                setStockForm({
-                  ...stockForm,
-                  variant_id: val,
-                })
-              }
-              warehouseId={selectedWarehouse}
-            />
+            {editingStock ? (
+              /* Edit mode: product & variant are fixed — show as read-only */
+              <>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  <span className="text-gray-500">Product: </span>
+                  <strong>{editingStock.product_name}</strong>
+                  {editingStock.category?.name && (
+                    <span className="text-gray-400 ml-1">({editingStock.category.name})</span>
+                  )}
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                  <span className="text-gray-500">Variant: </span>
+                  <strong>{editingStock.variant_name || "Default"}</strong>
+                  {editingStock.sku && (
+                    <span className="text-gray-400 ml-2 text-xs">SKU: {editingStock.sku}</span>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Add mode: full product + variant selectors */
+              <>
+                <Select
+                  label="Select Product"
+                  placeholder={loadingProducts ? "Loading products..." : "Search or Select Product"}
+                  data={productOptions}
+                  value={stockForm.product_id}
+                  onChange={(val) =>
+                    setStockForm({
+                      ...stockForm,
+                      product_id: val,
+                    })
+                  }
+                  searchable
+                  onSearchChange={setProductSearch}
+                  searchValue={productSearch}
+                  nothingFound={loadingProducts ? "Loading..." : "No products found"}
+                  rightSection={loadingProducts ? <Loader size="xs" /> : undefined}
+                  required
+                />
+                <VariantSelector
+                  productId={stockForm.product_id}
+                  value={stockForm.variant_id}
+                  onChange={(val) => {
+                    const warehouseRecord = inventory.find((item) => item.variant_id === val);
+                    setStockForm((prev) => ({
+                      ...prev,
+                      variant_id: val,
+                      stock_quantity: warehouseRecord
+                        ? (warehouseRecord.stock_quantity ?? "").toString()
+                        : "",
+                      minimum_threshold: warehouseRecord
+                        ? (warehouseRecord.minimum_threshold ?? "").toString()
+                        : prev.minimum_threshold,
+                    }));
+                  }}
+                  warehouseId={selectedWarehouse}
+                />
+              </>
+            )}
 
             <NumberInput
-              label="Stock Quantity"
-              placeholder="Enter stock quantity"
+              label={editingStock ? "Stock Quantity (set absolute value)" : "Quantity to Add"}
+              placeholder={editingStock ? "Enter new total stock" : "Enter quantity to add to existing stock"}
               value={parseInt(stockForm.stock_quantity) || ""}
               onChange={(val) =>
                 setStockForm({
@@ -1341,6 +1391,7 @@ const InventoryManagement = () => {
                   stock_quantity: val?.toString() || "",
                 })
               }
+              min={editingStock ? 0 : 1}
               required
             />
 
@@ -1554,12 +1605,10 @@ const VariantSelector = ({ productId, value, onChange, warehouseId }) => {
         const product = response.data.product || response.data;
         const variantList = product.variants || [];
         setVariants(variantList);
-        // Auto-select if there's only one variant (or a default one) so the form always has variant_id
-        if (variantList.length === 1) {
-          onChange(variantList[0].id);
-        } else if (variantList.length > 1) {
-          const defaultV = variantList.find(v => v.is_default) || variantList[0];
-          if (defaultV && !value) onChange(defaultV.id);
+        // Auto-select only when no variant is already selected (i.e. Add Stock, not Edit Stock)
+        if (!value) {
+          const autoSelect = variantList.find(v => v.is_default) || variantList[0];
+          if (autoSelect) onChange(autoSelect.id);
         }
       } catch (error) {
         console.error("Failed to fetch variants:", error);
