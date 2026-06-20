@@ -18,9 +18,7 @@ interface VariantData {
   active: boolean;
   attributes: Array<{ attribute_name: string; attribute_value: string }>;
   inventory: { stock_quantity: number; reserved_quantity: number };
-  is_bulk_enabled?: boolean;
-  bulk_min_quantity?: number;
-  bulk_discount_percentage?: number;
+  bulk_tiers?: Array<{ min_quantity: number | string; max_quantity: number | string | null; unit_price: number | string; sort_order?: number }>;
 }
 
 interface VariantsSectionProps {
@@ -48,9 +46,7 @@ export default function VariantsSection({
       active: true,
       attributes: [],
       inventory: { stock_quantity: 0, reserved_quantity: 0 },
-      is_bulk_enabled: false,
-      bulk_min_quantity: 50,
-      bulk_discount_percentage: 10,
+      bulk_tiers: [],
     };
     setVariants([...variants, newVariant]);
   };

@@ -90,9 +90,12 @@ export default function VariantEditor({
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card">
       {/* Header */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggleExpand}
-        className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+        onKeyDown={(e) => e.key === "Enter" && onToggleExpand()}
+        className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3 text-left">
           <ChevronDown
@@ -143,7 +146,7 @@ export default function VariantEditor({
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
-      </button>
+      </div>
 
       {/* Expanded Content */}
       {isExpanded && (
@@ -374,65 +377,82 @@ export default function VariantEditor({
             />
           </div>
 
-          {/* Bulk Pricing */}
+          {/* Bulk Pricing Tiers */}
           <div className="border-t border-border pt-4">
-            <div className="flex items-center justify-between mb-4">
-              <Label
-                htmlFor={`bulk-enable-${variantIndex}`}
-                className="text-sm font-semibold cursor-pointer"
+            <div className="flex items-center justify-between mb-3">
+              <Label className="text-sm font-semibold">Bulk Pricing Tiers</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  const tiers = [...(variant.bulk_tiers || [])];
+                  tiers.push({ min_quantity: "", max_quantity: "", unit_price: "", sort_order: tiers.length });
+                  handleChange("bulk_tiers", tiers);
+                }}
+                className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
-                Bulk Pricing
-              </Label>
-              <Switch
-                id={`bulk-enable-${variantIndex}`}
-                checked={variant.is_bulk_enabled}
-                onCheckedChange={(checked) =>
-                  handleChange("is_bulk_enabled", checked)
-                }
-              />
+                + Add Tier
+              </button>
             </div>
 
-            {variant.is_bulk_enabled && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor={`bulk-min-${variantIndex}`}
-                    className="text-sm font-medium"
-                  >
-                    Min Quantity
-                  </Label>
-                  <Input
-                    id={`bulk-min-${variantIndex}`}
-                    type="number"
-                    placeholder="50"
-                    value={variant.bulk_min_quantity}
-                    onChange={(e) =>
-                      handleChange("bulk_min_quantity", Number(e.target.value))
-                    }
-                    className="bg-card border-input"
-                  />
+            {(!variant.bulk_tiers || variant.bulk_tiers.length === 0) ? (
+              <p className="text-xs text-muted-foreground italic">No tiers yet. Add a tier to enable volume-based pricing.</p>
+            ) : (
+              <div className="space-y-2">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
+                  <span>Min Qty</span>
+                  <span>Max Qty (optional)</span>
+                  <span>Unit Price (₹)</span>
+                  <span></span>
                 </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor={`bulk-discount-${variantIndex}`}
-                    className="text-sm font-medium"
-                  >
-                    Discount (%)
-                  </Label>
-                  <Input
-                    id={`bulk-discount-${variantIndex}`}
-                    type="number"
-                    placeholder="10"
-                    value={variant.bulk_discount_percentage}
-                    onChange={(e) =>
-                      handleChange(
-                        "bulk_discount_percentage",
-                        Number(e.target.value),
-                      )
-                    }
-                    className="bg-card border-input"
-                  />
-                </div>
+                {variant.bulk_tiers.map((tier: any, tierIdx: number) => (
+                  <div key={tierIdx} className="grid grid-cols-[1fr_1fr_1fr_32px] gap-2 items-center bg-muted/30 p-2 rounded-lg">
+                    <Input
+                      type="number"
+                      placeholder="50"
+                      value={tier.min_quantity}
+                      onChange={(e) => {
+                        const tiers = [...variant.bulk_tiers];
+                        tiers[tierIdx] = { ...tiers[tierIdx], min_quantity: e.target.value };
+                        handleChange("bulk_tiers", tiers);
+                      }}
+                      className="bg-card border-input h-8 text-sm"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="unlimited"
+                      value={tier.max_quantity ?? ""}
+                      onChange={(e) => {
+                        const tiers = [...variant.bulk_tiers];
+                        tiers[tierIdx] = { ...tiers[tierIdx], max_quantity: e.target.value || null };
+                        handleChange("bulk_tiers", tiers);
+                      }}
+                      className="bg-card border-input h-8 text-sm"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={tier.unit_price}
+                      onChange={(e) => {
+                        const tiers = [...variant.bulk_tiers];
+                        tiers[tierIdx] = { ...tiers[tierIdx], unit_price: e.target.value };
+                        handleChange("bulk_tiers", tiers);
+                      }}
+                      className="bg-card border-input h-8 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const tiers = variant.bulk_tiers.filter((_: any, i: number) => i !== tierIdx);
+                        handleChange("bulk_tiers", tiers);
+                      }}
+                      className="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground mt-1">Tiers apply to ALL units when qty meets the minimum. Leave Max Qty blank for unlimited.</p>
               </div>
             )}
           </div>

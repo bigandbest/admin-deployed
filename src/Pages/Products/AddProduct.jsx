@@ -53,9 +53,7 @@ const AddProduct = () => {
         if (catsRes.data.success) {
           const categoriesData =
             catsRes.data.categories || catsRes.data.data || [];
-          console.log("Categories received from API:", categoriesData);
           const formattedCategories = formatOptions(categoriesData);
-          console.log("Formatted categories:", formattedCategories);
           setCategories(formattedCategories);
           // Flatten subcategories and groups for passing down, or component filters them
           // The component filters by ID, so we can pass all
@@ -92,13 +90,6 @@ const AddProduct = () => {
           setSubcategories(formattedSubs);
           setGroups(formattedGroups);
 
-          console.log(
-            "Subcategories (before format):",
-            allSubs.length,
-            allSubs,
-          );
-          console.log("Subcategories (after format):", formattedSubs);
-          console.log("Groups:", allGroups.length, allGroups);
         } else {
           console.error("Failed to fetch categories:", catsRes.data.message);
         }
@@ -107,8 +98,6 @@ const AddProduct = () => {
         if (brandsRes.data.success) {
           const brandsData = brandsRes.data.brands || brandsRes.data.data || [];
           const formattedBrands = formatOptions(brandsData);
-          console.log("Brands received:", brandsData);
-          console.log("Formatted brands:", formattedBrands);
           setBrandOptions(formattedBrands);
         } else {
           console.error("Failed to fetch brands:", brandsRes.data.message);
@@ -119,9 +108,7 @@ const AddProduct = () => {
           // recommendedStoreController returns { recommendedStores: [...] }
           const storesData =
             storesRes.data.recommendedStores || storesRes.data.data || [];
-          console.log("Recommended Stores received:", storesData);
           const formattedStores = formatOptions(storesData);
-          console.log("Formatted stores:", formattedStores);
           setStoreOptions(formattedStores);
         } else {
           console.error("Failed to fetch stores:", storesRes.data.message);
@@ -154,7 +141,6 @@ const AddProduct = () => {
       );
       if (response.data.success) {
         const product = response.data.product;
-        console.log("Fetched product for edit:", product);
 
         // Transform media
         // Handle both old format (strings/URLs) and new format (media objects with metadata)
@@ -179,7 +165,6 @@ const AddProduct = () => {
         // Transform variants
         // Check both variants (Prisma default) and product_variants (alias if used)
         const rawVariants = product.variants || product.product_variants || [];
-        console.log("Raw variants:", rawVariants);
 
         const variantItems = rawVariants.map((v) => ({
           id: v.id, // CRITICAL: Map ID so updates work!
@@ -208,14 +193,8 @@ const AddProduct = () => {
           variant_weight: v.variant_weight,
           variant_unit: v.variant_unit,
           shipping_amount: v.shipping_amount || product.shipping_amount || "0",
-          // Bulk Pricing Fields
-          is_bulk_enabled: v.is_bulk_enabled || false,
-          bulk_min_quantity: v.bulk_min_quantity || 50,
-          bulk_discount_percentage: v.bulk_discount_percentage || 0,
-          bulk_price: v.bulk_price || 0,
+          bulk_tiers: v.bulk_tiers || v.bulk_pricing_tiers || [],
         }));
-
-        console.log("Transformed variants:", variantItems);
 
         // Transform FAQS
         const faqItems = product.faq ||
@@ -244,15 +223,6 @@ const AddProduct = () => {
             ? product.product_recommended_store[0].recommended_store_id
             : "") ||
           "";
-
-        console.log("Brand/Store Extraction Debug:", {
-          product_brand_id: product.brand_id,
-          product_store_id: product.store_id,
-          relation_brand: product.brands,
-          relation_store: product.product_recommended_store,
-          final_brandId: brandId,
-          final_storeId: storeId,
-        });
 
         // Map data to Form Structure
         setInitialData({
@@ -299,15 +269,6 @@ const AddProduct = () => {
               : "", // Take first warehouse
           faqs: faqItems,
           status: product.active ? "active" : "draft",
-        });
-        console.log("Initial data set for form:", {
-          category: {
-            category_id: product.category_id,
-            subcategory_id: product.subcategory_id,
-            group_id: product.group_id,
-            store_id: product.store_id,
-            brand_id: brandId,
-          },
         });
       }
     } catch (error) {
@@ -469,47 +430,17 @@ const AddProduct = () => {
             packaging_details: v.packaging_details, // Added to payload
             net_quantity: v.net_quantity || "", // Net quantity description
             photo_url: v.photo_url || "", // Variant-specific photo
-            // Bulk Pricing Payload
-            is_bulk_enabled: v.is_bulk_enabled,
-            bulk_min_quantity: v.bulk_min_quantity,
-            bulk_discount_percentage: v.bulk_discount_percentage,
-            bulk_price:
-              (v.price || v.variant_price) *
-              (1 - (v.bulk_discount_percentage || 0) / 100), // Calculate tentative bulk price
+            bulk_tiers: (v.bulk_tiers || []).filter(t => t.min_quantity && t.unit_price).map((t, idx) => ({
+              min_quantity: parseInt(t.min_quantity),
+              max_quantity: t.max_quantity ? parseInt(t.max_quantity) : null,
+              unit_price: parseFloat(t.unit_price),
+              sort_order: idx,
+            })),
           };
         }),
 
         status: status, // active or draft
       };
-
-      console.log("=== FRONTEND: Full Payload Being Sent ===");
-      console.log("Product Data:", {
-        name: payload.name,
-        description: payload.description,
-        vertical: payload.vertical,
-        source_type: payload.source_type,
-        hsn_or_sac_code: payload.hsn_or_sac_code,
-        gst_rate: payload.gst_rate,
-        cess_rate: payload.cess_rate,
-        return_applicable: payload.return_applicable,
-        return_days: payload.return_days,
-        active: payload.active,
-      });
-      console.log("Category Data:", {
-        category_id: payload.category_id,
-        subcategory_id: payload.subcategory_id,
-        group_id: payload.group_id,
-        store_id: payload.store_id,
-        brand_id: payload.brand_id,
-      });
-      console.log("Variants Count:", payload.product_variants?.length);
-      console.log("Variants Data:", payload.product_variants);
-      console.log("Media Count:", payload.media?.length);
-      console.log("Media Data:", payload.media);
-      console.log("FAQ Count:", payload.faq?.length);
-      console.log("FAQ Data:", payload.faq);
-      console.log("Full Payload:", JSON.stringify(payload, null, 2));
-      console.log("=== END FRONTEND PAYLOAD ===");
 
       // API Call
       let response;
@@ -629,14 +560,6 @@ const AddProduct = () => {
       </>
     );
   }
-
-  console.log("Rendering AddProductForm with:", {
-    categoriesCount: categories.length,
-    subcategoriesCount: subcategories.length,
-    groupsCount: groups.length,
-    brandsCount: brandOptions.length,
-    storesCount: storeOptions.length,
-  });
 
   return (
     <>

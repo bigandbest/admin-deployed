@@ -1448,26 +1448,20 @@ const ProductsPage = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1 text-sm w-32">
-                            {defaultVariant?.is_bulk_enabled ? (
+                            {defaultVariant?.bulk_tiers?.length > 0 ? (
                               <>
                                 <Badge size="sm" color="green" variant="light">
-                                  ✓ Enabled
+                                  {defaultVariant.bulk_tiers.length} tier{defaultVariant.bulk_tiers.length > 1 ? "s" : ""}
                                 </Badge>
                                 <div className="text-gray-600">
-                                  Min: {defaultVariant.bulk_min_quantity} qty
+                                  From {defaultVariant.bulk_tiers[0]?.min_quantity}+ qty
                                 </div>
                                 <div className="text-green-600 font-medium">
-                                  {formatIndianPrice(
-                                    parseFloat(defaultVariant.bulk_price),
-                                  )}
-                                </div>
-                                <div className="text-gray-500">
-                                  ({defaultVariant.bulk_discount_percentage}%
-                                  off)
+                                  {formatIndianPrice(parseFloat(defaultVariant.bulk_tiers[0]?.unit_price))}
                                 </div>
                               </>
                             ) : (
-                              <span className="text-gray-400">Not enabled</span>
+                              <span className="text-gray-400">No tiers</span>
                             )}
                           </div>
                         </td>

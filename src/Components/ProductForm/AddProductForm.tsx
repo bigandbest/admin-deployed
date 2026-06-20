@@ -30,7 +30,6 @@ interface ProductData {
   in_stock: boolean;
   enable_bulk_pricing: boolean;
   bulk_min_quantity: number;
-  bulk_discount_percentage: number;
   quick_delivery: boolean;
   video: string;
   portion: string;
@@ -141,7 +140,6 @@ export default function AddProductForm({
       in_stock: true,
       enable_bulk_pricing: false,
       bulk_min_quantity: 50,
-      bulk_discount_percentage: 0,
       quick_delivery: false,
       video: "",
       portion: "",
@@ -248,15 +246,6 @@ export default function AddProductForm({
   // }, [category.brand_id]);
 
   const handleSubmitProduct = useCallback(() => {
-    console.log("\n=== FRONTEND FORM: Current State Before Submit ===");
-    console.log("Product State:", product);
-    console.log("Category State:", category);
-    console.log("Variants State:", variants);
-    console.log("Media State:", media);
-    console.log("FAQ State:", faqs);
-    console.log("Warehouse State:", warehouse);
-    console.log("=== END Current State ===");
-
     const formData = {
       product,
       variants,
@@ -266,10 +255,6 @@ export default function AddProductForm({
       faqs,
       status: "active",
     };
-
-    console.log("\n=== FRONTEND FORM: Form Data Being Passed to onSubmit ===");
-    console.log(JSON.stringify(formData, null, 2));
-    console.log("=== END Form Data ===");
 
     onSubmit(formData);
   }, [product, variants, media, category, warehouse, faqs, onSubmit]);

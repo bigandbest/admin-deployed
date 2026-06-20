@@ -37,22 +37,8 @@ export default function CategorySection({
   brands = [],
 }: CategorySectionProps) {
   const handleChange = (field: string, value: string) => {
-    console.log("Category field changed:", field, "=", value);
     setCategory({ ...category, [field]: value });
   };
-
-  console.log("DEBUG - selected category_id:", category.category_id);
-  console.log("DEBUG - selected brand_id:", category.brand_id);
-  console.log("DEBUG - available brands (RAW):", brands);
-  console.log("DEBUG - first brand structure:", brands[0]);
-  console.log(
-    "DEBUG - all subcategories:",
-    subcategories.map((s) => ({
-      id: s.id,
-      name: s.name,
-      category_id: s.category_id,
-    })),
-  );
 
   const filteredSubcategories = category.category_id
     ? subcategories.filter(
@@ -65,15 +51,6 @@ export default function CategorySection({
         (grp) => String(grp.subcategory_id) === String(category.subcategory_id),
       )
     : [];
-
-  console.log("CategorySection render:", {
-    selectedCategoryId: category.category_id,
-    totalCategories: categories.length,
-    totalSubcategories: subcategories.length,
-    filteredSubcategories: filteredSubcategories.length,
-    totalGroups: groups.length,
-    filteredGroups: filteredGroups.length,
-  });
 
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -100,7 +77,6 @@ export default function CategorySection({
             <Select
               value={category.category_id || ""}
               onValueChange={(value) => {
-                console.log("Category selected:", value);
                 setCategory((prev: typeof category) => ({
                   ...prev,
                   category_id: value,
@@ -130,7 +106,6 @@ export default function CategorySection({
             <Select
               value={category.subcategory_id || ""}
               onValueChange={(value) => {
-                console.log("Subcategory selected:", value);
                 setCategory((prev: typeof category) => ({
                   ...prev,
                   subcategory_id: value,
@@ -160,7 +135,6 @@ export default function CategorySection({
             <Select
               value={category.group_id || ""}
               onValueChange={(value) => {
-                console.log("Group selected:", value);
                 setCategory((prev: typeof category) => ({
                   ...prev,
                   group_id: value,
