@@ -7,6 +7,8 @@ import MediaUploader from "./media-uploader";
 import CategorySection from "./category-section";
 import FAQSection from "./faq-section";
 import { Plus, X } from "lucide-react";
+import { Switch } from "../UI/switch";
+import { Label } from "../UI/label";
 
 interface ProductData {
   id?: string; // Added to fix TS error
@@ -253,7 +255,7 @@ export default function AddProductForm({
       category,
       warehouse,
       faqs,
-      status: "active",
+      status: product.active ? "active" : "draft",
     };
 
     onSubmit(formData);
@@ -271,6 +273,21 @@ export default function AddProductForm({
               </h2>
             </div>
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg">
+                <Label
+                  htmlFor="product-active"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  {product.active ? "Active" : "Inactive"}
+                </Label>
+                <Switch
+                  id="product-active"
+                  checked={product.active}
+                  onCheckedChange={(checked) =>
+                    setProduct((prev) => ({ ...prev, active: checked }))
+                  }
+                />
+              </div>
               <Button
                 size="sm"
                 onClick={handleSubmitProduct}
