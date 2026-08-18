@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   Title,
@@ -9,6 +10,7 @@ import {
 import {
   getAllCategories,
   getAllSubcategories,
+  getAllProductSections,
 } from "../../utils/supabaseApi";
 import SectionMappingManager from "../../Components/SectionMappingManager";
 
@@ -43,10 +45,28 @@ const CategoryMapping = () => {
     fetchData();
   }, []);
 
+  // Fetch product sections once and share across every SectionMappingManager
+  // instance below, instead of each one independently calling
+  // getSectionByKey() -> GET /product-sections (was 6-7x duplicate calls).
+  const { data: sectionsResult, isLoading: sectionsLoading } = useQuery({
+    queryKey: ["product-sections"],
+    queryFn: getAllProductSections,
+  });
+
+  const sectionsByKey = useMemo(() => {
+    const map = {};
+    if (sectionsResult?.success && Array.isArray(sectionsResult.data)) {
+      sectionsResult.data.forEach((section) => {
+        map[section.section_key] = section;
+      });
+    }
+    return map;
+  }, [sectionsResult]);
+
   return (
     <div className="p-6 mantine-bg min-h-screen">
       <Card shadow="sm" p="lg" radius="md" className="mantine-card mb-6">
-        <LoadingOverlay visible={loading} />
+        <LoadingOverlay visible={loading || sectionsLoading} />
 
         <Title order={2} mb="md">Manage Section Mappings</Title>
         <Text size="sm" color="dimmed" mb="xl">
@@ -60,6 +80,7 @@ const CategoryMapping = () => {
           mappingType="subcategory"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
         />
 
         <Divider my="xl" />
@@ -71,6 +92,7 @@ const CategoryMapping = () => {
           mappingType="both"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
         />
 
         <Divider my="xl" />
@@ -82,6 +104,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
           singleSelect={true}
         />
 
@@ -94,6 +117,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
           singleSelect={true}
         />
 
@@ -106,6 +130,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
           singleSelect={true}
         />
 
@@ -118,6 +143,7 @@ const CategoryMapping = () => {
           mappingType="category"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
           singleSelect={true}
         />
 
@@ -130,6 +156,7 @@ const CategoryMapping = () => {
           mappingType="both"
           categories={categories}
           subcategories={subcategories}
+          sectionsByKey={sectionsByKey}
         />
       </Card>
     </div>

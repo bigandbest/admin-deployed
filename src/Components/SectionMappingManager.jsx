@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Card,
     Title,
@@ -17,7 +18,6 @@ import {
 import { showNotification } from "@mantine/notifications";
 import { FaCheck, FaTimes, FaInfoCircle } from "react-icons/fa";
 import {
-    getSectionByKey,
     getSectionSubcategoryMappings,
     updateSectionSubcategoryMappings,
     getCategoriesInSection,
@@ -31,76 +31,77 @@ const SectionMappingManager = ({
     mappingType, // 'subcategory', 'category', or 'both'
     categories,
     subcategories,
+    sectionsByKey,
     singleSelect = false, // New prop
 }) => {
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [saving, setSaving] = useState(false);
-    const [sectionId, setSectionId] = useState(null);
     const [selectedMappings, setSelectedMappings] = useState({});
     const [displayOrders, setDisplayOrders] = useState({});
 
+    const sectionId = sectionsByKey?.[sectionKey]?.id ?? null;
+    const sectionsResolved = !!sectionsByKey && Object.keys(sectionsByKey).length > 0;
+
+    const wantsSubcategories = mappingType === "subcategory" || mappingType === "both";
+    const wantsCategories = mappingType === "category" || mappingType === "both";
+
+    const subcatQuery = useQuery({
+        queryKey: ["section-subcategory-mappings", sectionId],
+        queryFn: () => getSectionSubcategoryMappings(sectionId),
+        enabled: !!sectionId && wantsSubcategories,
+    });
+
+    const catQuery = useQuery({
+        queryKey: ["section-categories", sectionId],
+        queryFn: () => getCategoriesInSection(sectionId),
+        enabled: !!sectionId && wantsCategories,
+    });
+
+    const loading =
+        !sectionsResolved ||
+        (wantsSubcategories && !!sectionId && subcatQuery.isLoading) ||
+        (wantsCategories && !!sectionId && catQuery.isLoading);
+
     useEffect(() => {
-        loadSectionMappings();
-    }, [sectionKey]);
-
-    const loadSectionMappings = async () => {
-        setLoading(true);
-        try {
-            // Get section ID
-            const sectionResult = await getSectionByKey(sectionKey);
-            if (!sectionResult.success || !sectionResult.section) {
-                showNotification({
-                    message: "Section not found",
-                    color: "red",
-                });
-                return;
-            }
-
-            const section = sectionResult.section;
-            setSectionId(section.id);
-
-            // Load existing mappings based on type
-            if (mappingType === "subcategory" || mappingType === "both") {
-                const subcatResult = await getSectionSubcategoryMappings(section.id);
-                if (subcatResult.success && subcatResult.data) {
-                    const mappings = {};
-                    const orders = {};
-                    subcatResult.data.forEach((mapping) => {
-                        mappings[`sub_${mapping.subcategory_id}`] = true;
-                        orders[`sub_${mapping.subcategory_id}`] = mapping.display_order;
-                    });
-                    setSelectedMappings((prev) => ({ ...prev, ...mappings }));
-                    setDisplayOrders((prev) => ({ ...prev, ...orders }));
-                }
-            }
-
-            if (mappingType === "category" || mappingType === "both") {
-                const catResult = await getCategoriesInSection(section.id);
-                if (catResult.success && catResult.data) {
-                    const mappings = {};
-                    catResult.data.forEach((mapping) => {
-                        mappings[`cat_${mapping.category_id}`] = true;
-                    });
-
-                    // If singleSelect is true and multiple are selected, keep only the first one (cleanup)
-                    if (singleSelect && catResult.data.length > 1) {
-                        const firstKey = `cat_${catResult.data[0].category_id}`;
-                        setSelectedMappings((prev) => ({ ...prev, [firstKey]: true }));
-                    } else {
-                        setSelectedMappings((prev) => ({ ...prev, ...mappings }));
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error loading section mappings:", error);
+        if (sectionsResolved && !sectionId) {
             showNotification({
-                message: "Failed to load mappings",
+                message: "Section not found",
                 color: "red",
             });
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [sectionsResolved, sectionId]);
+
+    useEffect(() => {
+        if (!sectionId || !wantsSubcategories) return;
+        if (subcatQuery.data?.success && subcatQuery.data.data) {
+            const mappings = {};
+            const orders = {};
+            subcatQuery.data.data.forEach((mapping) => {
+                mappings[`sub_${mapping.subcategory_id}`] = true;
+                orders[`sub_${mapping.subcategory_id}`] = mapping.display_order;
+            });
+            setSelectedMappings((prev) => ({ ...prev, ...mappings }));
+            setDisplayOrders((prev) => ({ ...prev, ...orders }));
+        }
+    }, [sectionId, wantsSubcategories, subcatQuery.data]);
+
+    useEffect(() => {
+        if (!sectionId || !wantsCategories) return;
+        if (catQuery.data?.success && catQuery.data.data) {
+            const mappings = {};
+            catQuery.data.data.forEach((mapping) => {
+                mappings[`cat_${mapping.category_id}`] = true;
+            });
+
+            // If singleSelect is true and multiple are selected, keep only the first one (cleanup)
+            if (singleSelect && catQuery.data.data.length > 1) {
+                const firstKey = `cat_${catQuery.data.data[0].category_id}`;
+                setSelectedMappings((prev) => ({ ...prev, [firstKey]: true }));
+            } else {
+                setSelectedMappings((prev) => ({ ...prev, ...mappings }));
+            }
+        }
+    }, [sectionId, wantsCategories, singleSelect, catQuery.data]);
 
     const handleToggleMapping = (key) => {
         if (singleSelect) {
@@ -261,8 +262,11 @@ const SectionMappingManager = ({
                 icon: <FaCheck />,
             });
 
-            // Reload mappings
-            await loadSectionMappings();
+            // Refetch mappings from the server so the UI reflects the save
+            // immediately (also relies on the backend having invalidated its
+            // Redis cache for this section on write).
+            queryClient.invalidateQueries({ queryKey: ["section-subcategory-mappings", sectionId] });
+            queryClient.invalidateQueries({ queryKey: ["section-categories", sectionId] });
         } catch (error) {
             console.error("Error saving mappings:", error);
             showNotification({

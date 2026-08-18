@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AdminAuthProvider, useAdminAuth } from "./contexts/AdminAuthContext";
 import { SellerAuthProvider } from "./contexts/SellerAuthContext";
 import {
@@ -244,6 +245,15 @@ const spotlightActions = [
     onClick: () => (window.location.href = "/wallet-transactions"),
   },
 ];
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   // Auth state will be managed by the AdminAuthContext
@@ -705,22 +715,24 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <AdminAuthProvider>
-        <SellerAuthProvider>
-          <ModalsProvider>
-            <Notifications position="top-right" zIndex={1000} />
-            <Spotlight
-              actions={spotlightActions}
-              searchProps={{
-                placeholder: "Search...",
-                leftSection: <FaSearch size={18} />,
-              }}
-              shortcut="mod + k"
-            />
-            <RouterProvider router={router} />
-          </ModalsProvider>
-        </SellerAuthProvider>
-      </AdminAuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AdminAuthProvider>
+          <SellerAuthProvider>
+            <ModalsProvider>
+              <Notifications position="top-right" zIndex={1000} />
+              <Spotlight
+                actions={spotlightActions}
+                searchProps={{
+                  placeholder: "Search...",
+                  leftSection: <FaSearch size={18} />,
+                }}
+                shortcut="mod + k"
+              />
+              <RouterProvider router={router} />
+            </ModalsProvider>
+          </SellerAuthProvider>
+        </AdminAuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
