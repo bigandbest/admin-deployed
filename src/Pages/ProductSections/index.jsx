@@ -156,7 +156,7 @@ const ProductSectionsManagement = () => {
   const fetchAllProducts = async () => {
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-      const response = await axios.get(`${apiUrl}/admin/products`);
+      const response = await axios.get(`${apiUrl}/admin/products`, { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } });
 
       if (response.data.success && response.data.products) {
         setAllProducts(response.data.products);

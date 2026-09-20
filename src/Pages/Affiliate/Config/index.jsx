@@ -1,144 +1,125 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { getConfig, updateConfig } from "../../../utils/adminAffiliateApi";
-import { Save, RefreshCw } from "lucide-react";
+import { Input } from "../../../Components/UI/input";
+import { Switch } from "../../../Components/UI/switch";
+import { Skeleton } from "../../../Components/UI/skeleton";
+import {
+  PageHeader, ConfigSection, ConfigRow, NumberField, SaveActions, ErrorState, useConfigDraft, notifySuccess, notifyError,
+} from "../../../Components/Growth";
+
+const num = (v) => (v === "" ? 0 : parseFloat(v) || 0);
 
 export default function AffiliateConfig() {
-  const [config, setConfig] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["affiliate", "config"], queryFn: () => getConfig() });
+  const { draft: config, set, dirty, discard } = useConfigDraft(data?.data);
 
-  useEffect(() => { load(); }, []);
+  const save = useMutation({
+    mutationFn: () => updateConfig(config),
+    onSuccess: () => {
+      notifySuccess("Affiliate settings updated.");
+      queryClient.invalidateQueries({ queryKey: ["affiliate", "config"] });
+    },
+    onError: (err) => notifyError(err.message),
+  });
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await getConfig();
-      setConfig(res.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updateConfig(config);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch (e) { alert(e.message); }
-    finally { setSaving(false); }
-  };
-
-  const set = (key, val) => setConfig((c) => ({ ...c, [key]: val }));
-
-  if (loading || !config) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
-    </div>
+  const header = (
+    <PageHeader
+      title="Affiliate settings"
+      description="Rules for the affiliate program."
+      actions={<SaveActions dirty={dirty} isSaving={save.isPending} onSave={() => save.mutate()} onDiscard={discard} />}
+    />
   );
 
-  const Field = ({ label, desc, children }) => (
-    <div className="flex items-start justify-between py-4 border-b border-gray-50 last:border-0">
-      <div className="flex-1 pr-8">
-        <div className="text-sm font-medium text-gray-900">{label}</div>
-        {desc && <div className="text-xs text-gray-500 mt-0.5">{desc}</div>}
+  if (isError) return <div>{header}<ErrorState title="Unable to load settings" onRetry={refetch} /></div>;
+  if (isLoading || !config) {
+    return (
+      <div className="space-y-4">
+        {header}
+        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)}
       </div>
-      <div className="flex-shrink-0">{children}</div>
-    </div>
-  );
+    );
+  }
 
-  const Toggle = ({ value, onChange }) => (
-    <button onClick={() => onChange(!value)}
-      className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-gray-900" : "bg-gray-200"}`}>
-      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${value ? "translate-x-6" : "translate-x-1"}`} />
-    </button>
-  );
-
-  const NumInput = ({ value, onChange, min, max, step = 1 }) => (
-    <input type="number" value={value} onChange={(e) => onChange(e.target.value)} min={min} max={max} step={step}
-      className="w-28 border border-gray-200 rounded-xl px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-gray-300" />
+  const n = (key, opts) => <NumberField id={key} value={config[key]} onChange={(v) => set(key, num(v))} {...opts} />;
+  const sw = (key, label, def = false) => (
+    <Switch
+      checked={def ? config[key] !== false : !!config[key]}
+      onCheckedChange={(v) => set(key, v)}
+      aria-label={label}
+    />
   );
 
   return (
-    <div className="p-6 space-y-5 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Program Settings</h1>
-          <p className="text-sm text-gray-500">Configure the affiliate program</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors
-              ${saved ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-gray-800"} disabled:opacity-50`}>
-            <Save className="w-4 h-4" /> {saved ? "Saved!" : saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-      </div>
+    <div>
+      {header}
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+        <ConfigSection title="General">
+          <ConfigRow label="Program enabled" hint="Master switch. When off, it overrides every setting below: approved affiliates keep their dashboard, links, commissions and balance, but nothing new can start.">
+            {sw("is_enabled", "Program enabled")}
+          </ConfigRow>
+          <ConfigRow label="New applications" hint="Blocks new affiliate applications. Approved affiliates are unaffected.">
+            {sw("new_applications_enabled", "New applications", true)}
+          </ConfigRow>
+          <ConfigRow label="New affiliate links" hint="Blocks creating new links. Existing links keep tracking clicks and earning commission.">
+            {sw("new_links_enabled", "New affiliate links", true)}
+          </ConfigRow>
+          <ConfigRow label="Program name" htmlFor="program_name" hint="Shown to affiliates.">
+            <Input id="program_name" value={config.program_name || ""} onChange={(e) => set("program_name", e.target.value)} className="w-48" />
+          </ConfigRow>
+          <ConfigRow label="Auto-approve applications" hint="Approve every application automatically, skipping manual review.">
+            {sw("auto_approve", "Auto-approve applications")}
+          </ConfigRow>
+        </ConfigSection>
 
-      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase py-3">General</h2>
-        <Field label="Program Enabled" desc="Enable or disable the affiliate program">
-          <Toggle value={config.is_enabled} onChange={(v) => set("is_enabled", v)} />
-        </Field>
-        <Field label="Program Name" desc="Displayed to affiliates">
-          <input value={config.program_name || ""} onChange={(e) => set("program_name", e.target.value)}
-            className="w-48 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-        </Field>
-        <Field label="Auto-Approve Applications" desc="Automatically approve all applications">
-          <Toggle value={config.auto_approve} onChange={(v) => set("auto_approve", v)} />
-        </Field>
-      </div>
+        <ConfigSection title="Commission">
+          <ConfigRow label="Default commission rate (%)" htmlFor="default_commission_rate" hint="Applied to categories without a custom rate.">
+            {n("default_commission_rate", { min: 0, max: 50, step: 0.5 })}
+          </ConfigRow>
+          <ConfigRow label="Tier bonuses" hint="Add a bonus percentage based on the affiliate's tier.">
+            {sw("enable_tier_bonuses", "Tier bonuses")}
+          </ConfigRow>
+        </ConfigSection>
 
-      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase py-3">Commission</h2>
-        <Field label="Default Commission Rate (%)" desc="Applied to categories without a custom rate">
-          <NumInput value={config.default_commission_rate} onChange={(v) => set("default_commission_rate", v)} min={0} max={50} step={0.5} />
-        </Field>
-        <Field label="Enable Tier Bonuses" desc="Add bonus % based on affiliate tier">
-          <Toggle value={config.enable_tier_bonuses} onChange={(v) => set("enable_tier_bonuses", v)} />
-        </Field>
-      </div>
+        <ConfigSection title="Tracking">
+          <ConfigRow label="Cookie duration (hours)" htmlFor="cookie_duration_hours" hint="How long a click is attributed to the affiliate.">
+            {n("cookie_duration_hours", { min: 1, max: 720 })}
+          </ConfigRow>
+          <ConfigRow label="Block self-referral" hint="Affiliates earn nothing on their own purchases.">
+            {sw("block_self_referral", "Block self-referral")}
+          </ConfigRow>
+          <ConfigRow label="Commission hold (days)" htmlFor="commission_hold_days" hint="Days after delivery before a commission can be approved.">
+            {n("commission_hold_days", { min: 0, max: 30 })}
+          </ConfigRow>
+        </ConfigSection>
 
-      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase py-3">Tracking</h2>
-        <Field label="Cookie Duration (hours)" desc="How long the affiliate cookie lasts">
-          <NumInput value={config.cookie_duration_hours} onChange={(v) => set("cookie_duration_hours", parseInt(v))} min={1} max={720} />
-        </Field>
-        <Field label="Block Self-Referral" desc="Prevent affiliates from earning on their own purchases">
-          <Toggle value={config.block_self_referral} onChange={(v) => set("block_self_referral", v)} />
-        </Field>
-        <Field label="Commission Hold Days" desc="Days after delivery before commission is approved">
-          <NumInput value={config.commission_hold_days} onChange={(v) => set("commission_hold_days", parseInt(v))} min={0} max={30} />
-        </Field>
-      </div>
+        <ConfigSection title="Payouts">
+          <ConfigRow label="Withdrawals enabled" hint="Blocks new payout requests. Existing balances remain available.">
+            {sw("withdrawal_enabled", "Withdrawals enabled", true)}
+          </ConfigRow>
+          <ConfigRow label="Minimum payout (₹)" htmlFor="minimum_payout_amount" hint="Affiliates cannot request a payout below this balance.">
+            {n("minimum_payout_amount", { min: 0, step: 50 })}
+          </ConfigRow>
+          <ConfigRow label="Payout day of month" htmlFor="payout_day_of_month" hint="Day each month payouts are processed (1–28).">
+            {n("payout_day_of_month", { min: 1, max: 28 })}
+          </ConfigRow>
+        </ConfigSection>
 
-      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase py-3">Payouts</h2>
-        <Field label="Minimum Payout (₹)" desc="Minimum balance to request a payout">
-          <NumInput value={config.minimum_payout_amount} onChange={(v) => set("minimum_payout_amount", v)} min={0} step={50} />
-        </Field>
-        <Field label="Payout Day of Month" desc="Day each month when payouts are processed">
-          <NumInput value={config.payout_day_of_month} onChange={(v) => set("payout_day_of_month", parseInt(v))} min={1} max={28} />
-        </Field>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase py-3">Tax (TDS)</h2>
-        <Field label="Enable TDS" desc="Deduct TDS from commission payouts">
-          <Toggle value={config.enable_tds} onChange={(v) => set("enable_tds", v)} />
-        </Field>
-        <Field label="TDS Threshold (₹/year)" desc="Yearly earnings above which TDS applies">
-          <NumInput value={config.tds_threshold} onChange={(v) => set("tds_threshold", v)} min={0} step={1000} />
-        </Field>
-        <Field label="TDS Rate with PAN (%)" desc="">
-          <NumInput value={config.tds_rate_with_pan} onChange={(v) => set("tds_rate_with_pan", v)} min={0} max={30} step={0.5} />
-        </Field>
-        <Field label="TDS Rate without PAN (%)" desc="">
-          <NumInput value={config.tds_rate_without_pan} onChange={(v) => set("tds_rate_without_pan", v)} min={0} max={30} step={0.5} />
-        </Field>
+        <ConfigSection title="Tax (TDS)" description="Tax deducted from commission payouts.">
+          <ConfigRow label="Enable TDS" hint="Deduct TDS from payouts once the yearly threshold is crossed.">
+            {sw("enable_tds", "Enable TDS")}
+          </ConfigRow>
+          <ConfigRow label="TDS threshold (₹ / year)" htmlFor="tds_threshold" hint="Yearly earnings above which TDS applies.">
+            {n("tds_threshold", { min: 0, step: 1000 })}
+          </ConfigRow>
+          <ConfigRow label="TDS rate with PAN (%)" htmlFor="tds_rate_with_pan">
+            {n("tds_rate_with_pan", { min: 0, max: 30, step: 0.5 })}
+          </ConfigRow>
+          <ConfigRow label="TDS rate without PAN (%)" htmlFor="tds_rate_without_pan" hint="Applied when the affiliate has not provided a PAN.">
+            {n("tds_rate_without_pan", { min: 0, max: 30, step: 0.5 })}
+          </ConfigRow>
+        </ConfigSection>
       </div>
     </div>
   );

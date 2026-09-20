@@ -1,99 +1,196 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDashboard, formatCurrency, statusColor } from "../../../utils/adminAffiliateApi";
-import { Users, ShoppingBag, DollarSign, Clock, TrendingUp, ChevronRight, RefreshCw, AlertCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { RefreshCw } from "lucide-react";
+
+import { getDashboard, getAnalytics } from "../../../utils/adminAffiliateApi";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../../Components/UI/card";
+import { Button } from "../../../Components/UI/button";
+import { Skeleton } from "../../../Components/UI/skeleton";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "../../../Components/UI/chart";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "../../../Components/UI/table";
+import { cn } from "../../../lib/utils";
+import { PageHeader, KpiCard, StatusBadge, ErrorState, EmptyState, formatINR, formatINRCompact, formatNumber } from "../../../Components/Growth";
+
+const trendConfig = {
+  clicks: { label: "Clicks", color: "var(--chart-1)" },
+  orders: { label: "Orders", color: "var(--chart-2)" },
+};
+
+const ago = (ts) => {
+  if (!ts) return null;
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  return mins < 1 ? "just now" : mins === 1 ? "1 min ago" : `${mins} min ago`;
+};
 
 export default function AffiliateDashboard() {
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => { load(); }, []);
+  const dashboardQuery = useQuery({ queryKey: ["affiliate", "dashboard"], queryFn: () => getDashboard(), staleTime: 30_000 });
+  const analyticsQuery = useQuery({ queryKey: ["affiliate", "analytics"], queryFn: () => getAnalytics(), staleTime: 30_000 });
 
-  const load = async () => {
-    setLoading(true); setError(null);
-    try {
-      const res = await getDashboard();
-      setData(res.data);
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  };
+  const data = dashboardQuery.data?.data;
+  const analytics = analyticsQuery.data?.analytics;
+  const dashLoading = dashboardQuery.isLoading;
+  const analyticsLoading = analyticsQuery.isLoading;
+  const fetching = dashboardQuery.isFetching || analyticsQuery.isFetching;
+  const refresh = () => { dashboardQuery.refetch(); analyticsQuery.refetch(); };
+  const updated = ago(dashboardQuery.dataUpdatedAt);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
-    </div>
+  const header = (
+    <PageHeader
+      title="Affiliate overview"
+      description={updated ? `Last updated ${updated}` : "Program performance and items needing attention."}
+      actions={
+        <Button variant="outline" onClick={refresh} disabled={fetching}>
+          <RefreshCw className={cn("size-4", fetching && "animate-spin")} /> Refresh
+        </Button>
+      }
+    />
   );
 
-  if (error) return (
-    <div className="p-6">
-      <div className="flex flex-col items-center justify-center py-16 bg-red-50 rounded-2xl border border-red-100 text-center">
-        <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
-        <p className="text-red-700 font-medium">{error}</p>
-        <button onClick={load} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700">Retry</button>
-      </div>
-    </div>
-  );
+  if (dashboardQuery.isError) {
+    return <div>{header}<ErrorState title="Unable to load the affiliate overview" onRetry={refresh} /></div>;
+  }
 
-  const stats = [
-    { label: "Total Affiliates", value: data?.totalAffiliates || 0, icon: <Users className="w-5 h-5" />, color: "text-blue-600 bg-blue-50", path: "/affiliate/affiliates" },
-    { label: "Active Affiliates", value: data?.activeAffiliates || 0, icon: <TrendingUp className="w-5 h-5" />, color: "text-emerald-600 bg-emerald-50", path: "/affiliate/affiliates?status=ACTIVE" },
-    { label: "Pending Applications", value: data?.pendingApplications || 0, icon: <Clock className="w-5 h-5" />, color: "text-orange-600 bg-orange-50", path: "/affiliate/applications?status=PENDING" },
-    { label: "Total Orders", value: data?.totalOrders || 0, icon: <ShoppingBag className="w-5 h-5" />, color: "text-violet-600 bg-violet-50", path: "/affiliate/orders" },
-    { label: "Pending Commission", value: formatCurrency(data?.pendingCommissionAmount || 0), icon: <DollarSign className="w-5 h-5" />, color: "text-yellow-600 bg-yellow-50", path: "/affiliate/payouts?status=PENDING" },
-    { label: "Pending Payouts", value: data?.pendingPayouts || 0, icon: <DollarSign className="w-5 h-5" />, color: "text-pink-600 bg-pink-50", path: "/affiliate/payouts?status=PENDING" },
-  ];
-
-  const quickLinks = [
-    { label: "Review Applications", path: "/affiliate/applications", badge: data?.pendingApplications, color: "bg-orange-500" },
-    { label: "Manage Commission Rates", path: "/affiliate/commission-rates" },
-    { label: "Process Payouts", path: "/affiliate/payouts", badge: data?.pendingPayouts, color: "bg-red-500" },
-    { label: "Program Settings", path: "/affiliate/config" },
-  ];
+  const statusTotal = (analytics?.status_breakdown || []).reduce((sum, s) => sum + (s._count?.id || 0), 0);
+  const trend = (analytics?.daily_trend || []).map((d) => ({
+    date: new Date(d.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+    clicks: d.clicks,
+    orders: d.orders,
+  }));
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Affiliate Program</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Overview and management</p>
-        </div>
-        <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
+    <div className="space-y-5">
+      {header}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <KpiCard
+          label="Pending applications"
+          value={formatNumber(data?.pendingApplications)}
+          hint="Awaiting review"
+          tone={data?.pendingApplications > 0 ? "warning" : "default"}
+          isLoading={dashLoading}
+          onClick={() => navigate("/affiliate/applications?status=PENDING")}
+        />
+        <KpiCard
+          label="Pending payouts"
+          value={formatNumber(data?.pendingPayouts)}
+          hint="Awaiting processing"
+          tone={data?.pendingPayouts > 0 ? "warning" : "default"}
+          isLoading={dashLoading}
+          onClick={() => navigate("/affiliate/payouts?status=PENDING")}
+        />
+        <KpiCard
+          label="Pending commission"
+          value={formatINRCompact(data?.pendingCommissionAmount)}
+          hint="Not yet paid out"
+          isLoading={dashLoading}
+          onClick={() => navigate("/affiliate/payouts?status=PENDING")}
+        />
+        <KpiCard
+          label="Active affiliates"
+          value={formatNumber(data?.activeAffiliates)}
+          hint={`of ${formatNumber(data?.totalAffiliates)} total`}
+          isLoading={dashLoading}
+          onClick={() => navigate("/affiliate/affiliates?status=ACTIVE")}
+        />
+        <KpiCard label="Attributed orders" value={formatNumber(data?.totalOrders)} hint="All time" isLoading={dashLoading} />
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {stats.map((s) => (
-          <button key={s.label} onClick={() => navigate(s.path)}
-            className="bg-white rounded-2xl border border-gray-100 p-4 text-left hover:shadow-md transition-shadow">
-            <div className={`inline-flex p-2 rounded-xl mb-3 ${s.color}`}>{s.icon}</div>
-            <div className="text-2xl font-bold text-gray-900">{typeof s.value === "number" ? s.value.toLocaleString() : s.value}</div>
-            <div className="text-xs text-gray-500 mt-1">{s.label}</div>
-          </button>
-        ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="shadow-none lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">Clicks and orders</CardTitle>
+            <CardDescription>Daily affiliate link clicks and the orders they produced.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analyticsLoading ? (
+              <Skeleton className="h-[240px] w-full" />
+            ) : !trend.length ? (
+              <EmptyState title="No trend data yet" description="Clicks and orders appear once affiliate links are used." />
+            ) : (
+              <ChartContainer config={trendConfig} className="h-[240px] w-full">
+                <LineChart data={trend}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line type="monotone" dataKey="clicks" stroke="var(--color-clicks)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="orders" stroke="var(--color-orders)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="text-sm">Commission status</CardTitle>
+            <CardDescription>Share of commissions by status.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analyticsLoading ? (
+              <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+            ) : !statusTotal ? (
+              <EmptyState title="No commissions yet" />
+            ) : (
+              <ul className="space-y-3">
+                {analytics.status_breakdown.map((item) => {
+                  const count = item._count?.id || 0;
+                  const pct = (count / statusTotal) * 100;
+                  return (
+                    <li key={item.commission_status} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <StatusBadge status={item.commission_status} />
+                        <span className="tabular-nums text-muted-foreground">{formatNumber(count)} · {pct.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary/70" style={{ width: `${pct}%` }} />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">Quick Actions</h2>
-        <div className="space-y-2">
-          {quickLinks.map((q) => (
-            <button key={q.label} onClick={() => navigate(q.path)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
-              <span className="text-sm font-medium text-gray-700">{q.label}</span>
-              <div className="flex items-center gap-2">
-                {q.badge > 0 && (
-                  <span className={`${q.color} text-white text-xs font-bold px-2 py-0.5 rounded-full`}>{q.badge}</span>
-                )}
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <Card className="gap-0 overflow-hidden p-0 shadow-none">
+        <CardHeader className="flex-row items-center justify-between border-b py-3">
+          <CardTitle className="text-sm">Top affiliates</CardTitle>
+          <Button variant="link" size="sm" className="h-auto p-0" onClick={() => navigate("/affiliate/affiliates")}>View all</Button>
+        </CardHeader>
+        {analyticsLoading ? (
+          <div className="space-y-2 p-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+        ) : !analytics?.top_affiliates?.length ? (
+          <EmptyState title="No affiliates yet" description="Top earners appear here once commissions are recorded." />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">#</TableHead>
+                <TableHead>Affiliate</TableHead>
+                <TableHead className="text-right">Commission earned</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {analytics.top_affiliates.map((a, idx) => (
+                <TableRow key={a.affiliate_id}>
+                  <TableCell className="text-muted-foreground tabular-nums">{idx + 1}</TableCell>
+                  <TableCell>
+                    <p className="font-medium">{a.display_name || "—"}</p>
+                    <p className="font-mono text-xs text-muted-foreground">{a.affiliate_code || "—"}</p>
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">{formatINR(a.total_commission)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
     </div>
   );
 }

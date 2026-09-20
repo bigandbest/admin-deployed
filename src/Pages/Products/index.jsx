@@ -1,1658 +1,515 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-// Removed direct Supabase import - using backend API endpoints instead
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Eye, MoreHorizontal, Package, Pencil, Plus, SlidersHorizontal, Trash2, Upload } from "lucide-react";
+import PropTypes from "prop-types";
 
+import { listAdminProducts, getProductSummary, getProductFilterOptions } from "../../utils/adminProductApi";
+import { deleteProduct, getAllCategories, getAllSubcategories, getAllGroups } from "../../utils/supabaseApi";
+import { Card } from "../../Components/UI/card";
+import { Button } from "../../Components/UI/button";
+import { Badge } from "../../Components/UI/badge";
+import { Label } from "../../Components/UI/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../Components/UI/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../../Components/UI/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../Components/UI/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "../../Components/UI/sheet";
 import {
-  Card,
-  Title,
-  Text,
-  Table,
-  ActionIcon,
-  Group,
-  Badge,
-  Button,
-  TextInput,
-  Select,
-  Modal,
-  Textarea,
-  Skeleton,
-  CloseButton,
-  Menu,
-  Checkbox,
-} from "@mantine/core";
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaUpload, FaChevronDown, FaFilter, FaLayerGroup } from "react-icons/fa";
+  PageHeader, KpiCard, StatusBadge, FilterBar, TablePagination, ConfirmDialog, DetailList, DataGrid, ColumnsMenu,
+  ErrorState, EmptyState, RichText, useDebouncedValue, formatINR, formatNumber, formatDate, notifySuccess, notifyError,
+} from "../../Components/Growth";
 
-// Small inline placeholder SVG for missing product images
-const PRODUCT_PLACEHOLDER = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160' viewBox='0 0 240 160'><rect width='100%' height='100%' fill='%23f8fafc'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23cbd5e1' font-family='sans-serif' font-size='14'>No Image</text></svg>`;
+const EMPTY = [];
+const PAGE_SIZES = [25, 50, 100];
+const LOW_STOCK = 10;
 
-// Loading skeleton component for table rows
-const ProductRowSkeleton = () => (
-  <tr className="border-b border-gray-100 dark:border-gray-700">
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <div className="flex flex-col items-center gap-2">
-        <Skeleton height={80} width={80} radius="sm" />
-      </div>
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={16} width="80%" mb={4} />
-      <Skeleton height={12} width="60%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="90%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="70%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="60%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="80%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="50%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="70%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="50%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="70%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="60%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="70%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="80%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="70%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="60%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="70%" />
-    </td>
-    <td style={{ padding: "8px" }}>
-      <Skeleton height={14} width="60%" />
-    </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <Skeleton height={20} width={40} mx="auto" radius="sm" />
-    </td>
-    <td style={{ textAlign: "center", padding: "8px" }}>
-      <div className="flex justify-center gap-1">
-        <Skeleton height={24} width={24} radius="sm" />
-        <Skeleton height={24} width={24} radius="sm" />
-      </div>
-    </td>
-  </tr>
-);
+// Column id -> server sort field. Only these columns are sortable (price lives on variants).
+const SORT_FIELD = { name: "name", updated: "updated_at", created: "created_at", rating: "rating" };
+const SORT_ID = Object.fromEntries(Object.entries(SORT_FIELD).map(([id, field]) => [field, id]));
 
-// Filter chips component for showing active filters
-/* eslint-disable react/prop-types */
-const FilterChips = ({
-  searchQuery,
-  categoryFilter,
-  subcategoryFilter,
-  groupFilter,
-  activeFilter,
-  categories,
-  subcategories,
-  groups,
-  onClearSearch,
-  onClearCategory,
-  onClearSubcategory,
-  onClearGroup,
-  onClearActive,
-  onClearAll,
-}) => {
-  const hasActiveFilters =
-    searchQuery ||
-    categoryFilter ||
-    subcategoryFilter ||
-    groupFilter ||
-    activeFilter;
+// Secondary columns start hidden; the admin can turn them on from the Columns menu.
+const DEFAULT_VISIBILITY = { store: false, vertical: false, tax: false, returns: false, rating: false, bulk: false, created: false };
+const COLUMN_LABELS = [
+  { id: "category", label: "Category" }, { id: "brand", label: "Brand" }, { id: "store", label: "Store" },
+  { id: "vertical", label: "Vertical" }, { id: "price", label: "Price" }, { id: "bulk", label: "Bulk pricing" },
+  { id: "stock", label: "Stock" }, { id: "tax", label: "HSN / GST" }, { id: "returns", label: "Returns" },
+  { id: "rating", label: "Rating" }, { id: "status", label: "Status" }, { id: "updated", label: "Updated" }, { id: "created", label: "Created" },
+];
 
-  if (!hasActiveFilters) return null;
+const defaultVariant = (p) => p.variants?.find((v) => v.is_default) || p.variants?.[0] || null;
+const totalAvailable = (p) => (p.variants || []).reduce((s, v) => s + (v.available_qty || 0), 0);
+const stockState = (p) => {
+  const q = totalAvailable(p);
+  return q <= 0 ? { key: "out", label: "Out of stock", tone: "danger" } : q <= LOW_STOCK ? { key: "low", label: "Low stock", tone: "warning" } : { key: "in", label: "In stock", tone: "success" };
+};
+const humanize = (s = "") => s.charAt(0).toUpperCase() + s.slice(1);
 
-  const getCategoryName = (id) =>
-    categories.find((c) => c.id === id)?.name || "Unknown";
-  const getSubcategoryName = (id) =>
-    subcategories.find((s) => s.id === id)?.name || "Unknown";
-  const getGroupName = (id) =>
-    groups.find((g) => g.id === id)?.name || "Unknown";
-
-  return (
-    <div className="flex flex-wrap items-center gap-3 p-4 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 mb-6 shadow-sm">
-      <div className="flex items-center text-blue-800 font-semibold text-sm mr-2">
-        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
-            clipRule="evenodd"
-          />
-        </svg>
-        Active Filters:
-      </div>
-
-      {searchQuery && (
-        <Badge
-          variant="filled"
-          color="blue"
-          rightSection={
-            <CloseButton
-              size="xs"
-              onClick={onClearSearch}
-              className="text-white hover:bg-blue-800"
-            />
-          }
-          className="pl-3 pr-1"
-        >
-          Search: &ldquo;{searchQuery}&rdquo;
-        </Badge>
-      )}
-
-      {categoryFilter && (
-        <Badge
-          variant="filled"
-          color="green"
-          rightSection={
-            <CloseButton
-              size="xs"
-              onClick={onClearCategory}
-              className="text-white hover:bg-green-800"
-            />
-          }
-          className="pl-3 pr-1"
-        >
-          Category: {getCategoryName(categoryFilter)}
-        </Badge>
-      )}
-
-      {subcategoryFilter && (
-        <Badge
-          variant="filled"
-          color="indigo"
-          rightSection={
-            <CloseButton
-              size="xs"
-              onClick={onClearSubcategory}
-              className="text-white hover:bg-indigo-800"
-            />
-          }
-          className="pl-3 pr-1"
-        >
-          Subcategory: {getSubcategoryName(subcategoryFilter)}
-        </Badge>
-      )}
-
-      {groupFilter && (
-        <Badge
-          variant="filled"
-          color="purple"
-          rightSection={
-            <CloseButton
-              size="xs"
-              onClick={onClearGroup}
-              className="text-white hover:bg-purple-800"
-            />
-          }
-          className="pl-3 pr-1"
-        >
-          Group: {getGroupName(groupFilter)}
-        </Badge>
-      )}
-
-      {activeFilter && (
-        <Badge
-          variant="filled"
-          color="orange"
-          rightSection={
-            <CloseButton
-              size="xs"
-              onClick={onClearActive}
-              className="text-white hover:bg-orange-800"
-            />
-          }
-          className="pl-3 pr-1"
-        >
-          Status: {activeFilter === "true" ? "Active" : "Inactive"}
-        </Badge>
-      )}
-
-      <Button
-        variant="subtle"
-        color="gray"
-        size="xs"
-        onClick={onClearAll}
-        className="ml-auto"
-      >
-        Clear All
-      </Button>
+function Thumb({ src, name, size = "size-10" }) {
+  return src ? (
+    <img src={src} alt={name} loading="lazy" className={`${size} shrink-0 rounded-md border object-cover`} />
+  ) : (
+    <div className={`${size} flex shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground`} aria-hidden="true">
+      <Package className="size-4" />
     </div>
   );
-};
-/* eslint-enable react/prop-types */
+}
+Thumb.propTypes = { src: PropTypes.string, name: PropTypes.string, size: PropTypes.string };
 
-// Empty product array - will be populated from Firebase
-
-// Format price to Indian Rupees
-const formatIndianPrice = (price) => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(price);
-};
-
-// Helper function to get product image from media array
-const getProductImage = (product) => {
-  if (!product.media || product.media.length === 0) {
-    return null;
-  }
-  // Get primary image or first image
-  const primaryImage = product.media.find((m) => m.is_primary);
-  return primaryImage ? primaryImage.url : product.media[0].url;
-};
-
-// Helper function to get default variant
-const getDefaultVariant = (product) => {
-  if (!product.variants || product.variants.length === 0) {
-    return null;
-  }
-  return product.variants.find((v) => v.is_default) || product.variants[0];
-};
-
-// Helper function to get product price from variant
-const getProductPrice = (product) => {
-  const variant = getDefaultVariant(product);
-  return variant ? parseFloat(variant.price) : 0;
-};
-
-// Helper function to get product old price from variant
-const getProductOldPrice = (product) => {
-  const variant = getDefaultVariant(product);
-  return variant && variant.old_price ? parseFloat(variant.old_price) : 0;
-};
-
-// Helper function to check if product is in stock
-const isProductInStock = (product) => {
-  const variant = getDefaultVariant(product);
-  if (!variant || !variant.inventory || variant.inventory.length === 0) {
-    return false;
-  }
-  // Check if any warehouse has stock
-  return variant.inventory.some((inv) => inv.stock_qty > inv.reserved_qty);
-};
-
-import {
-  deleteProduct,
-  getAllCategories,
-  getAllSubcategories,
-  getAllGroups,
-} from "../../utils/supabaseApi";
-
-// TableHeader component with dropdown filter and click-to-navigate
-const TableHeader = ({
-  label,
-  hasFilter = false,
-  filterContent = null,
-  navigateTo = null,
-  icon = null,
-  activeFilterCount = 0
-}) => {
+export default function ProductsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const [selected, setSelected] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [visibility, setVisibility] = useState(DEFAULT_VISIBILITY);
 
-  const handleHeaderClick = () => {
-    if (navigateTo) {
-      navigate(navigateTo);
-    }
+  // Filters live in the URL so they survive navigation, refresh and sharing.
+  const f = {
+    q: params.get("q") || "", category: params.get("category") || "", subcategory: params.get("subcategory") || "",
+    group: params.get("group") || "", active: params.get("active") || "", stock: params.get("stock") || "",
+    brand: params.get("brand") || "", store: params.get("store") || "", vertical: params.get("vertical") || "",
+    returns: params.get("returns") || "", image: params.get("image") || "",
+    page: Math.max(parseInt(params.get("page")) || 1, 1), size: PAGE_SIZES.includes(parseInt(params.get("size"))) ? parseInt(params.get("size")) : 25,
+    sort: params.get("sort") || "created_at:desc",
   };
+  const [sortField, sortDir] = f.sort.split(":");
 
-  if (!hasFilter) {
-    return (
-      <th
-        className={`px-4 py-3 text-gray-500 font-medium whitespace-nowrap ${navigateTo ? 'product-table-header-clickable' : ''}`}
-        onClick={handleHeaderClick}
-        title={navigateTo ? `Click to navigate to ${label}` : ''}
-      >
-        <div className="flex items-center gap-2">
-          {icon}
-          <span>{label}</span>
-        </div>
-      </th>
-    );
-  }
+  const update = (patch) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      Object.entries(patch).forEach(([k, v]) => (v === null || v === undefined || v === "" || v === "ALL" ? next.delete(k) : next.set(k, String(v))));
+      if (!("page" in patch)) next.delete("page"); // any filter change returns to page 1
+      return next;
+    }, { replace: true });
 
-  return (
-    <th className="px-4 py-3 text-gray-500 font-medium whitespace-nowrap group">
-      <div className="flex items-center gap-2 justify-between">
-        <div
-          className={`flex items-center gap-2 ${navigateTo ? 'product-table-header-clickable flex-1' : ''}`}
-          onClick={handleHeaderClick}
-          title={navigateTo ? `Click to navigate to ${label}` : ''}
-        >
-          {icon}
-          <span>{label}</span>
-          {activeFilterCount > 0 && (
-            <Badge
-              size="xs"
-              color="blue"
-              variant="filled"
-              className="ml-1 filter-badge-enter"
-              style={{ minWidth: '18px', height: '18px', padding: '0 4px' }}
-            >
-              {activeFilterCount}
-            </Badge>
-          )}
-        </div>
-        <Menu position="bottom-end" shadow="md" width={250} withArrow>
-          <Menu.Target>
-            <ActionIcon
-              variant="subtle"
-              size="sm"
-              className={`hover:bg-blue-100 hover:text-blue-600 transition-all opacity-70 group-hover:opacity-100 ${activeFilterCount > 0 ? 'text-blue-600' : ''}`}
-              title="Click to filter"
-            >
-              <FaFilter size={10} className="mr-0.5" />
-              <FaChevronDown size={10} />
-            </ActionIcon>
-          </Menu.Target>
-          <Menu.Dropdown className="product-table-filter-dropdown">
-            <div className="px-2 py-1 bg-gray-50 border-b border-gray-200 font-semibold text-xs text-gray-700 sticky top-0 z-10">
-              Filter by {label}
-            </div>
-            {filterContent}
-          </Menu.Dropdown>
-        </Menu>
-      </div>
-    </th>
-  );
-};
+  const [searchInput, setSearchInput] = useState(f.q);
+  const debouncedSearch = useDebouncedValue(searchInput);
+  // typing -> URL (debounced)
+  useEffect(() => { if (debouncedSearch !== f.q) update({ q: debouncedSearch }); }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  // URL -> input, only when the URL changed from outside (e.g. Reset), never while the admin is mid-typing
+  useEffect(() => { if (f.q !== debouncedSearch) setSearchInput(f.q); }, [f.q]); // eslint-disable-line react-hooks/exhaustive-deps
 
-const ProductsPage = () => {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState(null);
-  const [subcategoryFilter, setSubcategoryFilter] = useState(null);
-  const [groupFilter, setGroupFilter] = useState(null);
-  const [activeFilter, setStatusFilter] = useState(null);
-  // Infinite scroll state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const scrollContainerRef = useRef(null);
-  const sentinelRef = useRef(null);
+  const listQuery = useQuery({
+    queryKey: ["products", "list", f],
+    queryFn: () => listAdminProducts({
+      page: f.page, limit: f.size, search: f.q, category_id: f.category, subcategory_id: f.subcategory, group_id: f.group,
+      active: f.active, stock: f.stock, brand_id: f.brand, store_id: f.store, vertical: f.vertical, return_applicable: f.returns,
+      has_image: f.image, sort_by: sortField, sort_dir: sortDir,
+    }),
+    placeholderData: (prev) => prev,
+  });
+  const products = listQuery.data?.products || [];
+  const total = listQuery.data?.total || 0;
+  const pagination = listQuery.data ? { total, limit: f.size, pages: listQuery.data.totalPages } : null;
 
-  // Column-specific filters
-  const [brandFilter, setBrandFilter] = useState([]);
-  const [storeFilter, setStoreFilter] = useState([]);
-  const [verticalFilter, setVerticalFilter] = useState([]);
-  const [returnPolicyFilter, setReturnPolicyFilter] = useState(null);
-  const [stockFilter, setStockFilter] = useState(null);
+  const summary = useQuery({ queryKey: ["products", "summary"], queryFn: getProductSummary, staleTime: 60_000 }).data?.summary;
+  const options = useQuery({ queryKey: ["products", "filter-options"], queryFn: getProductFilterOptions, staleTime: 5 * 60_000 }).data;
+  const categories = useQuery({ queryKey: ["products", "categories"], queryFn: getAllCategories, staleTime: 5 * 60_000 }).data?.categories ?? EMPTY;
+  const subcategories = useQuery({ queryKey: ["products", "subcategories"], queryFn: getAllSubcategories, staleTime: 5 * 60_000 }).data?.subcategories ?? EMPTY;
+  const groups = useQuery({ queryKey: ["products", "groups"], queryFn: getAllGroups, staleTime: 5 * 60_000 }).data?.groups ?? EMPTY;
 
-  useEffect(() => {
-    const fetchSetting = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`,
-        );
-        const result = await response.json();
+  const subOptions = useMemo(() => subcategories.filter((s) => !f.category || s.category_id === f.category), [subcategories, f.category]);
+  const groupOptions = useMemo(() => groups.filter((g) => !f.subcategory || g.subcategory_id === f.subcategory), [groups, f.subcategory]);
 
-        if (result.success && result.data) {
-          setVisible(result.data.is_visible);
-        }
-      } catch (error) {
-        console.error("Error fetching product grid settings:", error);
-      }
-    };
-
-    fetchSetting();
-  }, []);
-
-  const toggleVisibility = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/product-grid-settings`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ is_visible: !visible }),
-        },
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
-        setVisible(!visible);
-      } else {
-        console.error("Error updating visibility:", result.error);
-      }
-    } catch (error) {
-      console.error("Error updating visibility:", error);
-    }
-  };
-
-  // Fetch products — append=true for infinite scroll, false to reset
-  const fetchProducts = useCallback(async (page = 1, append = false) => {
-    if (append) {
-      setIsFetchingMore(true);
-    } else {
-      setLoading(true);
-    }
-    setError("");
-
-    try {
-      const params = new URLSearchParams();
-      params.append('page', String(page));
-      params.append('limit', String(itemsPerPage));
-
-      if (categoryFilter) params.append('category_id', categoryFilter);
-      if (searchQuery) params.append('search', searchQuery);
-      if (activeFilter) params.append('active', activeFilter);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/admin/products?${params.toString()}`,
-      );
-      const result = await response.json();
-
-      if (result.success && result.products) {
-        if (append) {
-          setProducts(prev => [...prev, ...result.products]);
-        } else {
-          setProducts(result.products);
-        }
-        setTotalProducts(result.total || 0);
-        const pages = result.totalPages || Math.ceil((result.total || 0) / itemsPerPage);
-        setTotalPages(pages);
-        setHasMore(page < pages);
-      } else {
-        setError(result.error || "Failed to fetch products");
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-      setIsFetchingMore(false);
-    }
-  }, [itemsPerPage, categoryFilter, searchQuery, activeFilter]);
-
-  // Reset and refetch when filters change (fetchProducts identity changes)
-  useEffect(() => {
-    setCurrentPage(1);
-    setProducts([]);
-    setHasMore(false);
-    fetchProducts(1, false);
-  }, [fetchProducts]);
-
-  // Load next page when sentinel enters viewport
-  const loadMore = useCallback(() => {
-    if (isFetchingMore || !hasMore) return;
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
-    fetchProducts(nextPage, true);
-  }, [isFetchingMore, hasMore, currentPage, fetchProducts]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    const container = scrollContainerRef.current;
-    if (!sentinel || !container) return;
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) loadMore(); },
-      { root: container, threshold: 0.1 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
-
-  // Initialize category/subcategory/group dropdowns on mount
-  useEffect(() => {
-    fetchCategories();
-    fetchSubcategories();
-    fetchGroups();
-  }, []);
-
-  // Fetch subcategories for dropdown
-  const fetchSubcategories = async () => {
-    try {
-      const result = await getAllSubcategories();
-      if (result.success) {
-        setSubcategories(result.subcategories || []);
-      } else {
-        console.error("Error fetching subcategories:", result.error);
-      }
-    } catch (err) {
-      console.error("Error fetching subcategories:", err);
-    }
-  };
-
-  // Fetch groups for dropdown
-  const fetchGroups = async () => {
-    try {
-      const result = await getAllGroups();
-      if (result.success) {
-        setGroups(result.groups || []);
-      } else {
-        console.error("Error fetching groups:", result.error);
-      }
-    } catch (err) {
-      console.error("Error fetching groups:", err);
-    }
-  };
-
-  // Fetch categories for dropdown
-  const fetchCategories = async () => {
-    try {
-      const result = await getAllCategories();
-      if (result.success) {
-        setCategories(result.categories || []);
-      } else {
-        console.error("Error fetching categories:", result.error);
-      }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
-  };
-
-  // Filter products based on search and filters
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase());
-
-    // Category filtering - check both direct subcategory relation and group relation
-    let matchesCategory = !categoryFilter;
-    if (categoryFilter && !matchesCategory) {
-      // Check through subcategory relation
-      if (product.subcategories?.categories?.id === categoryFilter) {
-        matchesCategory = true;
-      }
-      // Check through group->subcategory relation
-      if (product.groups?.subcategories?.categories?.id === categoryFilter) {
-        matchesCategory = true;
-      }
-      // Fallback: check if product has category_id directly
-      if (product.category_id === categoryFilter) {
-        matchesCategory = true;
-      }
-      // Find category through subcategory lookup
-      const productSubcategory = subcategories.find(
-        (sub) => sub.id === product.subcategory_id,
-      );
-      if (productSubcategory?.category_id === categoryFilter) {
-        matchesCategory = true;
-      }
-      // Find category through group->subcategory lookup
-      const productGroup = groups.find((g) => g.id === product.group_id);
-      const groupSubcategory = subcategories.find(
-        (sub) => sub.id === productGroup?.subcategory_id,
-      );
-      if (groupSubcategory?.category_id === categoryFilter) {
-        matchesCategory = true;
-      }
-    }
-
-    // Subcategory filtering
-    let matchesSubcategory = !subcategoryFilter;
-    if (subcategoryFilter && !matchesSubcategory) {
-      // Direct subcategory match
-      if (product.subcategory_id === subcategoryFilter) {
-        matchesSubcategory = true;
-      }
-      // Through group relation
-      if (product.groups?.subcategory_id === subcategoryFilter) {
-        matchesSubcategory = true;
-      }
-      // Find subcategory through group lookup
-      const productGroup = groups.find((g) => g.id === product.group_id);
-      if (productGroup?.subcategory_id === subcategoryFilter) {
-        matchesSubcategory = true;
-      }
-    }
-
-    // Group filtering
-    const matchesGroup = !groupFilter || product.group_id === groupFilter;
-
-    // Active status filtering
-    const matchesActive =
-      !activeFilter || String(product.active) === String(activeFilter);
-
-    // Brand filtering
-    const matchesBrand =
-      brandFilter.length === 0 || brandFilter.includes(product.brand_name);
-
-    // Store filtering
-    const matchesStore =
-      storeFilter.length === 0 || storeFilter.includes(product.store_name);
-
-    // Vertical filtering
-    const matchesVertical =
-      verticalFilter.length === 0 || verticalFilter.includes(product.vertical);
-
-    // Return policy filtering
-    const matchesReturnPolicy =
-      !returnPolicyFilter ||
-      (returnPolicyFilter === "applicable" && product.return_applicable) ||
-      (returnPolicyFilter === "not_applicable" && !product.return_applicable);
-
-    // Stock filtering
-    const matchesStock =
-      !stockFilter ||
-      (stockFilter === "in_stock" && isProductInStock(product)) ||
-      (stockFilter === "out_of_stock" && !isProductInStock(product));
-
-    return (
-      matchesSearch &&
-      matchesCategory &&
-      matchesSubcategory &&
-      matchesGroup &&
-      matchesActive &&
-      matchesBrand &&
-      matchesStore &&
-      matchesVertical &&
-      matchesReturnPolicy &&
-      matchesStock
-    );
+  const remove = useMutation({
+    mutationFn: async (p) => {
+      const res = await deleteProduct(p.id);
+      if (!res?.success) throw new Error(res?.error || "Failed to delete product");
+    },
+    onSuccess: (_r, p) => {
+      notifySuccess(`"${p.name}" deleted.`);
+      setDeleting(null);
+      setSelected(null);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (e) => notifyError(e.message),
   });
 
-  // Display filtered products (client-side filters on server-paginated data)
-  const displayedProducts = filteredProducts;
+  const moreCount = [f.subcategory, f.group, f.brand, f.store, f.vertical, f.returns].filter(Boolean).length;
+  const activeCount = [f.q, f.category, f.active, f.stock, f.image].filter(Boolean).length + moreCount;
+  const reset = () => setParams({}, { replace: true });
 
-  // Auto-clear dependent filters when parent filters change
-  useEffect(() => {
-    // If category filter changes, clear subcategory and group filters
-    if (categoryFilter) {
-      const validSubcategories = subcategories.filter(
-        (sub) => sub.category_id === categoryFilter,
-      );
-      const currentSubcategoryValid = validSubcategories.some(
-        (sub) => sub.id === subcategoryFilter,
-      );
-      if (!currentSubcategoryValid) {
-        setSubcategoryFilter(null);
-        setGroupFilter(null);
-      }
-    }
-  }, [categoryFilter, subcategories, subcategoryFilter]);
-
-  useEffect(() => {
-    // If subcategory filter changes, clear group filter if it's not valid
-    if (subcategoryFilter) {
-      const validGroups = groups.filter(
-        (group) => group.subcategory_id === subcategoryFilter,
-      );
-      const currentGroupValid = validGroups.some(
-        (group) => group.id === groupFilter,
-      );
-      if (!currentGroupValid) {
-        setGroupFilter(null);
-      }
-    }
-  }, [subcategoryFilter, groups, groupFilter]);
-
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) {
-      return;
-    }
-
-    try {
-      const result = await deleteProduct(id);
-
-      if (result.success) {
-        // Update local state
-        setProducts(products.filter((product) => product.id !== id));
-      } else {
-        alert(result.error || "Failed to delete product");
-      }
-    } catch (err) {
-      console.error("Error deleting product:", err);
-      alert("An unexpected error occurred. Please try again.");
-    }
+  const sorting = [{ id: SORT_ID[sortField] || "created", desc: sortDir !== "asc" }];
+  const onSortingChange = (updater) => {
+    const next = typeof updater === "function" ? updater(sorting) : updater;
+    const s = next[0];
+    if (s) update({ sort: `${SORT_FIELD[s.id]}:${s.desc ? "desc" : "asc"}` });
   };
 
-  const openAddModal = () => {
-    navigate("/products/add");
-  };
+  const columns = useMemo(() => [
+    {
+      id: "name",
+      header: "Product",
+      enableSorting: true,
+      size: 320,
+      cell: ({ row }) => {
+        const p = row.original;
+        const v = defaultVariant(p);
+        return (
+          <div className="flex items-center gap-3">
+            <Thumb src={p.media?.[0]?.url} name={p.name} />
+            <div className="min-w-0">
+              <p className="max-w-[240px] truncate font-medium" title={p.name}>{p.name}</p>
+              <p className="max-w-[240px] truncate text-xs text-muted-foreground">
+                {v ? `${v.sku}${v.title ? ` · ${v.title}` : ""}` : "No variants"}
+                {p.variants?.length > 1 && <span className="ml-1 rounded bg-muted px-1 py-0.5">+{p.variants.length - 1}</span>}
+              </p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      id: "category",
+      header: "Category",
+      cell: ({ row }) => (
+        <>
+          <p className="max-w-[160px] truncate">{row.original.category?.name || "—"}</p>
+          <p className="max-w-[160px] truncate text-xs text-muted-foreground">{row.original.subcategory?.name || ""}</p>
+        </>
+      ),
+    },
+    { id: "brand", header: "Brand", cell: ({ row }) => <span className="block max-w-[140px] truncate">{row.original.brand_name || "—"}</span> },
+    { id: "store", header: "Store", cell: ({ row }) => <span className="block max-w-[140px] truncate">{row.original.store_name || "—"}</span> },
+    { id: "vertical", header: "Vertical", cell: ({ row }) => <Badge variant="secondary">{humanize(row.original.vertical)}</Badge> },
+    {
+      id: "price",
+      header: "Price",
+      meta: { align: "right" },
+      cell: ({ row }) => {
+        const v = defaultVariant(row.original);
+        if (!v) return <span className="text-muted-foreground">—</span>;
+        return (
+          <div className="tabular-nums">
+            <p className="font-medium">{formatINR(v.price)}</p>
+            {Number(v.old_price) > Number(v.price) && (
+              <p className="text-xs text-muted-foreground"><span className="line-through">{formatINR(v.old_price)}</span>{v.discount_percentage > 0 && <span className="ml-1 text-emerald-700 dark:text-emerald-400">{v.discount_percentage}% off</span>}</p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "bulk",
+      header: "Bulk pricing",
+      cell: ({ row }) => {
+        const tiers = defaultVariant(row.original)?.bulk_tiers || [];
+        return tiers.length ? <span className="text-sm">{tiers.length} tier{tiers.length > 1 ? "s" : ""} · from {tiers[0].min_quantity}+</span> : <span className="text-muted-foreground">—</span>;
+      },
+    },
+    {
+      id: "stock",
+      header: "Stock",
+      cell: ({ row }) => {
+        const s = stockState(row.original);
+        return (
+          <div className="flex flex-col items-start gap-0.5">
+            <StatusBadge label={s.label} tone={s.tone} status="_" />
+            <span className="text-xs tabular-nums text-muted-foreground">{formatNumber(totalAvailable(row.original))} available</span>
+          </div>
+        );
+      },
+    },
+    {
+      id: "tax",
+      header: "HSN / GST",
+      cell: ({ row }) => (
+        <>
+          <p className="tabular-nums">{row.original.hsn_or_sac_code || "—"}</p>
+          <p className="text-xs text-muted-foreground tabular-nums">GST {Number(row.original.gst_rate || 0)}% · CESS {Number(row.original.cess_rate || 0)}%</p>
+        </>
+      ),
+    },
+    { id: "returns", header: "Returns", cell: ({ row }) => (row.original.return_applicable ? `${row.original.return_days} days` : <span className="text-muted-foreground">Not returnable</span>) },
+    {
+      id: "rating",
+      header: "Rating",
+      enableSorting: true,
+      meta: { align: "right" },
+      cell: ({ row }) => (Number(row.original.rating) > 0 ? <span className="tabular-nums">★ {Number(row.original.rating).toFixed(1)} <span className="text-xs text-muted-foreground">({row.original.review_count})</span></span> : <span className="text-muted-foreground">—</span>),
+    },
+    { id: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.active ? "ACTIVE" : "INACTIVE"} /> },
+    { id: "updated", header: "Updated", enableSorting: true, cell: ({ row }) => <span className="whitespace-nowrap text-muted-foreground">{formatDate(row.original.updated_at || row.original.created_at)}</span> },
+    { id: "created", header: "Created", enableSorting: true, cell: ({ row }) => <span className="whitespace-nowrap text-muted-foreground">{formatDate(row.original.created_at)}</span> },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      size: 48,
+      cell: ({ row }) => (
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.original.name}`}><MoreHorizontal className="size-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSelected(row.original)}><Eye className="size-4" /> View details</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/products/edit/${row.original.id}`)}><Pencil className="size-4" /> Edit</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleting(row.original)}><Trash2 className="size-4" /> Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ], [navigate]);
 
-  const openEditModal = (product) => {
-    navigate(`/products/edit/${product.id}`);
-  };
-
-  // Get unique values for filters
-  const uniqueBrands = [...new Set(products.map(p => p.brand_name).filter(Boolean))];
-  const uniqueStores = [...new Set(products.map(p => p.store_name).filter(Boolean))];
-  const uniqueVerticals = [...new Set(products.map(p => p.vertical).filter(Boolean))];
+  const sel = selected;
+  const selVariant = sel && defaultVariant(sel);
+  const selStock = sel && stockState(sel);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 p-6">
-      <Modal
-        opened={imagePreviewOpen}
-        onClose={() => setImagePreviewOpen(false)}
-        title="Product Image Preview"
-        centered
-        size="lg"
+    <div className="space-y-4">
+      <PageHeader
+        title="Products"
+        description="Catalogue, pricing and stock across all verticals."
+        actions={
+          <>
+            <Button variant="outline" onClick={() => navigate("/bulk-price-update")}><Upload className="size-4" /> Bulk price update</Button>
+            <Button onClick={() => navigate("/products/add")}><Plus className="size-4" /> Add product</Button>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <KpiCard label="Total products" value={formatNumber(summary?.total)} isLoading={!summary} onClick={reset} />
+        <KpiCard label="Active" value={formatNumber(summary?.active)} hint={`${formatNumber(summary?.inactive)} inactive`} isLoading={!summary} onClick={() => update({ active: "true" })} />
+        <KpiCard label="Out of stock" value={formatNumber(summary?.out_of_stock)} hint="No sellable units" tone={summary?.out_of_stock > 0 ? "warning" : "default"} isLoading={!summary} onClick={() => update({ stock: "out_of_stock" })} />
+        <KpiCard label="Low stock" value={formatNumber(summary?.low_stock)} hint={`${LOW_STOCK} units or fewer`} tone={summary?.low_stock > 0 ? "warning" : "default"} isLoading={!summary} onClick={() => update({ stock: "low_stock" })} />
+        <KpiCard label="Missing image" value={formatNumber(summary?.missing_image)} hint="No media uploaded" isLoading={!summary} onClick={() => update({ image: "false" })} />
+      </div>
+
+      <FilterBar
+        search={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder="Search name, description or SKU..."
+        activeCount={activeCount}
+        onReset={reset}
       >
-        {previewImage && (
-          <img
-            src={previewImage}
-            alt="Product"
-            className="w-full max-h-96 object-contain rounded-lg shadow-lg"
-          />
-        )}
-      </Modal>
-      <Card
-        shadow="sm"
-        p="lg"
-        radius="md"
-        className="bg-white/80 backdrop-blur-sm border-0 shadow-xl mb-6"
-      >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-sm -mx-6 px-6 py-4 mb-6 border-b border-gray-100">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Products Management
-            </h1>
-            <p className="text-gray-600">
-              {loading
-                ? "Loading..."
-                : `${products.length} of ${totalProducts} products loaded`}
-              {(searchQuery ||
-                categoryFilter ||
-                subcategoryFilter ||
-                groupFilter ||
-                activeFilter ||
-                brandFilter.length > 0 ||
-                storeFilter.length > 0 ||
-                verticalFilter.length > 0 ||
-                returnPolicyFilter ||
-                stockFilter) &&
-                " (filtered)"}
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              leftIcon={<FaPlus />}
-              className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-              onClick={() => navigate("/products/add")}
-            >
-              Add New Product
-            </Button>
+        <Select value={f.category || "ALL"} onValueChange={(v) => update({ category: v, subcategory: "", group: "" })}>
+          <SelectTrigger className="w-[170px]" aria-label="Filter by category"><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="ALL">All categories</SelectItem>
+            {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={f.active || "ALL"} onValueChange={(v) => update({ active: v })}>
+          <SelectTrigger className="w-[130px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="true">Active</SelectItem>
+            <SelectItem value="false">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={f.stock || "ALL"} onValueChange={(v) => update({ stock: v })}>
+          <SelectTrigger className="w-[140px]" aria-label="Filter by stock"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All stock</SelectItem>
+            <SelectItem value="in_stock">In stock</SelectItem>
+            <SelectItem value="low_stock">Low stock</SelectItem>
+            <SelectItem value="out_of_stock">Out of stock</SelectItem>
+          </SelectContent>
+        </Select>
 
-            {/* <Button
-              onClick={toggleVisibility}
-              className="bg-linear-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
-            >
-              {visible ? "Hide Last Product Page" : "Show Last Product Page"}
-            </Button> */}
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-linear-to-r from-red-50 to-red-100 border-l-4 border-red-500 text-red-700 rounded-r-lg shadow-sm">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2 text-red-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {error}
-            </div>
-          </div>
-        )}
-
-        <FilterChips
-          searchQuery={searchQuery}
-          categoryFilter={categoryFilter}
-          subcategoryFilter={subcategoryFilter}
-          groupFilter={groupFilter}
-          activeFilter={activeFilter}
-          categories={categories}
-          subcategories={subcategories}
-          groups={groups}
-          onClearSearch={() => setSearchQuery("")}
-          onClearCategory={() => setCategoryFilter(null)}
-          onClearSubcategory={() => setSubcategoryFilter(null)}
-          onClearGroup={() => setGroupFilter(null)}
-          onClearActive={() => setStatusFilter(null)}
-          onClearAll={() => {
-            setSearchQuery("");
-            setCategoryFilter(null);
-            setSubcategoryFilter(null);
-            setGroupFilter(null);
-            setStatusFilter(null);
-            setBrandFilter([]);
-            setStoreFilter([]);
-            setVerticalFilter([]);
-            setReturnPolicyFilter(null);
-            setStockFilter(null);
-          }}
-        />
-
-        {loading && (
-          <div className="flex justify-center items-center p-6">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 dark:border-blue-400"></div>
-          </div>
-        )}
-
-        <div className="flex flex-col lg:flex-row gap-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 flex-1">
-            <TextInput
-              placeholder="Search products..."
-              leftSection={<FaSearch />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-
-            <Select
-              placeholder="Filter by Category"
-              clearable
-              data={categories.map((cat) => ({
-                value: cat.id,
-                label: cat.name,
-              }))}
-              value={categoryFilter}
-              onChange={setCategoryFilter}
-            />
-
-            <Select
-              placeholder="Filter by Subcategory"
-              clearable
-              data={subcategories
-                .filter((sub) => {
-                  if (!categoryFilter) return true;
-                  // Check if subcategory belongs to selected category
-                  return sub.category_id === categoryFilter;
-                })
-                .map((sub) => ({ value: sub.id, label: sub.name }))}
-              value={subcategoryFilter}
-              onChange={(value) => {
-                setSubcategoryFilter(value);
-                // Clear group filter if subcategory changes
-                if (groupFilter) {
-                  setGroupFilter(null);
-                }
-              }}
-            />
-
-            <Select
-              placeholder="Filter by Group"
-              clearable
-              data={groups
-                .filter((group) => {
-                  if (!subcategoryFilter) return true;
-                  // Check if group belongs to selected subcategory
-                  return group.subcategory_id === subcategoryFilter;
-                })
-                .map((group) => ({ value: group.id, label: group.name }))}
-              value={groupFilter}
-              onChange={setGroupFilter}
-            />
-
-            <Select
-              placeholder="Filter by Status"
-              clearable
-              data={[
-                { value: "true", label: "Active" },
-                { value: "false", label: "Inactive" },
-              ]}
-              value={activeFilter}
-              onChange={setStatusFilter}
-            />
-          </div>
-
-          {(searchQuery ||
-            categoryFilter ||
-            subcategoryFilter ||
-            groupFilter ||
-            activeFilter ||
-            brandFilter.length > 0 ||
-            storeFilter.length > 0 ||
-            verticalFilter.length > 0 ||
-            returnPolicyFilter ||
-            stockFilter) && (
-              <Button
-                variant="light"
-                color="gray"
-                onClick={() => {
-                  setSearchQuery("");
-                  setCategoryFilter(null);
-                  setSubcategoryFilter(null);
-                  setGroupFilter(null);
-                  setStatusFilter(null);
-                  setBrandFilter([]);
-                  setStoreFilter([]);
-                  setVerticalFilter([]);
-                  setReturnPolicyFilter(null);
-                  setStockFilter(null);
-                }}
-                className="lg:w-auto w-full"
-              >
-                Clear Filters
-              </Button>
-            )}
-        </div>
-
-        <div
-          ref={scrollContainerRef}
-          className="overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-          style={{ maxHeight: "70vh" }}
-        >
-          {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm w-full border border-gray-200">
-              <Table
-                striped
-                highlightOnHover
-                verticalSpacing="md"
-                fontSize="sm"
-                className="w-full min-w-[1200px]" // Ensure table has minimum width for horizontal scroll
-              >
-                <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <TableHeader label="Image" />
-
-                    <TableHeader
-                      label="Product Name"
-                      hasFilter={true}
-                      navigateTo="/products"
-                      activeFilterCount={searchQuery ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <TextInput
-                            placeholder="Search by name..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            leftSection={<FaSearch size={12} />}
-                            size="xs"
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader
-                      label="Variant Details"
-                      navigateTo="/products/variants"
-                    />
-
-                    <TableHeader
-                      label="Category"
-                      icon={<FaLayerGroup />}
-                      hasFilter={true}
-                      navigateTo="/categories"
-                      activeFilterCount={categoryFilter ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <Select
-                            placeholder="Filter by Category"
-                            clearable
-                            size="xs"
-                            data={categories.map((cat) => ({
-                              value: cat.id,
-                              label: cat.name,
-                            }))}
-                            value={categoryFilter}
-                            onChange={setCategoryFilter}
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader
-                      label="Subcategory"
-                      icon={<FaLayerGroup />}
-                      hasFilter={true}
-                      navigateTo="/categories"
-                      activeFilterCount={subcategoryFilter ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <Select
-                            placeholder="Filter by Subcategory"
-                            clearable
-                            size="xs"
-                            data={subcategories
-                              .filter((sub) => !categoryFilter || sub.category_id === categoryFilter)
-                              .map((sub) => ({ value: sub.id, label: sub.name }))}
-                            value={subcategoryFilter}
-                            onChange={setSubcategoryFilter}
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader
-                      label="Group"
-                      icon={<FaLayerGroup />}
-                      hasFilter={true}
-                      activeFilterCount={groupFilter ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <Select
-                            placeholder="Filter by Group"
-                            clearable
-                            size="xs"
-                            data={groups
-                              .filter((group) => !subcategoryFilter || group.subcategory_id === subcategoryFilter)
-                              .map((group) => ({ value: group.id, label: group.name }))}
-                            value={groupFilter}
-                            onChange={setGroupFilter}
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader
-                      label="Brand"
-                      icon={<FaLayerGroup />}
-                      hasFilter={true}
-                      navigateTo="/brands"
-                      activeFilterCount={brandFilter.length}
-                      filterContent={
-                        <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
-                          {uniqueBrands.map((brand) => (
-                            <Checkbox
-                              key={brand}
-                              label={brand}
-                              size="xs"
-                              checked={brandFilter.includes(brand)}
-                              onChange={(e) => {
-                                if (e.currentTarget.checked) {
-                                  setBrandFilter([...brandFilter, brand]);
-                                } else {
-                                  setBrandFilter(brandFilter.filter(b => b !== brand));
-                                }
-                              }}
-                            />
-                          ))}
-                        </div>
-                      }
-                    />
-
-                    <TableHeader
-                      label="Store"
-                      icon={<FaLayerGroup />}
-                      hasFilter={true}
-                      navigateTo="/shop-by-stores"
-                      activeFilterCount={storeFilter.length}
-                      filterContent={
-                        <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
-                          {uniqueStores.map((store) => (
-                            <Checkbox
-                              key={store}
-                              label={store}
-                              size="xs"
-                              checked={storeFilter.includes(store)}
-                              onChange={(e) => {
-                                if (e.currentTarget.checked) {
-                                  setStoreFilter([...storeFilter, store]);
-                                } else {
-                                  setStoreFilter(storeFilter.filter(s => s !== store));
-                                }
-                              }}
-                            />
-                          ))}
-                        </div>
-                      }
-                    />
-
-                    <TableHeader label="HSN/SAC" />
-
-                    <TableHeader label="GST" />
-
-                    <TableHeader label="CESS" />
-
-                    <TableHeader
-                      label="Vertical"
-                      hasFilter={true}
-                      activeFilterCount={verticalFilter.length}
-                      filterContent={
-                        <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
-                          {uniqueVerticals.map((vertical) => (
-                            <Checkbox
-                              key={vertical}
-                              label={vertical}
-                              size="xs"
-                              checked={verticalFilter.includes(vertical)}
-                              onChange={(e) => {
-                                if (e.currentTarget.checked) {
-                                  setVerticalFilter([...verticalFilter, vertical]);
-                                } else {
-                                  setVerticalFilter(verticalFilter.filter(v => v !== vertical));
-                                }
-                              }}
-                            />
-                          ))}
-                        </div>
-                      }
-                    />
-
-                    <TableHeader
-                      label="Return Policy"
-                      hasFilter={true}
-                      activeFilterCount={returnPolicyFilter ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <Select
-                            placeholder="Filter by return policy"
-                            clearable
-                            size="xs"
-                            data={[
-                              { value: "applicable", label: "Applicable" },
-                              { value: "not_applicable", label: "Not Applicable" },
-                            ]}
-                            value={returnPolicyFilter}
-                            onChange={setReturnPolicyFilter}
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader label="Rating" />
-
-                    <TableHeader label="Price" />
-
-                    <TableHeader
-                      label="Stock"
-                      hasFilter={true}
-                      activeFilterCount={stockFilter ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <Select
-                            placeholder="Filter by stock"
-                            clearable
-                            size="xs"
-                            data={[
-                              { value: "in_stock", label: "In Stock" },
-                              { value: "out_of_stock", label: "Out of Stock" },
-                            ]}
-                            value={stockFilter}
-                            onChange={setStockFilter}
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader label="Bulk Pricing" />
-
-                    <TableHeader label="FAQ" />
-
-                    <TableHeader label="Media" />
-
-                    <TableHeader label="Description" />
-
-                    <TableHeader
-                      label="Status"
-                      hasFilter={true}
-                      activeFilterCount={activeFilter ? 1 : 0}
-                      filterContent={
-                        <div className="p-2">
-                          <Select
-                            placeholder="Filter by Status"
-                            clearable
-                            size="xs"
-                            data={[
-                              { value: "true", label: "Active" },
-                              { value: "false", label: "Inactive" },
-                            ]}
-                            value={activeFilter}
-                            onChange={setStatusFilter}
-                          />
-                        </div>
-                      }
-                    />
-
-                    <TableHeader label="Actions" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedProducts.map((product) => {
-                    const defaultVariant = getDefaultVariant(product);
-                    return (
-                      <tr
-                        key={product.id}
-                        className="group hover:bg-blue-50/50 transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <div
-                            className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 cursor-pointer group-hover:border-blue-300 transition-colors shadow-sm"
-                            onClick={() => {
-                              const productImage = getProductImage(product);
-                              setPreviewImage(
-                                productImage || PRODUCT_PLACEHOLDER,
-                              );
-                              setImagePreviewOpen(true);
-                            }}
-                          >
-                            <img
-                              src={
-                                getProductImage(product) || PRODUCT_PLACEHOLDER
-                              }
-                              alt={product.name}
-                              className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
-                              onError={(e) => {
-                                e.target.src = PRODUCT_PLACEHOLDER;
-                              }}
-                            />
-                            {product.media && product.media.length > 1 && (
-                              <div className="absolute bottom-0 right-0 left-0 bg-black/50 text-white text-[10px] text-center py-0.5 backdrop-blur-[2px]">
-                                +{product.media.length - 1}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1">
-                            <div
-                              className="font-semibold text-gray-900 line-clamp-2 w-48 text-sm"
-                              title={product.name}
-                            >
-                              {product.name}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <span>
-                                Added:{" "}
-                                {new Date(
-                                  product.created_at,
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-40">
-                            {defaultVariant ? (
-                              <>
-                                <div
-                                  className="font-medium text-gray-700 truncate"
-                                  title={defaultVariant.title}
-                                >
-                                  {defaultVariant.title}
-                                </div>
-                                <div>SKU: {defaultVariant.sku}</div>
-                                {defaultVariant.packaging_details && (
-                                  <div
-                                    className="text-gray-500 truncate"
-                                    title={defaultVariant.packaging_details}
-                                  >
-                                    {defaultVariant.packaging_details}
-                                  </div>
-                                )}
-                                {product.has_variants &&
-                                  product.variants?.length > 1 && (
-                                    <Badge
-                                      size="sm"
-                                      color="grape"
-                                      variant="light"
-                                    >
-                                      +{product.variants.length - 1} more
-                                    </Badge>
-                                  )}
-                              </>
-                            ) : (
-                              <span className="text-gray-400">No variants</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge
-                            size="sm"
-                            variant="outline"
-                            color="blue"
-                            className="font-normal w-fit"
-                          >
-                            {categories.find(
-                              (c) => c.id === product.category_id,
-                            )?.name || "N/A"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-gray-600">
-                            {subcategories.find(
-                              (s) => s.id === product.subcategory_id,
-                            )?.name || "-"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-gray-600 w-24">
-                            {groups.find((g) => g.id === product.group_id)
-                              ?.name || "-"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div
-                            className="text-sm text-gray-600 truncate w-28"
-                            title={product.brand_name}
-                          >
-                            {product.brand_name || "-"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div
-                            className="text-sm text-gray-600 truncate w-28"
-                            title={product.store_name}
-                          >
-                            {product.store_name || "-"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-gray-600 w-24">
-                            {product.hsn_or_sac_code || "-"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-gray-600 w-20">
-                            {product.gst_rate}%
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-gray-600 w-20">
-                            {product.cess_rate}%
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge size="sm" variant="light" color="indigo">
-                            {product.vertical || "N/A"}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm text-gray-600 w-28">
-                            <div>
-                              {product.return_applicable
-                                ? "✓ Applicable"
-                                : "✗ Not Applicable"}
-                            </div>
-                            {product.return_applicable && (
-                              <div className="text-blue-600">
-                                {product.return_days} days
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm w-24">
-                            {product.rating > 0 ? (
-                              <>
-                                <Badge
-                                  size="sm"
-                                  color="yellow"
-                                  variant="light"
-                                  className="flex items-center gap-1 px-1 w-fit"
-                                >
-                                  ★ {product.rating}
-                                </Badge>
-                                <span className="text-gray-500">
-                                  ({product.review_count} reviews)
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-gray-400">No ratings</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 w-28">
-                            <div className="font-bold text-gray-900 border border-green-100 bg-green-50 px-2 py-0.5 rounded-md w-fit text-sm">
-                              {formatIndianPrice(getProductPrice(product))}
-                            </div>
-                            {getProductOldPrice(product) > 0 && (
-                              <div className="text-xs text-gray-400 line-through pl-1">
-                                {formatIndianPrice(getProductOldPrice(product))}
-                              </div>
-                            )}
-                            {defaultVariant?.discount_percentage > 0 && (
-                              <Badge size="sm" color="red" variant="light">
-                                {defaultVariant.discount_percentage}% OFF
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div>
-                            {isProductInStock(product) ? (
-                              <Badge size="sm" color="teal" variant="dot">
-                                In Stock
-                              </Badge>
-                            ) : (
-                              <Badge size="sm" color="red" variant="dot">
-                                Out of Stock
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm w-32">
-                            {defaultVariant?.bulk_tiers?.length > 0 ? (
-                              <>
-                                <Badge size="sm" color="green" variant="light">
-                                  {defaultVariant.bulk_tiers.length} tier{defaultVariant.bulk_tiers.length > 1 ? "s" : ""}
-                                </Badge>
-                                <div className="text-gray-600">
-                                  From {defaultVariant.bulk_tiers[0]?.min_quantity}+ qty
-                                </div>
-                                <div className="text-green-600 font-medium">
-                                  {formatIndianPrice(parseFloat(defaultVariant.bulk_tiers[0]?.unit_price))}
-                                </div>
-                              </>
-                            ) : (
-                              <span className="text-gray-400">No tiers</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm w-32">
-                            {product.faq && Array.isArray(product.faq) && product.faq.length > 0 ? (
-                              <>
-                                <Badge size="sm" color="blue" variant="light">
-                                  {product.faq.length} FAQ{product.faq.length > 1 ? 's' : ''}
-                                </Badge>
-                                <div className="text-gray-600 text-xs max-h-20 overflow-y-auto">
-                                  {product.faq.map((faqItem, idx) => (
-                                    <div key={idx} className="mb-2">
-                                      <div className="font-medium text-gray-700 truncate" title={faqItem.question}>
-                                        Q: {faqItem.question}
-                                      </div>
-                                      <div className="text-gray-500 truncate" title={faqItem.answer}>
-                                        A: {faqItem.answer}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </>
-                            ) : (
-                              <span className="text-gray-400">No FAQ</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1 text-sm w-24">
-                            {product.media && product.media.length > 0 ? (
-                              <>
-                                <Badge size="sm" color="violet" variant="light">
-                                  {product.media.length} file{product.media.length > 1 ? 's' : ''}
-                                </Badge>
-                                <div className="text-gray-600 text-xs">
-                                  {product.media.filter(m => m.media_type === 'image').length} image{product.media.filter(m => m.media_type === 'image').length !== 1 ? 's' : ''}
-                                </div>
-                                {product.media.some(m => m.media_type === 'video') && (
-                                  <div className="text-gray-600 text-xs">
-                                    {product.media.filter(m => m.media_type === 'video').length} video{product.media.filter(m => m.media_type === 'video').length !== 1 ? 's' : ''}
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-gray-400">No media</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div
-                            className="text-sm text-gray-600 line-clamp-3 w-48"
-                            title={product.description}
-                          >
-                            {product.description || "-"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {product.active ? (
-                            <Badge color="green" variant="light" size="sm">
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge color="gray" variant="light" size="sm">
-                              Inactive
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <ActionIcon
-                              variant="subtle"
-                              color="blue"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditModal(product);
-                              }}
-                              title="Edit"
-                            >
-                              <FaEdit size={16} />
-                            </ActionIcon>
-                            <ActionIcon
-                              variant="subtle"
-                              color="red"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteProduct(product.id);
-                              }}
-                              title="Delete"
-                            >
-                              <FaTrash size={16} />
-                            </ActionIcon>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </div>
-          )}
-
-          {/* No products found */}
-          {filteredProducts.length === 0 && !loading && (
-            <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-600">
-              <div className="max-w-md mx-auto">
-                <div className="mb-4">
-                  <div className="w-16 h-16 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                    <FaPlus className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                  </div>
-                </div>
-                <Title
-                  order={3}
-                  className="mb-2 text-gray-700 dark:text-gray-300"
-                >
-                  No products found
-                </Title>
-                <Text size="md" color="dimmed" className="mb-6">
-                  {searchQuery ||
-                    categoryFilter ||
-                    subcategoryFilter ||
-                    groupFilter ||
-                    activeFilter ||
-                    brandFilter.length > 0 ||
-                    storeFilter.length > 0 ||
-                    verticalFilter.length > 0 ||
-                    returnPolicyFilter ||
-                    stockFilter
-                    ? "No products match your current filters. Try adjusting your search criteria or clearing some filters."
-                    : "Get started by adding your first product to the inventory."}
-                </Text>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button
-                    leftIcon={<FaPlus />}
-                    color="blue"
-                    size="md"
-                    onClick={openAddModal}
-                  >
-                    Add New Product
-                  </Button>
-                  {(searchQuery ||
-                    categoryFilter ||
-                    subcategoryFilter ||
-                    groupFilter ||
-                    activeFilter ||
-                    brandFilter.length > 0 ||
-                    storeFilter.length > 0 ||
-                    verticalFilter.length > 0 ||
-                    returnPolicyFilter ||
-                    stockFilter) && (
-                      <Button
-                        variant="light"
-                        color="gray"
-                        size="md"
-                        onClick={() => {
-                          setSearchQuery("");
-                          setCategoryFilter(null);
-                          setSubcategoryFilter(null);
-                          setGroupFilter(null);
-                          setStatusFilter(null);
-                          setBrandFilter([]);
-                          setStoreFilter([]);
-                          setVerticalFilter([]);
-                          setReturnPolicyFilter(null);
-                          setStockFilter(null);
-                        }}
-                      >
-                        Clear All Filters
-                      </Button>
-                    )}
-                </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm"><SlidersHorizontal className="size-4" /> More filters{moreCount > 0 && <Badge variant="secondary" className="ml-1">{moreCount}</Badge>}</Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-[340px] space-y-3">
+            {[
+              { id: "subcategory", label: "Subcategory", value: f.subcategory, items: subOptions, patch: (v) => ({ subcategory: v, group: "" }) },
+              { id: "group", label: "Group", value: f.group, items: groupOptions, patch: (v) => ({ group: v }) },
+              { id: "brand", label: "Brand", value: f.brand, items: options?.brands || [], patch: (v) => ({ brand: v }) },
+              { id: "store", label: "Store", value: f.store, items: options?.stores || [], patch: (v) => ({ store: v }) },
+            ].map((s) => (
+              <div key={s.id} className="space-y-1.5">
+                <Label htmlFor={`f-${s.id}`}>{s.label}</Label>
+                <Select value={s.value || "ALL"} onValueChange={(v) => update(s.patch(v))}>
+                  <SelectTrigger id={`f-${s.id}`} className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    <SelectItem value="ALL">All</SelectItem>
+                    {s.items.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="f-vertical">Vertical</Label>
+                <Select value={f.vertical || "ALL"} onValueChange={(v) => update({ vertical: v })}>
+                  <SelectTrigger id="f-vertical" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All</SelectItem>
+                    {(options?.verticals || []).map((v) => <SelectItem key={v} value={v}>{humanize(v)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="f-returns">Returns</Label>
+                <Select value={f.returns || "ALL"} onValueChange={(v) => update({ returns: v })}>
+                  <SelectTrigger id="f-returns" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All</SelectItem>
+                    <SelectItem value="true">Returnable</SelectItem>
+                    <SelectItem value="false">Not returnable</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
+          </PopoverContent>
+        </Popover>
 
-          {/* Infinite scroll sentinel */}
-          <div ref={sentinelRef} className="py-1" />
-          {isFetchingMore && (
-            <div className="flex justify-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          )}
-          {!hasMore && products.length > 0 && !loading && (
-            <div className="text-center py-3 text-gray-400 text-sm">
-              All {totalProducts} products loaded
+        <div className="ml-auto">
+          <ColumnsMenu columns={COLUMN_LABELS} visibility={visibility} onChange={setVisibility} />
+        </div>
+      </FilterBar>
+
+      <Card className="gap-0 overflow-hidden p-0 shadow-none">
+        {listQuery.isError ? (
+          <ErrorState title="Unable to load products" onRetry={listQuery.refetch} />
+        ) : !listQuery.isLoading && products.length === 0 ? (
+          <EmptyState
+            title={activeCount ? "No products match these filters" : "No products yet"}
+            description={activeCount ? "Try a different search or clear the filters." : "Add your first product to start selling."}
+            action={activeCount ? <Button variant="outline" size="sm" onClick={reset}>Reset filters</Button> : <Button size="sm" onClick={() => navigate("/products/add")}>Add product</Button>}
+          />
+        ) : (
+          <DataGrid
+            columns={columns}
+            data={products}
+            getRowId={(p) => p.id}
+            isLoading={listQuery.isLoading}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            columnVisibility={visibility}
+            onRowClick={setSelected}
+            maxHeight="max(24rem, calc(100vh - 26rem))"
+            rowClassName={(p) => (p.active ? "" : "opacity-70")}
+          />
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t">
+          <TablePagination pagination={pagination} page={f.page} onPageChange={(p) => update({ page: p })} />
+          {pagination && (
+            <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground">
+              Rows
+              <Select value={String(f.size)} onValueChange={(v) => update({ size: v })}>
+                <SelectTrigger className="h-8 w-[80px]" aria-label="Rows per page"><SelectValue /></SelectTrigger>
+                <SelectContent>{PAGE_SIZES.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
           )}
         </div>
       </Card>
+
+      <Sheet open={!!sel} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+          {sel && (
+            <>
+              <SheetHeader>
+                <div className="flex items-start gap-3">
+                  <Thumb src={sel.media?.[0]?.url} name={sel.name} size="size-16" />
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      <StatusBadge status={sel.active ? "ACTIVE" : "INACTIVE"} />
+                      <StatusBadge label={selStock.label} tone={selStock.tone} status="_" />
+                    </div>
+                    <SheetTitle className="leading-snug">{sel.name}</SheetTitle>
+                    <SheetDescription>{sel.category?.name}{sel.subcategory?.name ? ` › ${sel.subcategory.name}` : ""}{sel.group?.name ? ` › ${sel.group.name}` : ""}</SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+              <div className="space-y-5 px-4 pb-4">
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
+                  <DetailList
+                    rows={[
+                      { label: "Price", value: selVariant && formatINR(selVariant.price) },
+                      { label: "Available stock", value: `${formatNumber(totalAvailable(sel))} units` },
+                      { label: "Brand", value: sel.brand_name },
+                      { label: "Store", value: sel.store_name },
+                      { label: "Vertical", value: humanize(sel.vertical) },
+                      { label: "Source", value: humanize((sel.source_type || "").toLowerCase()) },
+                      { label: "Rating", value: Number(sel.rating) > 0 ? `${Number(sel.rating).toFixed(1)} (${sel.review_count} reviews)` : null },
+                    ]}
+                  />
+                </section>
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tax and returns</h3>
+                  <DetailList
+                    rows={[
+                      { label: "HSN / SAC", value: sel.hsn_or_sac_code },
+                      { label: "GST", value: `${Number(sel.gst_rate || 0)}%` },
+                      { label: "CESS", value: `${Number(sel.cess_rate || 0)}%` },
+                      { label: "Returns", value: sel.return_applicable ? `Within ${sel.return_days} days` : "Not returnable" },
+                    ]}
+                  />
+                </section>
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Variants ({sel.variants?.length || 0})</h3>
+                  {sel.variants?.length ? (
+                    <div className="overflow-hidden rounded-md border">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 text-xs text-muted-foreground">
+                          <tr><th className="px-3 py-2 text-left font-medium">Variant</th><th className="px-3 py-2 text-right font-medium">Price</th><th className="px-3 py-2 text-right font-medium">Available</th></tr>
+                        </thead>
+                        <tbody>
+                          {sel.variants.map((v) => (
+                            <tr key={v.id} className="border-t">
+                              <td className="px-3 py-2"><p>{v.title}</p><p className="text-xs text-muted-foreground">{v.sku}{!v.active && " · inactive"}</p></td>
+                              <td className="px-3 py-2 text-right tabular-nums">{formatINR(v.price)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{formatNumber(v.available_qty)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : <p className="text-sm text-muted-foreground">No variants.</p>}
+                </section>
+                {sel.description && (
+                  <section>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</h3>
+                    <RichText html={sel.description} className="max-h-64 overflow-y-auto rounded-md bg-muted/40 p-3" />
+                  </section>
+                )}
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">FAQs ({Array.isArray(sel.faq) ? sel.faq.length : 0})</h3>
+                  {Array.isArray(sel.faq) && sel.faq.length > 0 ? (
+                    <ul className="divide-y rounded-md border">
+                      {sel.faq.map((item, i) => (
+                        <li key={i} className="space-y-1 p-3">
+                          <p className="text-sm font-medium">{item.question}</p>
+                          <RichText html={item.answer} className="text-muted-foreground" />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-sm text-muted-foreground">No FAQs added.</p>}
+                  <p className="mt-2 text-xs text-muted-foreground">{formatNumber(sel.media_count)} media file{sel.media_count === 1 ? "" : "s"}</p>
+                </section>
+              </div>
+              <SheetFooter>
+                <Button variant="destructive" onClick={() => setDeleting(sel)}>Delete</Button>
+                <Button onClick={() => navigate(`/products/edit/${sel.id}`)}>Edit product</Button>
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Delete product"
+        description="This permanently removes the product, its variants and stock records. Orders that already contain it keep their history."
+        details={deleting && [
+          { label: "Product", value: deleting.name },
+          { label: "SKU", value: defaultVariant(deleting)?.sku },
+          { label: "Variants", value: String(deleting.variants?.length || 0) },
+          { label: "Available stock", value: `${formatNumber(totalAvailable(deleting))} units` },
+        ]}
+        confirmLabel="Delete product"
+        destructive
+        isLoading={remove.isPending}
+        onConfirm={() => remove.mutate(deleting)}
+      />
     </div>
   );
-};
-
-export default ProductsPage;
+}

@@ -138,6 +138,7 @@ const AddProduct = () => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/admin/products/${id}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } },
       );
       if (response.data.success) {
         const product = response.data.product;
@@ -448,11 +449,13 @@ const AddProduct = () => {
         response = await axios.put(
           `${import.meta.env.VITE_API_BASE_URL}/admin/products/${id}`,
           payload,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } },
         );
       } else {
         response = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/admin/products`,
           payload,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } },
         );
       }
 

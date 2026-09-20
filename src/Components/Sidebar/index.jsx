@@ -5,11 +5,9 @@ import { getAllUsers } from "../../utils/supabaseApi";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  RiDashboardFill,
   RiQuestionnaireFill,
   RiSettings4Fill,
   RiShutDownLine,
-  RiPrinterFill,
 } from "react-icons/ri";
 import {
   FaUsers,
@@ -33,6 +31,13 @@ import {
   FaBoxOpen,
   FaGift,
   FaImage,
+  FaBullhorn,
+  FaChartLine,
+  FaHistory,
+  FaRocket,
+  FaShieldAlt,
+  FaIdBadge,
+  FaHome,
 } from "react-icons/fa";
 import { HiArchive } from "react-icons/hi";
 import { MdCategory } from "react-icons/md";
@@ -92,17 +97,22 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
   };
 
   // Check if a link is active
-  const isActive = (path) => {
+  const isActive = (path, matchPrefix = false) => {
+    if (matchPrefix) {
+      return (
+        location.pathname === path || location.pathname.startsWith(`${path}/`)
+      );
+    }
     return location.pathname === path;
   };
 
   // Define sidebar menu items
   const menuItems = [
-    // {
-    //   title: "Dashboard",
-    //   icon: <RiDashboardFill />,
-    //   path: "/",
-    // },
+    {
+      title: "Dashboard",
+      icon: <FaHome />,
+      path: "/",
+    },
     {
       title: "Product Master",
       icon: <HiArchive />,
@@ -513,93 +523,63 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
     // },
 
     {
-      title: "Affiliate",
-      icon: <FaHandshake />,
+      title: "Growth Manager",
+      icon: <FaRocket />,
       submenu: [
+        { group: "Acquisition" },
         {
-          title: "Dashboard",
-          icon: <RiDashboardFill />,
-          path: "/affiliate",
-          description: "Affiliate program overview",
+          title: "Marketing Dashboard",
+          icon: <FaChartLine />,
+          path: "/marketing/dashboard",
+          description: "Campaign performance, revenue & status at a glance",
         },
         {
-          title: "Applications",
-          icon: <FaUsers />,
-          path: "/affiliate/applications",
-          description: "Review & approve applications",
+          title: "Campaigns",
+          icon: <FaBullhorn />,
+          path: "/campaigns",
+          description: "Promotional campaigns for referral & affiliate rewards",
         },
+        {
+          title: "Notification Templates",
+          icon: <FaEnvelope />,
+          path: "/notification-templates",
+          description: "Edit in-app notification copy",
+        },
+        { group: "Partners & Referrals" },
         {
           title: "Affiliates",
-          icon: <FaList />,
-          path: "/affiliate/affiliates",
-          description: "Manage affiliate accounts",
+          icon: <FaHandshake />,
+          path: "/affiliate",
+          matchPrefix: true,
+          description: "Applications, commissions, payouts & settings",
         },
         {
-          title: "Commission Rates",
-          icon: <FaRupeeSign />,
-          path: "/affiliate/commission-rates",
-          description: "Set per-category commission rates",
+          title: "Membership",
+          icon: <FaIdBadge />,
+          path: "/membership",
+          matchPrefix: true,
+          description: "Free trial membership: plans, members and qualification progress",
         },
         {
-          title: "Payouts",
-          icon: <FaMoneyBillWave />,
-          path: "/affiliate/payouts",
-          description: "Process affiliate payouts",
-        },
-        {
-          title: "Settings",
-          icon: <RiSettings4Fill />,
-          path: "/affiliate/config",
-          description: "Program configuration",
-        },
-      ],
-    },
-
-    {
-      title: "Refer & Earn",
-      icon: <FaGift />,
-      submenu: [
-        {
-          title: "Dashboard",
-          icon: <RiDashboardFill />,
-          path: "/referral",
-          description: "Referral program overview and stats",
-        },
-        {
-          title: "Configuration",
-          icon: <RiSettings4Fill />,
-          path: "/referral/config",
-          description: "Configure reward amounts and rules",
-        },
-        {
-          title: "Users",
-          icon: <FaUsers />,
-          path: "/referral/users",
-          description: "Manage referral profiles and block users",
-        },
-        {
-          title: "Transactions",
-          icon: <FaList />,
-          path: "/referral/transactions",
-          description: "View all referral transactions",
-        },
-        {
-          title: "Rewards",
+          title: "Refer & Earn",
           icon: <FaGift />,
-          path: "/referral/rewards",
-          description: "Manage rewards, extend or cancel",
+          path: "/referral",
+          matchPrefix: true,
+          description: "Referral rewards, users, transactions & withdrawals",
+        },
+        { group: "Operations" },
+        {
+          title: "Fraud & Risk",
+          icon: <FaShieldAlt />,
+          path: "/fraud-risk",
+          description: "Suspicious referral and affiliate activity awaiting review",
         },
         {
-          title: "Withdrawals",
-          icon: <FaMoneyBillWave />,
-          path: "/referral/withdrawals",
-          description: "Approve and process withdrawal requests",
-        },
-        {
-          title: "Fraud Logs",
-          icon: <FaRupeeSign />,
-          path: "/referral/fraud-logs",
-          description: "Review suspicious referral activity",
+          title: "Activity Log",
+          icon: <FaHistory />,
+          path: "/activity-logs",
+          description:
+            "Audit trail of admin actions across referral, affiliate, campaigns & notifications",
         },
       ],
     },
@@ -657,7 +637,7 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
         </motion.div>
 
         {/* Navigation Section */}
-        <div className="flex-1 px-2 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
+        <div className="flex-1 px-2 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ul className="space-y-1">
             {menuItems.map((item, index) => (
               <li key={index} className="mb-1">
@@ -718,7 +698,15 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
                           exit="exit"
                           className="mt-1 ml-3 space-y-1 border-l-2 border-slate-700 pl-3"
                         >
-                          {item.submenu.map((submenuItem, subIndex) => (
+                          {item.submenu.map((submenuItem, subIndex) =>
+                            submenuItem.group ? (
+                              <li
+                                key={subIndex}
+                                className="pt-2 first:pt-0 px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500"
+                              >
+                                {isOpen ? submenuItem.group : "—"}
+                              </li>
+                            ) : (
                             <li key={subIndex} className="mb-1">
                               <Tooltip
                                 label={submenuItem.title}
@@ -727,7 +715,7 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
                               >
                                 <Link
                                   to={submenuItem.path}
-                                  className={`flex items-center p-2 text-sm rounded-md transition-colors ${isActive(submenuItem.path)
+                                  className={`flex items-center p-2 text-sm rounded-md transition-colors ${isActive(submenuItem.path, submenuItem.matchPrefix)
                                     ? "bg-slate-700 text-white"
                                     : "text-gray-300 hover:bg-slate-700/50 hover:text-white"
                                     }`}
@@ -750,7 +738,8 @@ const Sidebar = ({ isOpen = false, onMouseEnter, onMouseLeave }) => {
                                 </Link>
                               </Tooltip>
                             </li>
-                          ))}
+                            )
+                          )}
                         </motion.ul>
                       )}
                     </AnimatePresence>

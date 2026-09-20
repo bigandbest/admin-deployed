@@ -1,244 +1,226 @@
-import { useState, useEffect } from "react";
-import { listApplications, getApplication, approveApplication, rejectApplication, statusColor } from "../../../utils/adminAffiliateApi";
-import { Eye, CheckCircle, XCircle, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
+import PropTypes from "prop-types";
 
-const STATUSES = ["", "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"];
+import { listApplications, getApplication, approveApplication, rejectApplication } from "../../../utils/adminAffiliateApi";
+import { Card } from "../../../Components/UI/card";
+import { Button } from "../../../Components/UI/button";
+import { Label } from "../../../Components/UI/label";
+import { Textarea } from "../../../Components/UI/textarea";
+import { Skeleton } from "../../../Components/UI/skeleton";
+import { DataTable } from "../../../Components/UI/data-table";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../../Components/UI/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "../../../Components/UI/sheet";
+import {
+  PageHeader, StatusBadge, FilterBar, TablePagination, ConfirmDialog, DetailList, ErrorState, EmptyState,
+  formatNumber, formatDate, notifySuccess, notifyError,
+} from "../../../Components/Growth";
+
+const STATUSES = ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"];
+const LIMIT = 20;
+const label = (s) => s.toLowerCase().replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+function Section({ title, children }) {
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      {children}
+    </section>
+  );
+}
+Section.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node };
 
 export default function AffiliateApplications() {
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const initialStatus = STATUSES.includes(searchParams.get("status")) ? searchParams.get("status") : "PENDING";
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("PENDING");
-  const [loading, setLoading] = useState(true);
-  const [selectedApp, setSelectedApp] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [rejectModal, setRejectModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const limit = 20;
+  const [selectedId, setSelectedId] = useState(null);
+  const [confirm, setConfirm] = useState(null); // "approve" | "reject"
+  const [reason, setReason] = useState("");
 
-  useEffect(() => { load(); }, [page, statusFilter]);
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["affiliate", "applications", page, statusFilter],
+    queryFn: () => listApplications(page, LIMIT, statusFilter === "ALL" ? "" : statusFilter),
+    placeholderData: (prev) => prev,
+  });
+  const items = data?.items || [];
+  const pagination = data ? { total: data.total || 0, limit: LIMIT, pages: Math.ceil((data.total || 0) / LIMIT) } : null;
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await listApplications(page, limit, statusFilter);
-      setItems(res.items || []);
-      setTotal(res.total || 0);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+  const detail = useQuery({
+    queryKey: ["affiliate", "application", selectedId],
+    queryFn: () => getApplication(selectedId),
+    enabled: !!selectedId,
+  });
+  const app = detail.data?.data;
 
-  const openDetail = async (id) => {
-    try {
-      const res = await getApplication(id);
-      setSelectedApp(res.data);
-      setModalOpen(true);
-    } catch (e) { alert(e.message); }
-  };
+  const closeAll = () => { setConfirm(null); setSelectedId(null); setReason(""); };
 
-  const handleApprove = async (id) => {
-    setActionLoading(true);
-    try {
-      await approveApplication(id);
-      setModalOpen(false);
-      load();
-    } catch (e) { alert(e.message); }
-    finally { setActionLoading(false); }
-  };
+  const decide = useMutation({
+    mutationFn: () => (confirm === "approve" ? approveApplication(selectedId) : rejectApplication(selectedId, { rejection_reason: reason.trim() })),
+    onSuccess: () => {
+      notifySuccess(confirm === "approve" ? `Application approved for ${app?.full_name}.` : `Application rejected for ${app?.full_name}.`);
+      closeAll();
+      queryClient.invalidateQueries({ queryKey: ["affiliate", "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["affiliate", "dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["affiliate", "affiliates"] });
+    },
+    onError: (err) => notifyError(err.message),
+  });
 
-  const handleReject = async (id) => {
-    if (!rejectReason.trim()) { alert("Please enter a rejection reason"); return; }
-    setActionLoading(true);
-    try {
-      await rejectApplication(id, { rejection_reason: rejectReason });
-      setRejectModal(false);
-      setModalOpen(false);
-      setRejectReason("");
-      load();
-    } catch (e) { alert(e.message); }
-    finally { setActionLoading(false); }
-  };
+  const columns = useMemo(() => [
+    {
+      header: "Applicant",
+      id: "applicant",
+      cell: ({ row }) => (
+        <>
+          <p className="font-medium">{row.original.full_name}</p>
+          <p className="max-w-[220px] truncate text-xs text-muted-foreground">{row.original.email}</p>
+        </>
+      ),
+    },
+    { header: "Platform", accessorKey: "primary_platform", cell: ({ row }) => row.original.primary_platform || "—" },
+    { header: () => <div className="text-right">Audience</div>, id: "audience", cell: ({ row }) => <div className="text-right tabular-nums">{row.original.estimated_audience ? formatNumber(row.original.estimated_audience) : "—"}</div> },
+    { header: "Status", id: "status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { header: "Submitted", id: "submitted", cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.submitted_at)}</span> },
+    {
+      header: () => <span className="sr-only">Actions</span>,
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <Button size="sm" variant={row.original.status === "PENDING" ? "default" : "outline"} onClick={(e) => { e.stopPropagation(); setSelectedId(row.original.id); }}>
+            {row.original.status === "PENDING" ? "Review" : "View"}
+          </Button>
+        </div>
+      ),
+    },
+  ], []);
 
-  const totalPages = Math.ceil(total / limit);
+  const isPending = app?.status === "PENDING";
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Affiliate Applications</h1>
-          <p className="text-sm text-gray-500">{total} total applications</p>
-        </div>
-        <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="Affiliate applications"
+        description="Review and approve people applying to join the program."
+        actions={<Button variant="outline" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "size-4 animate-spin" : "size-4"} /> Refresh</Button>}
+      />
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors
-              ${statusFilter === s ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-            {s || "All"}
-          </button>
-        ))}
-      </div>
+      <FilterBar activeCount={statusFilter !== "PENDING" ? 1 : 0} onReset={() => { setStatusFilter("PENDING"); setPage(1); }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[170px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            {STATUSES.map((s) => <SelectItem key={s} value={s}>{label(s)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </FilterBar>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 text-sm">No applications found</div>
+      <Card className="gap-0 overflow-hidden p-0 shadow-none">
+        {isError ? (
+          <ErrorState title="Unable to load applications" onRetry={refetch} />
+        ) : !isLoading && items.length === 0 ? (
+          <EmptyState
+            title={statusFilter === "PENDING" ? "No applications waiting for review" : "No applications found"}
+            description={statusFilter === "PENDING" ? "New affiliate applications will appear here." : "No applications have this status."}
+          />
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {["Name", "Email", "Platform", "Audience", "Status", "Submitted", "Action"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {items.map((app) => (
-                <tr key={app.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{app.full_name}</td>
-                  <td className="px-4 py-3 text-gray-600">{app.email}</td>
-                  <td className="px-4 py-3 text-gray-600">{app.primary_platform}</td>
-                  <td className="px-4 py-3 text-gray-600">{app.estimated_audience?.toLocaleString() || "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(app.status)}`}>{app.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{new Date(app.submitted_at).toLocaleDateString("en-IN")}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => openDetail(app.id)} className="p-1.5 hover:bg-gray-100 rounded-lg">
-                      <Eye className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable columns={columns} data={items} isLoading={isLoading} onRowClick={(a) => setSelectedId(a.id)} />
         )}
-      </div>
+        <TablePagination pagination={pagination} page={page} onPageChange={setPage} />
+      </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-          <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              className="p-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-              className="p-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {modalOpen && selectedApp && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-bold text-gray-900">Application Detail</h2>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(selectedApp.status)}`}>{selectedApp.status}</span>
+      <Sheet open={!!selectedId && !confirm} onOpenChange={(o) => !o && closeAll()}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+          {detail.isLoading || !app ? (
+            <div className="space-y-3 p-6">
+              <SheetTitle className="sr-only">Application</SheetTitle>
+              <Skeleton className="h-6 w-48" /><Skeleton className="h-32 w-full" /><Skeleton className="h-32 w-full" />
             </div>
-            <div className="p-6 space-y-5">
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Personal Info</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {[["Name", selectedApp.full_name], ["Email", selectedApp.email], ["Phone", selectedApp.phone],
-                    ["PAN", selectedApp.pan_number || "—"]].map(([k, v]) => (
-                    <div key={k}><span className="text-gray-500">{k}: </span><span className="font-medium">{v}</span></div>
-                  ))}
-                </div>
-              </section>
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Platform</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {[["Primary", selectedApp.primary_platform], ["Audience", selectedApp.estimated_audience?.toLocaleString() || "—"],
-                    ["Website", selectedApp.website_url || "—"], ["Instagram", selectedApp.instagram_handle || "—"],
-                    ["YouTube", selectedApp.youtube_channel || "—"]].map(([k, v]) => (
-                    <div key={k}><span className="text-gray-500">{k}: </span><span className="font-medium">{v}</span></div>
-                  ))}
-                </div>
-              </section>
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">Promotion Strategy</h3>
-                <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{selectedApp.promotion_strategy}</p>
-              </section>
-              {selectedApp.payment_method === "BANK_TRANSFER" ? (
-                <section>
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Bank Details</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    {[["Bank", selectedApp.bank_name || "—"], ["Account", selectedApp.bank_account_number || "—"],
-                      ["IFSC", selectedApp.bank_ifsc_code || "—"], ["Holder", selectedApp.account_holder_name || "—"]].map(([k, v]) => (
-                      <div key={k}><span className="text-gray-500">{k}: </span><span className="font-medium">{v}</span></div>
-                    ))}
-                  </div>
-                </section>
-              ) : (
-                <section>
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">UPI</h3>
-                  <p className="text-sm font-medium">{selectedApp.upi_id || "—"}</p>
-                </section>
-              )}
-              {selectedApp.rejection_reason && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700">
-                  <strong>Rejection Reason:</strong> {selectedApp.rejection_reason}
-                </div>
-              )}
-            </div>
-            {selectedApp.status === "PENDING" && (
-              <div className="p-6 border-t border-gray-100 flex gap-3">
-                <button onClick={() => handleApprove(selectedApp.id)} disabled={actionLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-                  <CheckCircle className="w-4 h-4" /> Approve
-                </button>
-                <button onClick={() => setRejectModal(true)} disabled={actionLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 disabled:opacity-50">
-                  <XCircle className="w-4 h-4" /> Reject
-                </button>
-                <button onClick={() => setModalOpen(false)} className="ml-auto text-sm text-gray-500 hover:text-gray-700">Close</button>
+          ) : (
+            <>
+              <SheetHeader>
+                <StatusBadge status={app.status} className="w-fit" />
+                <SheetTitle>{app.full_name}</SheetTitle>
+                <SheetDescription>Submitted {formatDate(app.submitted_at)}</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-5 px-4">
+                <Section title="Contact">
+                  <DetailList rows={[{ label: "Email", value: app.email }, { label: "Phone", value: app.phone }, { label: "PAN", value: app.pan_number }]} />
+                </Section>
+                <Section title="Platform">
+                  <DetailList
+                    rows={[
+                      { label: "Primary platform", value: app.primary_platform },
+                      { label: "Estimated audience", value: app.estimated_audience ? formatNumber(app.estimated_audience) : null },
+                      { label: "Website", value: app.website_url },
+                      { label: "Instagram", value: app.instagram_handle },
+                      { label: "YouTube", value: app.youtube_channel },
+                    ]}
+                  />
+                </Section>
+                {app.promotion_strategy && (
+                  <Section title="Promotion strategy">
+                    <p className="whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-sm">{app.promotion_strategy}</p>
+                  </Section>
+                )}
+                <Section title="Payout details">
+                  {app.payment_method === "BANK_TRANSFER" ? (
+                    <DetailList
+                      rows={[
+                        { label: "Bank", value: app.bank_name },
+                        { label: "Account holder", value: app.account_holder_name },
+                        { label: "Account number", value: app.bank_account_number && <span className="font-mono">{app.bank_account_number}</span> },
+                        { label: "IFSC", value: app.bank_ifsc_code && <span className="font-mono">{app.bank_ifsc_code}</span> },
+                      ]}
+                    />
+                  ) : (
+                    <DetailList rows={[{ label: "UPI ID", value: app.upi_id && <span className="font-mono">{app.upi_id}</span> }]} />
+                  )}
+                </Section>
+                {app.rejection_reason && (
+                  <Section title="Rejection reason">
+                    <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">{app.rejection_reason}</p>
+                  </Section>
+                )}
               </div>
-            )}
-            {selectedApp.status !== "PENDING" && (
-              <div className="p-6 border-t border-gray-100">
-                <button onClick={() => setModalOpen(false)} className="text-sm text-gray-500 hover:text-gray-700">Close</button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              <SheetFooter>
+                <Button variant="outline" onClick={closeAll}>Close</Button>
+                {isPending && (
+                  <>
+                    <Button variant="destructive" onClick={() => setConfirm("reject")}>Reject</Button>
+                    <Button onClick={() => setConfirm("approve")}>Approve</Button>
+                  </>
+                )}
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
-      {/* Reject Modal */}
-      {rejectModal && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Reject Application</h2>
-            <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Reason for rejection (will be shown to applicant)..."
-              className="w-full h-28 border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300" />
-            <div className="flex gap-3">
-              <button onClick={() => handleReject(selectedApp.id)} disabled={actionLoading}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-50">
-                Confirm Reject
-              </button>
-              <button onClick={() => { setRejectModal(false); setRejectReason(""); }}
-                className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
-                Cancel
-              </button>
-            </div>
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        title={confirm === "approve" ? "Approve application" : "Reject application"}
+        description={confirm === "approve"
+          ? "This creates an affiliate account with a unique code and notifies the applicant."
+          : "The applicant is notified and can see the reason you enter."}
+        details={app && [{ label: "Applicant", value: app.full_name }, { label: "Platform", value: app.primary_platform }, { label: "Audience", value: app.estimated_audience ? formatNumber(app.estimated_audience) : null }]}
+        confirmLabel={confirm === "approve" ? "Approve applicant" : "Reject applicant"}
+        destructive={confirm === "reject"}
+        isLoading={decide.isPending}
+        onConfirm={() => (confirm === "reject" && !reason.trim() ? null : decide.mutate())}
+      >
+        {confirm === "reject" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="reject-reason">Rejection reason (required)</Label>
+            <Textarea id="reject-reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
-        </div>
-      )}
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

@@ -1227,6 +1227,7 @@ export async function addProduct(
     }
 
     const response = await fetch(`${API_BASE_URL}/admin/products`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` },
       method: "POST",
       body: formData,
     });
@@ -1270,6 +1271,7 @@ export async function updateProduct(
     }
 
     const response = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` },
       method: "PUT",
       body: formData,
     });
@@ -1281,6 +1283,7 @@ export async function updateProduct(
 export async function deleteProduct(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` },
       method: "DELETE",
     });
     return await handleResponse(response);
