@@ -19,6 +19,8 @@ import {
   Stack,
   Flex,
   MultiSelect,
+  Select,
+  NumberInput,
   ScrollArea,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -35,6 +37,8 @@ import {
 import {
   getAllProductSections,
   updateProductSection,
+  getSectionTypes,
+  getSectionAuditLog,
   toggleProductSectionStatus,
   updateProductSectionOrder,
   addCategoriesToSection,
@@ -59,11 +63,13 @@ const ProductSectionsManagement = () => {
     section_name: "",
     description: "",
     is_active: true,
-    is_marketing: false,
-    allow_group_mapping: false,
-    allow_category_mapping: false,
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Homepage settings (registry-driven; only for sections that have a section_type)
+  const [sectionTypes, setSectionTypes] = useState(null);
+  const [hpForm, setHpForm] = useState(null); // { platforms, load_mode, show_on_home, config }
+  const [auditRows, setAuditRows] = useState([]);
 
   // Product management state
   const [sectionProducts, setSectionProducts] = useState([]);
@@ -247,7 +253,8 @@ const ProductSectionsManagement = () => {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
       const response = await axios.post(
         `${apiUrl}/product-sections/${selectedSection.id}/products`,
-        { product_ids: productIds }
+        { product_ids: productIds },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } }
       );
 
       if (response.data.success) {
@@ -277,7 +284,8 @@ const ProductSectionsManagement = () => {
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
       const response = await axios.delete(
-        `${apiUrl}/product-sections/${selectedSection.id}/products/${productId}`
+        `${apiUrl}/product-sections/${selectedSection.id}/products/${productId}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } }
       );
 
       if (response.data.success) {
@@ -395,7 +403,8 @@ const ProductSectionsManagement = () => {
   const updateSection = async () => {
     try {
       setSubmitting(true);
-      const result = await updateProductSection(selectedSection.id, formData);
+      const payload = hpForm ? { ...formData, ...hpForm } : formData;
+      const result = await updateProductSection(selectedSection.id, payload);
 
       if (result.success) {
         setSections(
@@ -489,10 +498,26 @@ const ProductSectionsManagement = () => {
       section_name: section.section_name,
       description: section.description || "",
       is_active: section.is_active,
-      is_marketing: section.is_marketing || false,
-      allow_group_mapping: section.allow_group_mapping || false,
-      allow_category_mapping: section.allow_category_mapping || false,
     });
+    setAuditRows([]);
+    if (section.section_type) {
+      setHpForm({
+        platforms: section.platforms || ["web", "mobile"],
+        load_mode: section.load_mode || "AUTO",
+        show_on_home: section.show_on_home !== false,
+        config: section.config || {},
+      });
+      (async () => {
+        if (!sectionTypes) {
+          const t = await getSectionTypes();
+          if (t.success) setSectionTypes(t.data);
+        }
+        const a = await getSectionAuditLog(section.id, 5);
+        if (a.success) setAuditRows(a.data);
+      })();
+    } else {
+      setHpForm(null);
+    }
     openEditModal();
   };
 
@@ -583,9 +608,6 @@ const ProductSectionsManagement = () => {
                     <Table.Td>
                       <Text size="sm">{section.component_name}</Text>
                       <Group gap={5} mt={5}>
-                        {section.is_marketing && <Badge size="xs" color="orange">Marketing</Badge>}
-                        {section.allow_group_mapping && <Badge size="xs" color="blue">Group Map</Badge>}
-                        {section.allow_category_mapping && <Badge size="xs" color="cyan">Cat Map</Badge>}
                       </Group>
                     </Table.Td>
                     <Table.Td>
@@ -694,32 +716,56 @@ const ProductSectionsManagement = () => {
             }
           />
 
-          <Switch
-            label="Marketing Section"
-            description="Mark this section as for marketing purposes"
-            checked={formData.is_marketing}
-            onChange={(e) =>
-              setFormData({ ...formData, is_marketing: e.currentTarget.checked })
-            }
-          />
-
-          <Switch
-            label="Allow Group Mapping"
-            description="Enable mapping groups to this section"
-            checked={formData.allow_group_mapping}
-            onChange={(e) =>
-              setFormData({ ...formData, allow_group_mapping: e.currentTarget.checked })
-            }
-          />
-
-          <Switch
-            label="Allow Category Mapping"
-            description="Enable mapping categories to this section"
-            checked={formData.allow_category_mapping}
-            onChange={(e) =>
-              setFormData({ ...formData, allow_category_mapping: e.currentTarget.checked })
-            }
-          />
+          {hpForm && (() => {
+            const typeMeta = (sectionTypes || []).find((t) => t.type === selectedSection?.section_type);
+            const setCfg = (key, value) => setHpForm({ ...hpForm, config: { ...hpForm.config, [key]: value } });
+            return (
+              <Stack gap="xs" p="sm" style={{ border: "1px solid var(--mantine-color-gray-3)", borderRadius: 8 }}>
+                <Text fw={600} size="sm">
+                  Homepage settings — {typeMeta?.label || selectedSection?.section_type}
+                </Text>
+                <MultiSelect
+                  label="Platforms"
+                  data={(typeMeta?.platforms || ["web", "mobile"]).map((p) => ({ value: p, label: p }))}
+                  value={hpForm.platforms}
+                  onChange={(v) => setHpForm({ ...hpForm, platforms: v })}
+                />
+                <Select
+                  label="Load mode"
+                  description="Auto = first sections load immediately, the rest load as the user scrolls"
+                  data={[{ value: "AUTO", label: "Auto" }, { value: "INITIAL", label: "Initial (with the page)" }, { value: "DEFERRED", label: "Deferred (on scroll)" }]}
+                  value={hpForm.load_mode}
+                  onChange={(v) => setHpForm({ ...hpForm, load_mode: v || "AUTO" })}
+                  allowDeselect={false}
+                />
+                <Switch
+                  label="Show on homepage"
+                  checked={hpForm.show_on_home}
+                  onChange={(e) => setHpForm({ ...hpForm, show_on_home: e.currentTarget.checked })}
+                />
+                {(typeMeta?.config || []).map((f) => {
+                  const value = hpForm.config[f.key] ?? f.default ?? undefined;
+                  if (f.type === "enum")
+                    return <Select key={f.key} label={f.key} data={f.values} value={value ?? null} onChange={(v) => setCfg(f.key, v)} allowDeselect={false} />;
+                  if (f.type === "boolean")
+                    return <Switch key={f.key} label={f.key} checked={!!value} onChange={(e) => setCfg(f.key, e.currentTarget.checked)} />;
+                  if (f.type === "int" || f.type === "number")
+                    return <NumberInput key={f.key} label={f.key} min={f.min} max={f.max} value={value ?? ""} onChange={(v) => setCfg(f.key, v === "" ? undefined : v)} />;
+                  return <TextInput key={f.key} label={f.key} maxLength={f.maxLength} value={value ?? ""} onChange={(e) => setCfg(f.key, e.target.value)} />;
+                })}
+                {auditRows.length > 0 && (
+                  <Stack gap={2}>
+                    <Text size="xs" c="dimmed" fw={600}>Recent changes</Text>
+                    {auditRows.map((r) => (
+                      <Text key={r.id} size="xs" c="dimmed">
+                        {new Date(r.created_at).toLocaleString()} · {r.action} · {r.actor_role || "?"}
+                      </Text>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            );
+          })()}
 
           <Group justify="flex-end" gap="sm">
             <Button variant="outline" onClick={closeEditModal}>
