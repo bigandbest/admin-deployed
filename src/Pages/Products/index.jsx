@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, MoreHorizontal, Package, Pencil, Plus, SlidersHorizontal, Trash2, Upload } from "lucide-react";
 import PropTypes from "prop-types";
 
-import { listAdminProducts, getProductSummary, getProductFilterOptions } from "../../utils/adminProductApi";
+import { listAdminProducts, getAdminProduct, getProductSummary, getProductFilterOptions } from "../../utils/adminProductApi";
 import { deleteProduct, getAllCategories, getAllSubcategories, getAllGroups } from "../../utils/supabaseApi";
 import { Card } from "../../Components/UI/card";
 import { Button } from "../../Components/UI/button";
@@ -253,9 +253,19 @@ export default function ProductsPage() {
     },
   ], [navigate]);
 
+  // Media count isn't in the list payload (it'd require scanning product_media for every
+  // row on every page) — fetch it lazily for just the one product the admin opens.
+  const mediaCountQuery = useQuery({
+    queryKey: ["products", "detail", selected?.id],
+    queryFn: () => getAdminProduct(selected.id),
+    enabled: !!selected?.id,
+    staleTime: 60_000,
+  });
+
   const sel = selected;
   const selVariant = sel && defaultVariant(sel);
   const selStock = sel && stockState(sel);
+  const selMediaCount = mediaCountQuery.data?.product?.media_count;
 
   return (
     <div className="space-y-4">
@@ -482,7 +492,9 @@ export default function ProductsPage() {
                       ))}
                     </ul>
                   ) : <p className="text-sm text-muted-foreground">No FAQs added.</p>}
-                  <p className="mt-2 text-xs text-muted-foreground">{formatNumber(sel.media_count)} media file{sel.media_count === 1 ? "" : "s"}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {selMediaCount === undefined ? "Loading media count…" : `${formatNumber(selMediaCount)} media file${selMediaCount === 1 ? "" : "s"}`}
+                  </p>
                 </section>
               </div>
               <SheetFooter>

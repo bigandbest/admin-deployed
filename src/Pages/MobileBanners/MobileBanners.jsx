@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FaEdit, FaTrash, FaPlus, FaMobileAlt } from "react-icons/fa";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 import {
   getAllMobileBanners,
   addMobileBanner,
@@ -319,16 +320,22 @@ const MobileBanners = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this mobile banner?")) return;
-    const result = await deleteMobileBanner(id);
-    if (result.success) {
-      fetchBanners();
-      notifications.show({ color: "green", message: "Banner deleted successfully!" });
-    } else {
-      notifications.show({ color: "red", message: "Failed to delete banner." });
-    }
-  };
+  const handleDelete = (banner) =>
+    modals.openConfirmModal({
+      title: "Delete mobile banner",
+      children: `Delete "${banner.name || "this banner"}"? This cannot be undone.`,
+      labels: { confirm: "Delete", cancel: "Cancel" },
+      confirmProps: { color: "red" },
+      onConfirm: async () => {
+        const result = await deleteMobileBanner(banner.id);
+        if (result.success) {
+          fetchBanners();
+          notifications.show({ color: "green", message: "Banner deleted successfully!" });
+        } else {
+          notifications.show({ color: "red", message: result.error || "Failed to delete banner." });
+        }
+      },
+    });
 
   const handleToggleActive = async (banner) => {
     const result = await toggleMobileBannerActiveStatus(banner.id, !banner.active);
@@ -339,12 +346,12 @@ const MobileBanners = () => {
         message: `Banner ${!banner.active ? "activated" : "deactivated"} successfully!`,
       });
     } else {
-      notifications.show({ color: "red", message: "Failed to update banner status." });
+      notifications.show({ color: "red", message: result.error || "Failed to update banner status." });
     }
   };
 
   const filtered = banners.filter((b) =>
-    b.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (b.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -493,7 +500,7 @@ const MobileBanners = () => {
                             </button>
                             <button
                               className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                              onClick={() => handleDelete(banner.id)}
+                              onClick={() => handleDelete(banner)}
                               title="Delete Banner"
                             >
                               <FaTrash className="w-4 h-4" />

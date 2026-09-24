@@ -17,5 +17,6 @@ export const listAdminProducts = (params = {}) => {
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== "") qs.append(k, String(v)); });
   return makeRequest(`${API_BASE}?${qs}`);
 };
+export const getAdminProduct = (id) => makeRequest(`${API_BASE}/${id}`);
 export const getProductSummary = () => makeRequest(`${API_BASE}/summary`);
 export const getProductFilterOptions = () => makeRequest(`${API_BASE}/filter-options`);

@@ -1,170 +1,178 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FaPlus, FaEdit, FaTrash, FaToggleOn, FaToggleOff, FaTicketAlt, FaUsers, FaChartLine } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
+import { adminAuthHeaders } from "../../utils/backendApi";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const PAGE_SIZE = 20;
+
+const notify = (color, message) =>
+    notifications.show({ color, title: color === "red" ? "Error" : "Success", message });
+
+// Shared admin request helper: auth header, JSON body, and a uniform { ok, result } outcome.
+const adminRequest = async (path, { method = "GET", body } = {}) => {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        method,
+        headers: adminAuthHeaders(body ? { "Content-Type": "application/json" } : {}),
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const result = await response.json().catch(() => ({}));
+    return { ok: response.ok && result.success !== false, result };
+};
+
+const EMPTY_FORM = {
+    code: "",
+    discount_type: "PERCENTAGE",
+    discount_value: "",
+    max_discount: "",
+    min_order_value: "",
+    allowed_brands: [],
+    new_user_only: false,
+    usage_limit_total: "",
+    usage_limit_per_user: "1",
+    valid_from: "",
+    valid_to: "",
+    timezone: "Asia/Kolkata",
+    description: "",
+    terms_conditions: "",
+};
 
 const Coupons = () => {
     const [coupons, setCoupons] = useState([]);
+    const [stats, setStats] = useState({ total: 0, active: 0, expired: 0 });
+    const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null); // specific coupon id being processed
     const [isSubmitting, setIsSubmitting] = useState(false); // form submission
     const [showModal, setShowModal] = useState(false);
     const [editingCoupon, setEditingCoupon] = useState(null);
     const [filter, setFilter] = useState("ALL");
+    const [page, setPage] = useState(1);
+    const [formData, setFormData] = useState(EMPTY_FORM);
 
-    // Form state
-    const [formData, setFormData] = useState({
-        code: "",
-        discount_type: "PERCENTAGE",
-        discount_value: "",
-        max_discount: "",
-        min_order_value: "",
-        allowed_brands: [],
-        new_user_only: false,
-        usage_limit_total: "",
-        usage_limit_per_user: "1",
-        valid_from: "",
-        valid_to: "",
-        timezone: "Asia/Kolkata",
-        description: "",
-        terms_conditions: ""
-    });
-
-    useEffect(() => {
-        fetchCoupons();
-    }, [filter]);
-
-    const getAuthToken = () => {
-        const token = localStorage.getItem("admin_token");
-        return token;
-    };
-
-    const fetchCoupons = async () => {
+    const fetchCoupons = useCallback(async () => {
+        setLoading(true);
         try {
-            setLoading(true);
-            const token = getAuthToken();
-            const url = filter === "ALL"
-                ? `${API_BASE_URL}/coupons/admin`
-                : `${API_BASE_URL}/coupons/admin?status=${filter}`;
+            const query = new URLSearchParams({ page, limit: PAGE_SIZE });
+            if (filter !== "ALL") query.set("status", filter);
+            const { ok, result } = await adminRequest(`/coupons/admin?${query}`);
+            if (!ok) throw new Error(result.error || result.message || "Failed to load coupons");
 
-            const response = await fetch(url, {
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                setCoupons(result.data || []);
+            setCoupons(result.data || []);
+            if (result.stats) setStats(result.stats);
+            if (result.pagination) {
+                setPagination({ page: result.pagination.page, pages: Math.max(1, result.pagination.pages), total: result.pagination.total });
             }
         } catch (error) {
-            console.error("Error fetching coupons:", error);
+            notify("red", error.message || "Failed to load coupons");
         } finally {
             setLoading(false);
         }
+    }, [page, filter]);
+
+    useEffect(() => {
+        fetchCoupons();
+    }, [fetchCoupons]);
+
+    const changeFilter = (next) => {
+        setFilter(next);
+        setPage(1);
+    };
+
+    const validateForm = () => {
+        const value = parseFloat(formData.discount_value);
+        if (!Number.isFinite(value) || value <= 0) return "Discount value must be greater than 0";
+        if (formData.discount_type === "PERCENTAGE" && value > 100) return "Percentage discount cannot exceed 100";
+        if (formData.max_discount && parseFloat(formData.max_discount) <= 0) return "Max discount must be greater than 0";
+        if (formData.min_order_value && parseFloat(formData.min_order_value) < 0) return "Min order value cannot be negative";
+        const perUser = parseInt(formData.usage_limit_per_user, 10);
+        if (!Number.isInteger(perUser) || perUser < 1) return "Per-user limit must be at least 1";
+        if (formData.usage_limit_total && parseInt(formData.usage_limit_total, 10) < 1) return "Total usage limit must be at least 1";
+        if (formData.valid_from && formData.valid_to && formData.valid_to < formData.valid_from) {
+            return "Valid To must be on or after Valid From";
+        }
+        return null;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const problem = validateForm();
+        if (problem) {
+            notify("red", problem);
+            return;
+        }
         setIsSubmitting(true);
 
         try {
-            const token = getAuthToken();
-            const url = editingCoupon
-                ? `${API_BASE_URL}/coupons/admin/${editingCoupon.id}`
-                : `${API_BASE_URL}/coupons/admin`;
+            const { ok, result } = await adminRequest(
+                editingCoupon ? `/coupons/admin/${editingCoupon.id}` : "/coupons/admin",
+                {
+                    method: editingCoupon ? "PUT" : "POST",
+                    body: {
+                        ...formData,
+                        code: formData.code.trim(),
+                        discount_value: parseFloat(formData.discount_value),
+                        max_discount: formData.max_discount ? parseFloat(formData.max_discount) : null,
+                        min_order_value: formData.min_order_value ? parseFloat(formData.min_order_value) : 0,
+                        usage_limit_total: formData.usage_limit_total ? parseInt(formData.usage_limit_total, 10) : null,
+                        usage_limit_per_user: parseInt(formData.usage_limit_per_user, 10),
+                    },
+                }
+            );
 
-            const method = editingCoupon ? "PUT" : "POST";
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    discount_value: parseFloat(formData.discount_value),
-                    max_discount: formData.max_discount ? parseFloat(formData.max_discount) : null,
-                    min_order_value: formData.min_order_value ? parseFloat(formData.min_order_value) : 0,
-                    usage_limit_total: formData.usage_limit_total ? parseInt(formData.usage_limit_total) : null,
-                    usage_limit_per_user: formData.usage_limit_per_user ? parseInt(formData.usage_limit_per_user) : 1,
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                alert(editingCoupon ? "Coupon updated successfully!" : "Coupon created successfully!");
-                setShowModal(false);
-                resetForm();
-                fetchCoupons();
-            } else {
-                alert(result.error || "Failed to save coupon");
-            }
+            if (!ok) throw new Error(result.error || result.message || "Failed to save coupon");
+            notify("green", editingCoupon ? "Coupon updated successfully" : "Coupon created successfully");
+            setShowModal(false);
+            resetForm();
+            fetchCoupons();
         } catch (error) {
-            console.error("Error saving coupon:", error);
-            alert("Failed to save coupon");
+            notify("red", error.message || "Failed to save coupon");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleToggleStatus = async (coupon) => {
+        setActionLoading(coupon.id);
         try {
-            setActionLoading(coupon.id);
-            const token = getAuthToken();
             const newStatus = coupon.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
-
-            const response = await fetch(`${API_BASE_URL}/coupons/admin/${coupon.id}/status`, {
+            const { ok, result } = await adminRequest(`/coupons/admin/${coupon.id}/status`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({ status: newStatus })
+                body: { status: newStatus },
             });
-
-            const result = await response.json();
-
-            if (result.success) {
-                setCoupons(prev => prev.map(c =>
-                    c.id === coupon.id ? { ...c, status: newStatus } : c
-                ));
-            }
-
+            if (!ok) throw new Error(result.error || result.message || "Failed to update status");
+            fetchCoupons(); // re-fetch so the summary cards and status filter stay consistent
         } catch (error) {
-            console.error("Error toggling status:", error);
+            notify("red", error.message || "Failed to update status");
         } finally {
             setActionLoading(null);
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm("Are you sure you want to delete this coupon?")) return;
-
-        try {
-            setActionLoading(id);
-            const token = getAuthToken();
-            const response = await fetch(`${API_BASE_URL}/coupons/admin/${id}`, {
-                method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${token}`
+    const handleDelete = (coupon) =>
+        modals.openConfirmModal({
+            title: "Delete coupon",
+            children: `Delete coupon ${coupon.code}? This cannot be undone.`,
+            labels: { confirm: "Delete", cancel: "Cancel" },
+            confirmProps: { color: "red" },
+            onConfirm: async () => {
+                setActionLoading(coupon.id);
+                try {
+                    const { ok, result } = await adminRequest(`/coupons/admin/${coupon.id}`, { method: "DELETE" });
+                    if (!ok) throw new Error(result.error || result.message || "Failed to delete coupon");
+                    notify("green", "Coupon deleted");
+                    // Deleting the last row on a page would leave it empty: step back a page
+                    if (coupons.length === 1 && page > 1) setPage(page - 1);
+                    else fetchCoupons();
+                } catch (error) {
+                    notify("red", error.message || "Failed to delete coupon");
+                } finally {
+                    setActionLoading(null);
                 }
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                setCoupons(prev => prev.filter(c => c.id !== id));
-            }
-        } catch (error) {
-            console.error("Error deleting coupon:", error);
-        } finally {
-            setActionLoading(null);
-        }
-    };
+            },
+        });
 
     const handleEdit = (coupon) => {
         setEditingCoupon(coupon);
@@ -178,39 +186,18 @@ const Coupons = () => {
             new_user_only: coupon.new_user_only || false,
             usage_limit_total: coupon.usage_limit_total?.toString() || "",
             usage_limit_per_user: coupon.usage_limit_per_user?.toString() || "1",
-            valid_from: coupon.valid_from?.split('T')[0] || "",
-            valid_to: coupon.valid_to?.split('T')[0] || "",
+            valid_from: coupon.valid_from?.split("T")[0] || "",
+            valid_to: coupon.valid_to?.split("T")[0] || "",
             timezone: coupon.timezone || "Asia/Kolkata",
             description: coupon.description || "",
-            terms_conditions: coupon.terms_conditions || ""
+            terms_conditions: coupon.terms_conditions || "",
         });
         setShowModal(true);
     };
 
     const resetForm = () => {
-        setFormData({
-            code: "",
-            discount_type: "PERCENTAGE",
-            discount_value: "",
-            max_discount: "",
-            min_order_value: "",
-            allowed_brands: [],
-            new_user_only: false,
-            usage_limit_total: "",
-            usage_limit_per_user: "1",
-            valid_from: "",
-            valid_to: "",
-            timezone: "Asia/Kolkata",
-            description: "",
-            terms_conditions: ""
-        });
+        setFormData(EMPTY_FORM);
         setEditingCoupon(null);
-    };
-
-    const stats = {
-        total: coupons.length,
-        active: coupons.filter(c => c.status === "ACTIVE").length,
-        expired: coupons.filter(c => c.status === "EXPIRED").length,
     };
 
     return (
@@ -275,7 +262,7 @@ const Coupons = () => {
             <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex justify-between items-center">
                 <div className="flex gap-2">
                     <button
-                        onClick={() => setFilter("ALL")}
+                        onClick={() => changeFilter("ALL")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "ALL"
                             ? "bg-purple-600 text-white"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -284,7 +271,7 @@ const Coupons = () => {
                         All
                     </button>
                     <button
-                        onClick={() => setFilter("ACTIVE")}
+                        onClick={() => changeFilter("ACTIVE")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "ACTIVE"
                             ? "bg-green-600 text-white"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -293,7 +280,7 @@ const Coupons = () => {
                         Active
                     </button>
                     <button
-                        onClick={() => setFilter("DISABLED")}
+                        onClick={() => changeFilter("DISABLED")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "DISABLED"
                             ? "bg-gray-600 text-white"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -302,7 +289,7 @@ const Coupons = () => {
                         Disabled
                     </button>
                     <button
-                        onClick={() => setFilter("EXPIRED")}
+                        onClick={() => changeFilter("EXPIRED")}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === "EXPIRED"
                             ? "bg-red-600 text-white"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -415,7 +402,7 @@ const Coupons = () => {
                                                     <FaEdit size={18} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(coupon.id)}
+                                                    onClick={() => handleDelete(coupon)}
                                                     className={`${actionLoading === coupon.id ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:text-red-900"}`}
                                                     title="Delete"
                                                     disabled={actionLoading === coupon.id}
@@ -428,6 +415,28 @@ const Coupons = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {pagination.pages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 text-sm text-gray-600">
+                        <span>Page {pagination.page} of {pagination.pages} · {pagination.total} coupons</span>
+                        <div className="flex gap-2">
+                            <button
+                                disabled={page <= 1 || loading}
+                                onClick={() => setPage(page - 1)}
+                                className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-40"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                disabled={page >= pagination.pages || loading}
+                                onClick={() => setPage(page + 1)}
+                                className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-40"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -618,7 +627,8 @@ const Coupons = () => {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                        disabled={isSubmitting}
+                                        className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-60"
                                     >
                                         {editingCoupon ? (isSubmitting ? "Updating..." : "Update Coupon") : (isSubmitting ? "Creating..." : "Create Coupon")}
                                     </button>

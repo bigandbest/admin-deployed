@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -6,6 +6,7 @@ import {
   Text,
   LoadingOverlay,
   Divider,
+  Alert,
 } from "@mantine/core";
 import {
   getAllCategories,
@@ -14,36 +15,29 @@ import {
 } from "../../utils/supabaseApi";
 import SectionMappingManager from "../../Components/SectionMappingManager";
 
+const EMPTY = [];
+
 const CategoryMapping = () => {
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Cached + deduped by react-query; api helpers resolve { success:false } instead of throwing,
+  // so turn that into a real query error.
+  const unwrap = (res, key) => {
+    if (!res?.success) throw new Error(res?.error?.message || res?.error || "Request failed");
+    return res[key] || [];
+  };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [categoriesRes, subcategoriesRes] = await Promise.all([
-          getAllCategories(),
-          getAllSubcategories(),
-        ]);
+  const categoriesQuery = useQuery({
+    queryKey: ["mapping-categories"],
+    queryFn: async () => unwrap(await getAllCategories(), "categories"),
+  });
+  const subcategoriesQuery = useQuery({
+    queryKey: ["mapping-subcategories"],
+    queryFn: async () => unwrap(await getAllSubcategories(), "subcategories"),
+  });
 
-        if (categoriesRes.success) {
-          setCategories(categoriesRes.categories || []);
-        }
-
-        if (subcategoriesRes.success) {
-          setSubcategories(subcategoriesRes.subcategories || []);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const categories = categoriesQuery.data ?? EMPTY;
+  const subcategories = subcategoriesQuery.data ?? EMPTY;
+  const loading = categoriesQuery.isLoading || subcategoriesQuery.isLoading;
+  const loadError = categoriesQuery.error || subcategoriesQuery.error;
 
   // Fetch product sections once and share across every SectionMappingManager
   // instance below, instead of each one independently calling
@@ -69,9 +63,15 @@ const CategoryMapping = () => {
         <LoadingOverlay visible={loading || sectionsLoading} />
 
         <Title order={2} mb="md">Manage Section Mappings</Title>
-        <Text size="sm" color="dimmed" mb="xl">
+        <Text size="sm" c="dimmed" mb="xl">
           Control which categories and subcategories appear in PriceZone and ShopByCategory sections
         </Text>
+
+        {loadError && (
+          <Alert color="red" variant="light" title="Failed to load categories" mb="xl">
+            {loadError.message}
+          </Alert>
+        )}
 
         {/* PriceZone Section */}
         <SectionMappingManager

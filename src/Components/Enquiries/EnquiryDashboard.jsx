@@ -12,7 +12,7 @@ const STATUS_COLORS = {
     CLOSED: 'bg-red-100 text-red-800',
 };
 
-export default function EnquiryDashboard({ onViewEnquiry, onCreateBid }) {
+export default function EnquiryDashboard({ onViewEnquiry, onCreateBid, refreshKey = 0 }) {
     // Removed navigate - using callbacks instead
     const [enquiries, setEnquiries] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export default function EnquiryDashboard({ onViewEnquiry, onCreateBid }) {
 
     useEffect(() => {
         fetchEnquiries();
-    }, [filter, pagination.page]);
+    }, [filter, pagination.page, refreshKey]);
 
     const fetchEnquiries = async () => {
         setLoading(true);
