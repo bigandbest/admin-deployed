@@ -10,7 +10,6 @@ export default function ProductEnquiriesPage() {
     const [selectedEnquiry, setSelectedEnquiry] = useState(null);
     const [showBidForm, setShowBidForm] = useState(false);
     const [showChat, setShowChat] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
 
     const handleViewEnquiry = (enquiry) => {
         setSelectedEnquiry(enquiry);
@@ -25,8 +24,8 @@ export default function ProductEnquiriesPage() {
     const handleBidCreated = () => {
         setShowBidForm(false);
         setSelectedEnquiry(null);
-        // Re-fetch the list in place (keeps the current filter and page)
-        setRefreshKey((k) => k + 1);
+        // Refresh dashboard
+        window.location.reload();
     };
 
     return (
@@ -41,7 +40,6 @@ export default function ProductEnquiriesPage() {
             <EnquiryDashboard
                 onViewEnquiry={handleViewEnquiry}
                 onCreateBid={handleCreateBid}
-                refreshKey={refreshKey}
             />
 
             {/* Bid Creation Modal */}

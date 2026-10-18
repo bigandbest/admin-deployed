@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -14,192 +14,231 @@ import {
   MultiSelect,
   LoadingOverlay,
 } from "@mantine/core";
-import { modals } from "@mantine/modals";
-import { showNotification } from "@mantine/notifications";
-import { IconEdit, IconTrash, IconPlus } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconTrash,
+  IconPlus,
+} from "@tabler/icons-react";
 import api from "../../utils/api";
-
-const errorMessage = (error, fallback) =>
-  error?.response?.data?.error || error?.message || fallback;
-
-const notifyError = (error, fallback) =>
-  showNotification({
-    color: "red",
-    title: "Error",
-    message: errorMessage(error, fallback),
-  });
 
 const StoreSectionMapping = () => {
   const [loading, setLoading] = useState(false);
   const [sections, setSections] = useState([]);
   const [mappings, setMappings] = useState([]);
 
-  // Modal + form state
-  const [mappingModal, setMappingModal] = useState(false);
-  const [selectedSection, setSelectedSection] = useState(null);
+  // Modal state
+  const [categoryMappingModal, setCategoryMappingModal] = useState(false);
+
+  // Form states
+  const [selectedSection, setSelectedSection] = useState("");
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [groups, setGroups] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Only section-group mappings are shown here, so ask the API for just those
-  const fetchInitialData = useCallback(async () => {
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  // Fetch groups only when modal opens
+  useEffect(() => {
+    if (categoryMappingModal && groups.length === 0) {
+      fetchGroups();
+    }
+  }, [categoryMappingModal]);
+
+  const fetchInitialData = async () => {
     setLoading(true);
     try {
       const [sectionsRes, mappingsRes] = await Promise.all([
-        api.get("/store-section-mappings/product-sections/list", {
-          params: { allow_group_mapping: true },
-        }),
-        api.get("/store-section-mappings/list", {
-          params: { type: "section-group" },
-        }),
+        api.get("/store-section-mappings/product-sections/list"),
+        api.get("/store-section-mappings/list"),
       ]);
+
       setSections(sectionsRes.data.sections || []);
       setMappings(mappingsRes.data.mappings || []);
     } catch (error) {
-      notifyError(error, "Failed to load mappings");
+      console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const fetchGroups = useCallback(async () => {
+  const fetchGroups = async () => {
     try {
       const res = await api.get("/categories/groups");
       setGroups(res.data.groups || []);
     } catch (error) {
-      notifyError(error, "Failed to load groups");
+      console.error("Failed to fetch groups:", error);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
-
-  // Groups are only needed once the modal is opened
-  useEffect(() => {
-    if (mappingModal && groups.length === 0) fetchGroups();
-  }, [mappingModal, groups.length, fetchGroups]);
-
-  const closeModal = () => {
-    setMappingModal(false);
-    setSelectedSection(null);
-    setSelectedGroups([]);
   };
 
+  // Group-Section Mapping Functions
   const handleGroupMapping = async () => {
     if (!selectedSection || selectedGroups.length === 0) return;
 
     setSubmitting(true);
     try {
       await api.post("/store-section-mappings/section-group", {
-        section_id: Number(selectedSection),
+        section_id: selectedSection,
         group_ids: selectedGroups,
       });
-      showNotification({
-        color: "green",
-        title: "Saved",
-        message: "Group mapping updated",
-      });
-      closeModal();
+
+      setCategoryMappingModal(false);
+      setSelectedSection("");
+      setSelectedGroups([]);
       fetchInitialData();
     } catch (error) {
-      notifyError(error, "Failed to save group mapping");
+      console.error("Failed to create group-section mapping:", error);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const toggleMappingStatus = async (mapping) => {
-    const next = !mapping.is_active;
-    // Optimistic update so the switch responds instantly; rolled back on failure
-    setMappings((prev) =>
-      prev.map((m) => (m.id === mapping.id ? { ...m, is_active: next } : m))
-    );
+  // Toggle mapping status
+  const toggleMappingStatus = async (mappingId, currentStatus) => {
     try {
-      await api.put(`/store-section-mappings/${mapping.id}/status`, {
-        is_active: next,
+      await api.put(`/store-section-mappings/${mappingId}/status`, {
+        is_active: !currentStatus,
       });
-    } catch (error) {
-      setMappings((prev) =>
-        prev.map((m) =>
-          m.id === mapping.id ? { ...m, is_active: mapping.is_active } : m
-        )
-      );
-      notifyError(error, "Failed to update status");
-    }
-  };
-
-  const runDelete = async (mappingId, failMessage) => {
-    try {
-      await api.delete(`/store-section-mappings/${mappingId}`);
       fetchInitialData();
     } catch (error) {
-      notifyError(error, failMessage);
+      console.error("Failed to update mapping status:", error);
     }
   };
 
-  // Deletes every group of the section and its linked products (backend cascade)
-  const deleteMapping = (mapping) =>
-    modals.openConfirmModal({
-      title: "Delete mapping",
-      children: (
-        <Text size="sm">
-          Delete all groups mapped to <b>{mapping.section_name}</b>? This also
-          removes all linked products from this section.
-        </Text>
-      ),
-      labels: { confirm: "Delete", cancel: "Cancel" },
-      confirmProps: { color: "red" },
-      onConfirm: () => runDelete(mapping.id, "Failed to delete mapping"),
-    });
-
-  // The list API already returns each group's own mapping id (psg_<id>)
-  const deleteIndividualGroup = (group) => {
-    if (!group._mapping_id) {
-      notifyError(null, "Group mapping ID not found");
-      return;
+  // Delete mapping — also removes linked products on backend
+  const deleteMapping = async (mappingId) => {
+    if (window.confirm("Are you sure? This will also remove all linked products from this section.")) {
+      try {
+        await api.delete(`/store-section-mappings/${mappingId}`);
+        fetchInitialData();
+      } catch (error) {
+        console.error("Failed to delete mapping:", error);
+      }
     }
-    modals.openConfirmModal({
-      title: "Remove group",
-      children: (
-        <Text size="sm">
-          Remove <b>{group.name}</b> from this section?
-        </Text>
-      ),
-      labels: { confirm: "Remove", cancel: "Cancel" },
-      confirmProps: { color: "red" },
-      onConfirm: () => runDelete(group._mapping_id, "Failed to remove group"),
-    });
   };
 
+  // Delete individual group from section
+  const deleteIndividualGroup = async (mapping, groupId) => {
+    if (window.confirm("Are you sure you want to remove this group from the section?")) {
+      try {
+        // Find the specific group mapping ID
+        // The backend expects psg_{id} format for individual group deletions
+        const groupMapping = mappings.find(m =>
+          m.section_id === mapping.section_id &&
+          m.groups?.some(g => g.id === groupId)
+        );
+
+        if (groupMapping && groupMapping.groups) {
+          const group = groupMapping.groups.find(g => g.id === groupId);
+          if (group && group._mapping_id) {
+            await api.delete(`/store-section-mappings/${group._mapping_id}`);
+            fetchInitialData();
+          } else {
+            console.error("Group mapping ID not found");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to delete individual group:", error);
+      }
+    }
+  };
+
+  // Filter options for group mapping based on allow_group_mapping flag
+  const groupMappingSectionOptions = sections
+    .filter(s => s.allow_group_mapping)
+    .map((section) => ({
+      value: section.id.toString(),
+      label: `${section.section_name} (${section.section_key})`,
+    }));
+
+  const groupOptions = groups.map((group) => ({
+    value: group.id.toString(),
+    label: group.name,
+  }));
+
+  // Handle opening edit modal for group mapping
   const handleEditGroupMapping = (mapping) => {
-    setSelectedSection(String(mapping.section_id));
-    setSelectedGroups((mapping.groups || []).map((g) => String(g.id)));
-    setMappingModal(true);
+    setSelectedSection(mapping.section_id.toString());
+    const mappedGroupIds = mapping.groups.map(g => g.id.toString());
+    setSelectedGroups(mappedGroupIds);
+    setCategoryMappingModal(true);
+    if (groups.length === 0) {
+      fetchGroups();
+    }
   };
 
-  // Picking a section in the modal preloads its already-mapped groups
-  const handleSectionChange = (value) => {
-    setSelectedSection(value);
-    const existing = mappings.find((m) => String(m.section_id) === value);
-    setSelectedGroups((existing?.groups || []).map((g) => String(g.id)));
-  };
+  // Table columns for section-group mappings
+  const sectionGroupColumns = [
+    {
+      accessor: "section_name",
+      title: "Section Name",
+    },
+    {
+      accessor: "groups",
+      title: "Mapped Groups",
+      render: (mapping) => (
+        <div className="flex flex-wrap gap-1">
+          {mapping.groups?.map((group) => (
+            <Badge
+              key={group.id}
+              size="sm"
+              variant="filled"
+              color="blue"
+              rightSection={
+                <ActionIcon
+                  size="xs"
+                  color="red"
+                  radius="xl"
+                  variant="transparent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteIndividualGroup(mapping, group.id);
+                  }}
+                >
+                  <IconTrash size={12} />
+                </ActionIcon>
+              }
+            >
+              {group.name}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      accessor: "is_active",
+      title: "Status",
+      render: (mapping) => (
+        <Switch
+          checked={mapping.is_active}
+          onChange={() => toggleMappingStatus(mapping.id, mapping.is_active)}
+        />
+      ),
+    },
+    {
+      accessor: "actions",
+      title: "Actions",
+      render: (mapping) => (
+        <Group spacing="xs">
+          <Tooltip label="Edit mapping">
+            <ActionIcon color="blue" onClick={() => handleEditGroupMapping(mapping)}>
+              <IconEdit size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Delete mapping & linked products">
+            <ActionIcon color="red" onClick={() => deleteMapping(mapping.id)}>
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      ),
+    },
+  ];
 
-  const sectionOptions = useMemo(
-    () =>
-      sections
-        .filter((s) => s.allow_group_mapping)
-        .map((s) => ({
-          value: String(s.id),
-          label: `${s.section_name} (${s.section_key})`,
-        })),
-    [sections]
-  );
-
-  const groupOptions = useMemo(
-    () => groups.map((g) => ({ value: String(g.id), label: g.name })),
-    [groups]
-  );
+  // Filter only section-group mappings
+  const sectionGroupMappings = mappings.filter((m) => m.type === "section-group");
 
   return (
     <div className="p-6">
@@ -209,123 +248,62 @@ const StoreSectionMapping = () => {
         <h1 className="text-2xl font-bold text-gray-800 mb-2">
           Group-Section Mapping
         </h1>
-        <Text c="dimmed" size="sm">
+        <Text color="gray" size="sm">
           Manage group-section relationships and product assignments
         </Text>
       </div>
 
       <Card shadow="sm" p="lg" radius="md" className="mb-6">
-        <Group justify="space-between" mb="md">
-          <Text fw={500}>Group-Section Mappings</Text>
+        <Group position="apart" className="mb-4">
+          <Text weight={500}>Group-Section Mappings</Text>
           <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setMappingModal(true)}
+            leftIcon={<IconPlus size={16} />}
+            onClick={() => setCategoryMappingModal(true)}
           >
             Map Group to Section
           </Button>
         </Group>
 
         <Table>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Section Name</Table.Th>
-              <Table.Th>Mapped Groups</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {mappings.length === 0 && !loading && (
-              <Table.Tr>
-                <Table.Td colSpan={4}>
-                  <Text c="dimmed" ta="center" size="sm">
-                    No group mappings yet
-                  </Text>
-                </Table.Td>
-              </Table.Tr>
-            )}
-            {mappings.map((mapping) => (
-              <Table.Tr key={mapping.id}>
-                <Table.Td>{mapping.section_name}</Table.Td>
-                <Table.Td>
-                  <Group gap={4}>
-                    {mapping.groups?.map((group) => (
-                      <Badge
-                        key={group.id}
-                        size="lg"
-                        variant="filled"
-                        color="blue"
-                        rightSection={
-                          <ActionIcon
-                            size="xs"
-                            color="white"
-                            radius="xl"
-                            variant="transparent"
-                            aria-label={`Remove ${group.name}`}
-                            onClick={() => deleteIndividualGroup(group)}
-                          >
-                            <IconTrash size={12} />
-                          </ActionIcon>
-                        }
-                      >
-                        {group.name}
-                      </Badge>
-                    ))}
-                  </Group>
-                </Table.Td>
-                <Table.Td>
-                  <Switch
-                    checked={!!mapping.is_active}
-                    onChange={() => toggleMappingStatus(mapping)}
-                  />
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <Tooltip label="Edit mapping">
-                      <ActionIcon
-                        variant="light"
-                        color="blue"
-                        aria-label="Edit mapping"
-                        onClick={() => handleEditGroupMapping(mapping)}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Delete mapping & linked products">
-                      <ActionIcon
-                        variant="light"
-                        color="red"
-                        aria-label="Delete mapping"
-                        onClick={() => deleteMapping(mapping)}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
+          <thead>
+            <tr>
+              {sectionGroupColumns.map((col) => (
+                <th key={col.accessor}>{col.title}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sectionGroupMappings.map((mapping) => (
+              <tr key={mapping.id}>
+                {sectionGroupColumns.map((col) => (
+                  <td key={col.accessor}>
+                    {col.render
+                      ? col.render(mapping)
+                      : mapping[col.accessor]}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </Table.Tbody>
+          </tbody>
         </Table>
       </Card>
 
+      {/* Group-Section Mapping Modal */}
       <Modal
-        opened={mappingModal}
-        onClose={closeModal}
+        opened={categoryMappingModal}
+        onClose={() => setCategoryMappingModal(false)}
         title="Manage Group-Section Mapping"
         size="md"
       >
-        <div style={{ position: "relative" }}>
+        <div className="space-y-4" style={{ position: "relative" }}>
           <LoadingOverlay visible={submitting} overlayProps={{ blur: 2 }} />
           <Select
             label="Select Section"
             placeholder="Choose a section"
-            data={sectionOptions}
+            data={groupMappingSectionOptions}
             value={selectedSection}
-            onChange={handleSectionChange}
-            searchable
+            onChange={setSelectedSection}
             required
-            mb="md"
           />
 
           <MultiSelect
@@ -338,16 +316,14 @@ const StoreSectionMapping = () => {
             required
           />
 
-          <Group justify="flex-end" mt="md">
-            <Button variant="subtle" onClick={closeModal}>
+          <Group position="right" mt="md">
+            <Button
+              variant="subtle"
+              onClick={() => setCategoryMappingModal(false)}
+            >
               Cancel
             </Button>
-            <Button
-              onClick={handleGroupMapping}
-              disabled={!selectedSection || selectedGroups.length === 0}
-            >
-              Map Groups
-            </Button>
+            <Button onClick={handleGroupMapping}>Map Groups</Button>
           </Group>
         </div>
       </Modal>
