@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Card,
@@ -21,9 +21,23 @@ import {
     getSectionSubcategoryMappings,
     updateSectionSubcategoryMappings,
     getCategoriesInSection,
-    addCategoriesToSection,
     syncCategoriesInSection,
 } from "../utils/supabaseApi";
+
+const SUB = "sub_";
+const CAT = "cat_";
+
+// Drop every key with the given prefix, then add the new ones (server data replaces, never merges)
+const replaceByPrefix = (prev, prefix, next) => {
+    const out = {};
+    Object.keys(prev).forEach((k) => {
+        if (!k.startsWith(prefix)) out[k] = prev[k];
+    });
+    return { ...out, ...next };
+};
+
+const nextOrder = (orders) =>
+    Math.max(-1, ...Object.values(orders).filter((v) => typeof v === "number")) + 1;
 
 const SectionMappingManager = ({
     sectionKey,
@@ -32,7 +46,7 @@ const SectionMappingManager = ({
     categories,
     subcategories,
     sectionsByKey,
-    singleSelect = false, // New prop
+    singleSelect = false,
 }) => {
     const queryClient = useQueryClient();
     const [saving, setSaving] = useState(false);
@@ -62,197 +76,140 @@ const SectionMappingManager = ({
         (wantsSubcategories && !!sectionId && subcatQuery.isLoading) ||
         (wantsCategories && !!sectionId && catQuery.isLoading);
 
+    // The api helpers resolve { success: false } instead of throwing, so surface both shapes
+    const loadError =
+        (subcatQuery.data && subcatQuery.data.success === false && subcatQuery.data.error) ||
+        (catQuery.data && catQuery.data.success === false && catQuery.data.error) ||
+        (subcatQuery.error && subcatQuery.error.message) ||
+        (catQuery.error && catQuery.error.message) ||
+        null;
+
     useEffect(() => {
         if (sectionsResolved && !sectionId) {
             showNotification({
-                message: "Section not found",
+                message: `Section "${sectionName}" not found`,
                 color: "red",
             });
         }
-    }, [sectionsResolved, sectionId]);
+    }, [sectionsResolved, sectionId, sectionName]);
 
     useEffect(() => {
-        if (!sectionId || !wantsSubcategories) return;
-        if (subcatQuery.data?.success && subcatQuery.data.data) {
-            const mappings = {};
-            const orders = {};
-            subcatQuery.data.data.forEach((mapping) => {
-                mappings[`sub_${mapping.subcategory_id}`] = true;
-                orders[`sub_${mapping.subcategory_id}`] = mapping.display_order;
-            });
-            setSelectedMappings((prev) => ({ ...prev, ...mappings }));
-            setDisplayOrders((prev) => ({ ...prev, ...orders }));
-        }
-    }, [sectionId, wantsSubcategories, subcatQuery.data]);
+        if (!wantsSubcategories || !subcatQuery.data?.success) return;
+        const mappings = {};
+        const orders = {};
+        (subcatQuery.data.data || []).forEach((m) => {
+            mappings[`${SUB}${m.subcategory_id}`] = true;
+            orders[`${SUB}${m.subcategory_id}`] = m.display_order ?? 0;
+        });
+        setSelectedMappings((prev) => replaceByPrefix(prev, SUB, mappings));
+        setDisplayOrders((prev) => replaceByPrefix(prev, SUB, orders));
+    }, [wantsSubcategories, subcatQuery.data]);
 
     useEffect(() => {
-        if (!sectionId || !wantsCategories) return;
-        if (catQuery.data?.success && catQuery.data.data) {
-            const mappings = {};
-            catQuery.data.data.forEach((mapping) => {
-                mappings[`cat_${mapping.category_id}`] = true;
-            });
-
-            // If singleSelect is true and multiple are selected, keep only the first one (cleanup)
-            if (singleSelect && catQuery.data.data.length > 1) {
-                const firstKey = `cat_${catQuery.data.data[0].category_id}`;
-                setSelectedMappings((prev) => ({ ...prev, [firstKey]: true }));
-            } else {
-                setSelectedMappings((prev) => ({ ...prev, ...mappings }));
-            }
-        }
-    }, [sectionId, wantsCategories, singleSelect, catQuery.data]);
+        if (!wantsCategories || !catQuery.data?.success) return;
+        // singleSelect sections keep only the first mapped category (cleans up legacy data)
+        const rows = (catQuery.data.data || []).slice(0, singleSelect ? 1 : undefined);
+        const mappings = {};
+        rows.forEach((m) => {
+            mappings[`${CAT}${m.category_id}`] = true;
+        });
+        setSelectedMappings((prev) => replaceByPrefix(prev, CAT, mappings));
+    }, [wantsCategories, singleSelect, catQuery.data]);
 
     const handleToggleMapping = (key) => {
+        const isSelected = !!selectedMappings[key];
+
         if (singleSelect) {
-            // specific logic for single select
-            setSelectedMappings((prev) => {
-                const isSelected = !!prev[key];
-                if (isSelected) {
-                    // If already selected, allow deselection (or maybe enforce at least one? user said "allow only one", implying 0 or 1)
-                    // Let's allow deselecting to 0.
-                    const newMappings = { ...prev };
-                    delete newMappings[key];
-                    return newMappings;
-                } else {
-                    // If selecting new, clear all others of the same type?
-                    // Or clear ALL mappings just to be safe if singleSelect applies to the whole manager
-                    // The user request context implies single category.
-                    // We will clear ALL selected mappings and set only this one.
-                    return { [key]: true };
-                }
-            });
-        } else {
-            setSelectedMappings((prev) => ({
-                ...prev,
-                [key]: !prev[key],
-            }));
+            // 0 or 1 selection: picking a new item replaces the current one
+            setSelectedMappings(isSelected ? {} : { [key]: true });
+            return;
         }
 
-        // Set default display order if newly selected (only needed if not single select or if we want to preserve order logic)
-        if (!selectedMappings[key] && !displayOrders[key]) {
-            const maxOrder = Math.max(
-                ...Object.values(displayOrders).filter((v) => typeof v === "number"),
-                -1
-            );
-            setDisplayOrders((prev) => ({
-                ...prev,
-                [key]: maxOrder + 1,
-            }));
+        setSelectedMappings((prev) => ({ ...prev, [key]: !isSelected }));
+
+        // Give a newly selected subcategory the next free display order
+        if (!isSelected && key.startsWith(SUB) && displayOrders[key] === undefined) {
+            setDisplayOrders((prev) => ({ ...prev, [key]: nextOrder(prev) }));
         }
     };
 
     const handleDisplayOrderChange = (key, value) => {
-        setDisplayOrders((prev) => ({
-            ...prev,
-            [key]: value,
-        }));
+        const n = Number(value);
+        setDisplayOrders((prev) => ({ ...prev, [key]: Number.isFinite(n) && n >= 0 ? n : 0 }));
     };
 
     const handleSelectAll = (type) => {
-        if (singleSelect) return; // Disable for single select
-
-        const newMappings = { ...selectedMappings };
-        const newOrders = { ...displayOrders };
-        let order = Math.max(...Object.values(displayOrders).filter((v) => typeof v === "number"), -1) + 1;
+        if (singleSelect) return;
 
         if (type === "subcategory") {
+            const newMappings = {};
+            const newOrders = {};
+            let order = nextOrder(displayOrders);
             subcategories.forEach((sub) => {
-                const key = `sub_${sub.id}`;
+                const key = `${SUB}${sub.id}`;
                 newMappings[key] = true;
-                if (!newOrders[key]) {
-                    newOrders[key] = order++;
-                }
+                if (displayOrders[key] === undefined) newOrders[key] = order++;
             });
-        } else if (type === "category") {
+            setSelectedMappings((prev) => ({ ...prev, ...newMappings }));
+            setDisplayOrders((prev) => ({ ...prev, ...newOrders }));
+        } else {
+            const newMappings = {};
             categories.forEach((cat) => {
-                const key = `cat_${cat.id}`;
-                newMappings[key] = true;
+                newMappings[`${CAT}${cat.id}`] = true;
             });
+            setSelectedMappings((prev) => ({ ...prev, ...newMappings }));
         }
-
-        setSelectedMappings(newMappings);
-        setDisplayOrders(newOrders);
     };
 
     const handleDeselectAll = (type) => {
-        // Deselect all is fine for single select technically, but user UI might not need it if they can just uncheck.
-        // But for consistency we can leave it or hide it. Plan said hide it.
-        const newMappings = { ...selectedMappings };
-        const newOrders = { ...displayOrders };
-
-        if (type === "subcategory") {
-            subcategories.forEach((sub) => {
-                const key = `sub_${sub.id}`;
-                delete newMappings[key];
-                delete newOrders[key];
-            });
-        } else if (type === "category") {
-            categories.forEach((cat) => {
-                const key = `cat_${cat.id}`;
-                delete newMappings[key];
-            });
-        }
-
-        setSelectedMappings(newMappings);
-        setDisplayOrders(newOrders);
+        const prefix = type === "subcategory" ? SUB : CAT;
+        setSelectedMappings((prev) => replaceByPrefix(prev, prefix, {}));
     };
 
     const handleSave = async () => {
         if (!sectionId) {
+            showNotification({ message: "Section ID not found", color: "red" });
+            return;
+        }
+
+        const selectedKeys = (prefix) =>
+            Object.keys(selectedMappings)
+                .filter((k) => k.startsWith(prefix) && selectedMappings[k])
+                .map((k) => ({ key: k, id: k.slice(prefix.length) }));
+
+        const categoryIds = wantsCategories ? selectedKeys(CAT).map((c) => c.id) : [];
+        if (singleSelect && categoryIds.length > 1) {
             showNotification({
-                message: "Section ID not found",
+                message: "Only one category allowed for this section",
                 color: "red",
+                icon: <FaTimes />,
             });
             return;
         }
 
         setSaving(true);
         try {
-            // Save subcategory mappings
-            if (mappingType === "subcategory" || mappingType === "both") {
-                const subcategoryMappings = [];
-                Object.keys(selectedMappings).forEach((key) => {
-                    if (key.startsWith("sub_") && selectedMappings[key]) {
-                        const subcategoryId = key.replace("sub_", "");
-                        if (subcategoryId && subcategoryId !== "undefined") {
-                            subcategoryMappings.push({
-                                subcategory_id: subcategoryId,
-                                display_order: displayOrders[key] || 0,
-                                is_active: true,
-                            });
-                        }
-                    }
-                });
+            if (wantsSubcategories) {
+                const subcategoryMappings = selectedKeys(SUB)
+                    .filter((s) => s.id && s.id !== "undefined")
+                    .map((s) => ({
+                        subcategory_id: s.id,
+                        display_order: displayOrders[s.key] || 0,
+                        is_active: true,
+                    }));
 
-                const subResult = await updateSectionSubcategoryMappings(
-                    sectionId,
-                    subcategoryMappings
-                );
+                const subResult = await updateSectionSubcategoryMappings(sectionId, subcategoryMappings);
                 if (!subResult.success) {
                     throw new Error(subResult.error || "Failed to save subcategory mappings");
                 }
             }
 
-            // Save category mappings
-            if (mappingType === "category" || mappingType === "both") {
-                const categoryIds = [];
-                Object.keys(selectedMappings).forEach((key) => {
-                    if (key.startsWith("cat_") && selectedMappings[key]) {
-                        categoryIds.push(key.replace("cat_", ""));
-                    }
-                });
-
-                // Validation for single select
-                if (singleSelect && categoryIds.length > 1) {
-                    throw new Error("Only one category allowed for this section");
-                }
-
-
-                // Sync category mappings (replace existing with selected)
+            if (wantsCategories) {
                 const catResult = await syncCategoriesInSection(sectionId, categoryIds);
                 if (!catResult.success) {
-                    throw new Error(catResult.error || "Failed to save category mappings");
+                    throw new Error(
+                        catResult.error?.message || catResult.error || "Failed to save category mappings"
+                    );
                 }
             }
 
@@ -262,9 +219,6 @@ const SectionMappingManager = ({
                 icon: <FaCheck />,
             });
 
-            // Refetch mappings from the server so the UI reflects the save
-            // immediately (also relies on the backend having invalidated its
-            // Redis cache for this section on write).
             queryClient.invalidateQueries({ queryKey: ["section-subcategory-mappings", sectionId] });
             queryClient.invalidateQueries({ queryKey: ["section-categories", sectionId] });
         } catch (error) {
@@ -279,10 +233,20 @@ const SectionMappingManager = ({
         }
     };
 
+    // Subcategories grouped by category once, instead of filtering inside every render of every accordion item
+    const subsByCategory = useMemo(() => {
+        const map = new Map();
+        subcategories.forEach((sub) => {
+            if (!map.has(sub.category_id)) map.set(sub.category_id, []);
+            map.get(sub.category_id).push(sub);
+        });
+        return map;
+    }, [subcategories]);
+
     if (loading) {
         return (
             <Card p="md">
-                <Group position="center" py="xl">
+                <Group justify="center" py="xl">
                     <Loader size="lg" />
                     <Text>Loading {sectionName} mappings...</Text>
                 </Group>
@@ -291,18 +255,35 @@ const SectionMappingManager = ({
     }
 
     const selectedCount = Object.values(selectedMappings).filter(Boolean).length;
+    const noun =
+        mappingType === "subcategory"
+            ? "subcategories"
+            : mappingType === "category"
+              ? "categories"
+              : "categories and subcategories";
+
+    const renderBulkButtons = (type) =>
+        !singleSelect && (
+            <Group>
+                <Button size="xs" variant="light" onClick={() => handleSelectAll(type)}>
+                    Select All
+                </Button>
+                <Button size="xs" variant="light" color="red" onClick={() => handleDeselectAll(type)}>
+                    Deselect All
+                </Button>
+            </Group>
+        );
 
     return (
         <Card p="md" withBorder>
-            <Stack spacing="md">
-                <Group position="apart">
+            <Stack gap="md">
+                <Group justify="space-between">
                     <div>
                         <Title order={3}>{sectionName}</Title>
-                        <Text size="sm" color="dimmed">
+                        <Text size="sm" c="dimmed">
                             {singleSelect
-                                ? "Select exactly one category to display"
-                                : `Select which ${mappingType === "subcategory" ? "subcategories" : mappingType === "category" ? "categories" : "categories and subcategories"} to display`
-                            }
+                                ? "Select one category to display"
+                                : `Select which ${noun} to display`}
                         </Text>
                     </div>
                     <Badge size="lg" color="blue">
@@ -310,74 +291,87 @@ const SectionMappingManager = ({
                     </Badge>
                 </Group>
 
-                {!singleSelect && (
+                {loadError && (
+                    <Alert color="red" variant="light" title="Could not load current mappings">
+                        {String(loadError)}
+                    </Alert>
+                )}
+
+                {wantsSubcategories && (
                     <Alert icon={<FaInfoCircle />} color="blue" variant="light">
                         Display order determines the sequence in which items appear on the frontend.
                         Lower numbers appear first.
                     </Alert>
                 )}
 
-                {(mappingType === "subcategory" || mappingType === "both") && (
+                {wantsCategories && mappingType === "both" && (
                     <>
-                        <Group position="apart">
+                        <Group justify="space-between">
+                            <Title order={4}>Categories</Title>
+                            {renderBulkButtons("category")}
+                        </Group>
+                        <Stack gap="xs">
+                            {categories.map((category) => {
+                                const key = `${CAT}${category.id}`;
+                                return (
+                                    <Checkbox
+                                        key={category.id}
+                                        label={category.name}
+                                        checked={!!selectedMappings[key]}
+                                        onChange={() => handleToggleMapping(key)}
+                                    />
+                                );
+                            })}
+                        </Stack>
+                        <Divider />
+                    </>
+                )}
+
+                {wantsSubcategories && (
+                    <>
+                        <Group justify="space-between">
                             <Title order={4}>Subcategories</Title>
-                            {!singleSelect && (
-                                <Group>
-                                    <Button
-                                        size="xs"
-                                        variant="light"
-                                        onClick={() => handleSelectAll("subcategory")}
-                                    >
-                                        Select All
-                                    </Button>
-                                    <Button
-                                        size="xs"
-                                        variant="light"
-                                        color="red"
-                                        onClick={() => handleDeselectAll("subcategory")}
-                                    >
-                                        Deselect All
-                                    </Button>
-                                </Group>
-                            )}
+                            {renderBulkButtons("subcategory")}
                         </Group>
 
                         <Accordion variant="separated">
                             {categories.map((category) => {
-                                const categorySubs = subcategories.filter(
-                                    (sub) => sub.category_id === category.id
-                                );
-                                if (categorySubs.length === 0) return null;
+                                const categorySubs = subsByCategory.get(category.id);
+                                if (!categorySubs?.length) return null;
+                                const chosen = categorySubs.filter(
+                                    (sub) => selectedMappings[`${SUB}${sub.id}`]
+                                ).length;
 
                                 return (
                                     <Accordion.Item key={category.id} value={`cat-${category.id}`}>
                                         <Accordion.Control>
                                             <Group>
-                                                <Text weight={500}>{category.name}</Text>
+                                                <Text fw={500}>{category.name}</Text>
                                                 <Badge size="sm">
-                                                    {categorySubs.filter((sub) => selectedMappings[`sub_${sub.id}`]).length} / {categorySubs.length}
+                                                    {chosen} / {categorySubs.length}
                                                 </Badge>
                                             </Group>
                                         </Accordion.Control>
                                         <Accordion.Panel>
-                                            <Stack spacing="xs">
+                                            <Stack gap="xs">
                                                 {categorySubs.map((subcategory) => {
-                                                    const key = `sub_${subcategory.id}`;
+                                                    const key = `${SUB}${subcategory.id}`;
                                                     return (
-                                                        <Group key={subcategory.id} position="apart">
+                                                        <Group key={subcategory.id} justify="space-between">
                                                             <Checkbox
                                                                 label={subcategory.name}
-                                                                checked={selectedMappings[key] || false}
+                                                                checked={!!selectedMappings[key]}
                                                                 onChange={() => handleToggleMapping(key)}
                                                             />
                                                             {selectedMappings[key] && (
                                                                 <NumberInput
-                                                                    value={displayOrders[key] || 0}
+                                                                    value={displayOrders[key] ?? 0}
                                                                     onChange={(value) =>
                                                                         handleDisplayOrderChange(key, value)
                                                                     }
                                                                     min={0}
                                                                     max={999}
+                                                                    allowDecimal={false}
                                                                     style={{ width: 100 }}
                                                                     label="Order"
                                                                     size="xs"
@@ -395,39 +389,21 @@ const SectionMappingManager = ({
                     </>
                 )}
 
-                {(mappingType === "category") && (
+                {mappingType === "category" && (
                     <>
-                        <Group position="apart">
+                        <Group justify="space-between">
                             <Title order={4}>Categories</Title>
-                            {!singleSelect && (
-                                <Group>
-                                    <Button
-                                        size="xs"
-                                        variant="light"
-                                        onClick={() => handleSelectAll("category")}
-                                    >
-                                        Select All
-                                    </Button>
-                                    <Button
-                                        size="xs"
-                                        variant="light"
-                                        color="red"
-                                        onClick={() => handleDeselectAll("category")}
-                                    >
-                                        Deselect All
-                                    </Button>
-                                </Group>
-                            )}
+                            {renderBulkButtons("category")}
                         </Group>
 
-                        <Stack spacing="xs">
+                        <Stack gap="xs">
                             {categories.map((category) => {
-                                const key = `cat_${category.id}`;
+                                const key = `${CAT}${category.id}`;
                                 return (
                                     <Checkbox
                                         key={category.id}
                                         label={category.name}
-                                        checked={selectedMappings[key] || false}
+                                        checked={!!selectedMappings[key]}
                                         onChange={() => handleToggleMapping(key)}
                                     />
                                 );
@@ -438,11 +414,12 @@ const SectionMappingManager = ({
 
                 <Divider />
 
-                <Group position="right">
+                <Group justify="flex-end">
                     <Button
                         onClick={handleSave}
                         loading={saving}
-                        leftIcon={<FaCheck />}
+                        disabled={!sectionId || !!loadError}
+                        leftSection={<FaCheck />}
                         color="green"
                         size="md"
                     >

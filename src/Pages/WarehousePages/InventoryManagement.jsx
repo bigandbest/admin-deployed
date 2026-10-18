@@ -1527,7 +1527,7 @@ const VariantStockViewer = ({ productId, warehouseId }) => {
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/admin/products/${productId}`);
+        const response = await axios.get(`${API_BASE_URL}/admin/products/${productId}`, { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } });
         setProductInfo(response.data.product || response.data);
       } catch (error) {
         console.error("Failed to fetch product:", error);
@@ -1601,7 +1601,7 @@ const VariantSelector = ({ productId, value, onChange, warehouseId }) => {
     const fetchVariants = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/admin/products/${productId}`);
+        const response = await axios.get(`${API_BASE_URL}/admin/products/${productId}`, { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } });
         const product = response.data.product || response.data;
         const variantList = product.variants || [];
         setVariants(variantList);

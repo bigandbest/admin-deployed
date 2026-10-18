@@ -121,13 +121,21 @@ import DocumentVerification from "./Pages/DocumentVerification/DocumentVerificat
 import OutOfStockEnquiries from "./Pages/OutOfStockEnquiries/index.jsx";
 import BankAccountSettings from "./Pages/BankAccountSettings.jsx";
 
+import MembershipPage from "./Pages/Membership/index.jsx";
+import FraudRisk from "./Pages/FraudRisk/index.jsx";
+import GrowthSubNav from "./Components/GrowthSubNav/index.jsx";
 // Affiliate Pages
 import AffiliateDashboard from "./Pages/Affiliate/Dashboard/index.jsx";
 import AffiliateApplications from "./Pages/Affiliate/Applications/index.jsx";
 import AffiliateList from "./Pages/Affiliate/Affiliates/index.jsx";
 import AffiliateCommissionRates from "./Pages/Affiliate/CommissionRates/index.jsx";
 import AffiliatePayouts from "./Pages/Affiliate/Payouts/index.jsx";
+import AffiliateFraudLogs from "./Pages/Affiliate/FraudLogs/index.jsx";
+import NotificationTemplates from "./Pages/Marketing/Templates/index.jsx";
 import AffiliateConfig from "./Pages/Affiliate/Config/index.jsx";
+import Campaigns from "./Pages/Marketing/Campaigns/index.jsx";
+import MarketingDashboard from "./Pages/Marketing/Dashboard/index.jsx";
+import ActivityLogs from "./Pages/Marketing/ActivityLogs/index.jsx";
 
 // Referral Pages
 import ReferralAdminDashboard from "./Pages/Referral/Dashboard/index.jsx";
@@ -184,6 +192,7 @@ const MainLayout = () => {
               transition={{ duration: 0.3 }}
               className="h-full"
             >
+              <GrowthSubNav />
               <Outlet />
             </motion.div>
           </AnimatePresence>
@@ -610,7 +619,17 @@ function App() {
         { path: "/affiliate/affiliates", element: <AffiliateList /> },
         { path: "/affiliate/commission-rates", element: <AffiliateCommissionRates /> },
         { path: "/affiliate/payouts", element: <AffiliatePayouts /> },
+        { path: "/affiliate/fraud-logs", element: <AffiliateFraudLogs /> },
         { path: "/affiliate/config", element: <AffiliateConfig /> },
+
+        // Marketing Dashboard
+        { path: "/marketing/dashboard", element: <MarketingDashboard /> },
+        { path: "/membership", element: <MembershipPage /> },
+        { path: "/fraud-risk", element: <FraudRisk /> },
+        { path: "/activity-logs", element: <ActivityLogs /> },
+        // Campaigns (Phase 5)
+        { path: "/campaigns", element: <Campaigns /> },
+        { path: "/notification-templates", element: <NotificationTemplates /> },
 
         // Referral Routes
         {

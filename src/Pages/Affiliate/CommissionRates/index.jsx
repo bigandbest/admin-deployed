@@ -1,188 +1,169 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { getCommissionRates, upsertCommissionRate, deleteCommissionRate, getConfig } from "../../../utils/adminAffiliateApi";
-import { Plus, Trash2, Save, RefreshCw, Percent } from "lucide-react";
+import { Card } from "../../../Components/UI/card";
+import { Button } from "../../../Components/UI/button";
+import { Input } from "../../../Components/UI/input";
+import { Label } from "../../../Components/UI/label";
+import { DataTable } from "../../../Components/UI/data-table";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../../Components/UI/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../../Components/UI/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../Components/UI/dropdown-menu";
+import { PageHeader, StatusBadge, ConfirmDialog, ErrorState, EmptyState, notifySuccess, notifyError } from "../../../Components/Growth";
+
+const MAX_RATE = 50;
 
 export default function CommissionRates() {
-  const [categories, setCategories] = useState([]);
-  const [defaultRate, setDefaultRate] = useState(5);
-  const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editRate, setEditRate] = useState("");
-  const [addMode, setAddMode] = useState(false);
-  const [newRate, setNewRate] = useState({ category_id: "", category_name: "", base_commission_rate: "" });
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [editor, setEditor] = useState(null); // { category?: {id,name}, rate }
+  const [removing, setRemoving] = useState(null);
 
-  useEffect(() => { load(); }, []);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["affiliate", "commission-rates"],
+    queryFn: async () => {
+      const [rates, config] = await Promise.all([getCommissionRates(), getConfig()]);
+      return { categories: rates.data || [], defaultRate: config.data?.default_commission_rate ?? 5 };
+    },
+  });
+  const categories = data?.categories || [];
+  const defaultRate = data?.defaultRate;
+  const custom = categories.filter((c) => c.commission);
+  const available = categories.filter((c) => !c.commission);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [ratesRes, configRes] = await Promise.all([getCommissionRates(), getConfig()]);
-      setCategories(ratesRes.data || []);
-      setDefaultRate(configRes.data?.default_commission_rate || 5);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+  const done = (msg) => {
+    notifySuccess(msg);
+    queryClient.invalidateQueries({ queryKey: ["affiliate", "commission-rates"] });
   };
 
-  const handleSave = async (cat) => {
-    setSaving(true);
-    try {
-      await upsertCommissionRate({
-        category_id: cat.id,
-        category_name: cat.name,
-        category_level: "category",
-        base_commission_rate: parseFloat(editRate),
-      });
-      setEditingId(null);
-      load();
-    } catch (e) { alert(e.message); }
-    finally { setSaving(false); }
-  };
+  const save = useMutation({
+    mutationFn: () => upsertCommissionRate({
+      category_id: editor.category.id,
+      category_name: editor.category.name,
+      category_level: "category",
+      base_commission_rate: parseFloat(editor.rate),
+    }),
+    onSuccess: () => { done(`Rate for ${editor.category.name} set to ${parseFloat(editor.rate)}%.`); setEditor(null); },
+    onError: (err) => notifyError(err.message),
+  });
 
-  const handleDelete = async (rateId) => {
-    if (!window.confirm("Remove this commission rate? Default rate will apply.")) return;
-    try {
-      await deleteCommissionRate(rateId);
-      load();
-    } catch (e) { alert(e.message); }
-  };
+  const remove = useMutation({
+    mutationFn: () => deleteCommissionRate(removing.commission.id),
+    onSuccess: () => { done(`Custom rate removed for ${removing.name}.`); setRemoving(null); },
+    onError: (err) => notifyError(err.message),
+  });
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
-    </div>
+  const columns = useMemo(() => [
+    { header: "Category", accessorKey: "name", cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
+    { header: () => <div className="text-right">Commission rate</div>, id: "rate", cell: ({ row }) => <div className="text-right font-medium tabular-nums">{row.original.commission.base_commission_rate}%</div> },
+    { header: "Status", id: "status", cell: ({ row }) => <StatusBadge status={row.original.commission.is_active ? "ACTIVE" : "INACTIVE"} /> },
+    {
+      header: () => <span className="sr-only">Actions</span>,
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.original.name}`}><MoreHorizontal className="size-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditor({ category: row.original, rate: String(row.original.commission.base_commission_rate), editing: true })}>
+                <Pencil className="size-4" /> Edit rate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => setRemoving(row.original)}>
+                <Trash2 className="size-4" /> Remove custom rate
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
+  ], []);
+
+  const rateNum = parseFloat(editor?.rate);
+  const rateInvalid = !editor?.category || !(rateNum >= 0 && rateNum <= MAX_RATE) || Number.isNaN(rateNum);
+
+  const header = (
+    <PageHeader
+      title="Commission rates"
+      description="Per-category commission. Categories without a custom rate use the default."
+      actions={<Button onClick={() => setEditor({ category: null, rate: "" })} disabled={!available.length}><Plus className="size-4" /> Add rate</Button>}
+    />
   );
 
+  if (isError) return <div>{header}<ErrorState title="Unable to load commission rates" onRetry={refetch} /></div>;
+
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {header}
+
+      <Card className="flex-row items-center justify-between gap-4 p-4 shadow-none">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Commission Rates</h1>
-          <p className="text-sm text-gray-500">Set per-category commission rates. Default rate: <strong>{defaultRate}%</strong></p>
+          <p className="text-xs text-muted-foreground">Default rate</p>
+          <p className="text-xl font-semibold tabular-nums">{defaultRate != null ? `${defaultRate}%` : "—"}</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
-      </div>
+        <Button variant="outline" size="sm" onClick={() => navigate("/affiliate/config")}>Change in settings</Button>
+      </Card>
 
-      {/* Default rate info */}
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
-        <Percent className="w-5 h-5 text-blue-500 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-blue-800">Default Commission Rate: {defaultRate}%</p>
-          <p className="text-xs text-blue-600 mt-0.5">Applied to categories without a custom rate. Change in Program Settings.</p>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-700">{categories.filter(c => c.commission).length} custom rates configured</span>
-          <button onClick={() => setAddMode(!addMode)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800">
-            <Plus className="w-4 h-4" /> Add Rate
-          </button>
-        </div>
-
-        {addMode && (
-          <div className="p-4 bg-gray-50 border-b border-gray-100 flex gap-3 items-end">
-            <div className="flex-1">
-              <label className="text-xs text-gray-500 mb-1 block">Category</label>
-              <select value={newRate.category_id}
-                onChange={(e) => {
-                  const cat = categories.find(c => c.id === e.target.value);
-                  setNewRate(r => ({ ...r, category_id: e.target.value, category_name: cat?.name || "" }));
-                }}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">
-                <option value="">Select category...</option>
-                {categories.filter(c => !c.commission).map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="w-32">
-              <label className="text-xs text-gray-500 mb-1 block">Rate (%)</label>
-              <input type="number" min="0" max="50" step="0.5"
-                value={newRate.base_commission_rate}
-                onChange={(e) => setNewRate(r => ({ ...r, base_commission_rate: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                placeholder="e.g. 8" />
-            </div>
-            <button disabled={saving || !newRate.category_id || !newRate.base_commission_rate}
-              onClick={async () => {
-                setSaving(true);
-                try {
-                  await upsertCommissionRate({ ...newRate, category_level: "category", base_commission_rate: parseFloat(newRate.base_commission_rate) });
-                  setNewRate({ category_id: "", category_name: "", base_commission_rate: "" });
-                  setAddMode(false);
-                  load();
-                } catch (e) { alert(e.message); }
-                finally { setSaving(false); }
-              }}
-              className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-              Save
-            </button>
-            <button onClick={() => setAddMode(false)} className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
-          </div>
+      <Card className="gap-0 overflow-hidden p-0 shadow-none">
+        <div className="border-b px-5 py-3 text-sm text-muted-foreground">{custom.length} custom {custom.length === 1 ? "rate" : "rates"}</div>
+        {!isLoading && custom.length === 0 ? (
+          <EmptyState
+            title="No custom rates"
+            description={`Every category earns the default ${defaultRate}% commission.`}
+            action={<Button variant="outline" size="sm" onClick={() => setEditor({ category: null, rate: "" })} disabled={!available.length}>Add a rate</Button>}
+          />
+        ) : (
+          <DataTable columns={columns} data={custom} isLoading={isLoading} />
         )}
+      </Card>
 
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              {["Category", "Commission Rate", "Status", "Actions"].map((h) => (
-                <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {categories.filter(c => c.commission).map((cat) => (
-              <tr key={cat.id} className="hover:bg-gray-50">
-                <td className="px-5 py-3 font-medium text-gray-900">{cat.name}</td>
-                <td className="px-5 py-3">
-                  {editingId === cat.id ? (
-                    <input type="number" min="0" max="50" step="0.5" value={editRate}
-                      onChange={(e) => setEditRate(e.target.value)}
-                      className="w-24 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-                  ) : (
-                    <span className="font-semibold text-gray-900">{cat.commission.base_commission_rate}%</span>
-                  )}
-                </td>
-                <td className="px-5 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cat.commission.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {cat.commission.is_active ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-5 py-3">
-                  {editingId === cat.id ? (
-                    <div className="flex gap-2">
-                      <button onClick={() => handleSave(cat)} disabled={saving}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-xl text-xs font-medium hover:bg-green-700 disabled:opacity-50">
-                        <Save className="w-3 h-3" /> Save
-                      </button>
-                      <button onClick={() => setEditingId(null)} className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs hover:bg-gray-50">Cancel</button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button onClick={() => { setEditingId(cat.id); setEditRate(cat.commission.base_commission_rate); }}
-                        className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs hover:bg-gray-50">Edit</button>
-                      <button onClick={() => handleDelete(cat.commission.id)}
-                        className="p-1.5 hover:bg-red-50 rounded-xl">
-                        <Trash2 className="w-4 h-4 text-red-400" />
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <Dialog open={!!editor} onOpenChange={(o) => !o && !save.isPending && setEditor(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editor?.editing ? `Edit rate: ${editor.category.name}` : "Add commission rate"}</DialogTitle>
+            <DialogDescription>Affiliates earn this percentage on orders in the category.</DialogDescription>
+          </DialogHeader>
+          {editor && (
+            <div className="space-y-4">
+              {!editor.editing && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="cr-cat">Category</Label>
+                  <Select value={editor.category?.id || ""} onValueChange={(id) => setEditor((e) => ({ ...e, category: available.find((c) => c.id === id) }))}>
+                    <SelectTrigger id="cr-cat" className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                    <SelectContent>{available.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="cr-rate">Commission rate (%)</Label>
+                <Input id="cr-rate" type="number" min="0" max={MAX_RATE} step="0.5" value={editor.rate} onChange={(e) => setEditor((s) => ({ ...s, rate: e.target.value }))} className="w-32" />
+                <p className="text-xs text-muted-foreground">Between 0 and {MAX_RATE}. Default is {defaultRate}%.</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditor(null)} disabled={save.isPending}>Cancel</Button>
+            <Button onClick={() => save.mutate()} disabled={rateInvalid || save.isPending}>{save.isPending ? "Saving..." : "Save rate"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {categories.filter(c => c.commission).length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">
-            No custom rates configured. All categories use the default {defaultRate}% rate.
-          </div>
-        )}
-      </div>
+      <ConfirmDialog
+        open={!!removing}
+        onClose={() => setRemoving(null)}
+        title="Remove custom rate"
+        description={`${removing?.name} will use the default ${defaultRate}% rate for new orders.`}
+        details={removing && [{ label: "Category", value: removing.name }, { label: "Current rate", value: `${removing.commission.base_commission_rate}%` }, { label: "New rate", value: `${defaultRate}% (default)` }]}
+        confirmLabel="Remove rate"
+        destructive
+        isLoading={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 import {
   getAllBanners,
   addBanner,
@@ -397,31 +398,30 @@ const AddBanner = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    const isConfirmed = window.confirm(
-      "Are you sure you want to delete this banner?"
-    );
-    if (isConfirmed) {
-      try {
-        const result = await deleteBanner(id);
-        if (result.success) {
+  const handleDelete = (banner) =>
+    modals.openConfirmModal({
+      title: "Delete banner",
+      children: `Delete "${banner.name || "this banner"}"? This cannot be undone.`,
+      labels: { confirm: "Delete", cancel: "Cancel" },
+      confirmProps: { color: "red" },
+      onConfirm: async () => {
+        try {
+          const result = await deleteBanner(banner.id);
+          if (!result.success) throw new Error(result.error);
           fetchBanners(); // Refresh the list
           notifications.show({
             color: "green",
             message: "Banner deleted successfully!",
           });
-        } else {
-          throw new Error(result.error);
+        } catch (error) {
+          console.error("Error deleting banner:", error);
+          notifications.show({
+            color: "red",
+            message: error.message || "Failed to delete banner.",
+          });
         }
-      } catch (error) {
-        console.error("Error deleting banner:", error);
-        notifications.show({
-          color: "red",
-          message: "Failed to delete banner.",
-        });
-      }
-    }
-  };
+      },
+    });
 
   const handleEditClick = (banner) => {
     setEditingBanner(banner);
@@ -521,7 +521,7 @@ const AddBanner = () => {
 
   // Filter banners based on search and type
   const filteredBanners = banners.filter((banner) => {
-    const matchesSearch = banner.name
+    const matchesSearch = (banner.name || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesType =
@@ -754,7 +754,7 @@ const AddBanner = () => {
                             </button>
                             <button
                               className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                              onClick={() => handleDelete(banner.id)}
+                              onClick={() => handleDelete(banner)}
                               title="Delete Banner"
                             >
                               <FaTrash className="w-4 h-4" />

@@ -1,185 +1,208 @@
-// src/Pages/Referral/Withdrawals/index.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontal, SendHorizonal, XCircle } from "lucide-react";
 import { formatEmail } from "../../../utils/formatEmail";
-import { listWithdrawals, approveWithdrawal, rejectWithdrawal, processWithdrawal, formatCurrency, getStatusBadge } from "../../../utils/adminReferralApi";
-import { CheckCircle, XCircle, Zap, X } from "lucide-react";
+import { listWithdrawals, approveWithdrawal, rejectWithdrawal, processWithdrawal } from "../../../utils/adminReferralApi";
+import { Card } from "../../../Components/UI/card";
+import { Button } from "../../../Components/UI/button";
+import { Input } from "../../../Components/UI/input";
+import { Label } from "../../../Components/UI/label";
+import { DataTable } from "../../../Components/UI/data-table";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../../Components/UI/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../Components/UI/dropdown-menu";
+import {
+  PageHeader, StatusBadge, FilterBar, TablePagination, ConfirmDialog, ErrorState, EmptyState,
+  formatINR, formatDate, notifySuccess, notifyError,
+} from "../../../Components/Growth";
+
+const STATUSES = ["PENDING", "APPROVED", "PROCESSING", "COMPLETED", "FAILED", "REJECTED"];
+const label = (s) => s.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+
+const ACTIONS = {
+  approve: { title: "Approve withdrawal", confirm: "Approve withdrawal", consequence: "The request moves to the payout queue. No money is sent until you mark it as paid." },
+  reject: { title: "Reject withdrawal", confirm: "Reject withdrawal", destructive: true, consequence: "The requested amount is returned to the user's balance and they are notified." },
+  process: { title: "Mark as paid", confirm: "Mark as paid", consequence: "Record the transfer you have already made. This completes the withdrawal." },
+};
 
 export default function ReferralWithdrawals() {
-  const [withdrawals, setWithdrawals] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
+  const queryClient = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
-  const [input, setInput] = useState("");
-  const [input2, setInput2] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [notes, setNotes] = useState("");
+  const [txnId, setTxnId] = useState("");
+  const [gatewayRef, setGatewayRef] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await listWithdrawals(page, 20, statusFilter);
-      setWithdrawals(res.withdrawals || []);
-      setPagination(res.pagination);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [page, statusFilter]);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["referral", "withdrawals", page, statusFilter],
+    queryFn: () => listWithdrawals(page, 20, statusFilter === "ALL" ? "" : statusFilter),
+    placeholderData: (prev) => prev,
+  });
+  const withdrawals = data?.withdrawals || [];
+  const pagination = data?.pagination;
+  const pendingOnPage = withdrawals.filter((w) => w.status === "PENDING").length;
 
-  useEffect(() => { load(); }, [load]);
+  const openModal = (type, w) => { setModal({ type, w }); setNotes(""); setTxnId(""); setGatewayRef(""); };
+  const closeModal = () => setModal(null);
 
-  const openModal = (type, w) => { setModal({ type, w }); setInput(""); setInput2(""); setMsg(""); };
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const { type, w } = modal;
+      if (type === "approve") return approveWithdrawal(w.id, notes.trim());
+      if (type === "reject") return rejectWithdrawal(w.id, notes.trim());
+      return processWithdrawal(w.id, { transaction_id: txnId.trim(), payment_gateway_ref: gatewayRef.trim() });
+    },
+    onSuccess: () => {
+      notifySuccess(`${ACTIONS[modal.type].title} — ${formatINR(modal.w.requested_amount)} for ${modal.w.user?.name || "user"}.`);
+      closeModal();
+      queryClient.invalidateQueries({ queryKey: ["referral", "withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["referral", "users"] });
+    },
+    onError: (err) => notifyError(err.message),
+  });
 
-  const handleAction = async () => {
-    setProcessing(true); setMsg("");
-    try {
-      if (modal.type === "approve") await approveWithdrawal(modal.w.id, input);
-      else if (modal.type === "reject") await rejectWithdrawal(modal.w.id, input);
-      else if (modal.type === "process") await processWithdrawal(modal.w.id, { transaction_id: input, payment_gateway_ref: input2 });
-      setModal(null); load();
-    } catch (err) { setMsg(err.message); }
-    finally { setProcessing(false); }
-  };
+  const columns = useMemo(() => [
+    {
+      header: "User",
+      id: "user",
+      cell: ({ row }) => (
+        <>
+          <p className="font-medium truncate max-w-[180px]">{row.original.user?.name || "Unknown"}</p>
+          <p className="text-xs text-muted-foreground truncate max-w-[180px]">{formatEmail(row.original.user?.email) || row.original.user?.phone || "—"}</p>
+        </>
+      ),
+    },
+    { header: () => <div className="text-right">Amount</div>, id: "amount", cell: ({ row }) => <div className="text-right font-medium tabular-nums">{formatINR(row.original.requested_amount)}</div> },
+    {
+      header: "Payout to",
+      id: "method",
+      cell: ({ row }) => (
+        <>
+          <p>{row.original.payment_method === "UPI" ? "UPI" : "Bank transfer"}</p>
+          <p className="text-xs text-muted-foreground truncate max-w-[180px]">{row.original.upi_id || row.original.account_holder_name || "—"}</p>
+        </>
+      ),
+    },
+    {
+      header: "Status",
+      id: "status",
+      cell: ({ row }) => (
+        <>
+          <StatusBadge status={row.original.status} />
+          {(row.original.failure_reason || row.original.rejection_reason) && (
+            <p className="mt-1 max-w-[180px] truncate text-xs text-red-700 dark:text-red-400" title={row.original.failure_reason || row.original.rejection_reason}>
+              {row.original.failure_reason || row.original.rejection_reason}
+            </p>
+          )}
+        </>
+      ),
+    },
+    { header: "Requested", id: "date", cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.created_at)}</span> },
+    {
+      header: () => <span className="sr-only">Actions</span>,
+      id: "actions",
+      cell: ({ row }) => {
+        const w = row.original;
+        if (w.status === "PENDING") {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Button size="sm" onClick={() => openModal("approve", w)}>Approve</Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" aria-label="More actions"><MoreHorizontal className="size-4" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem variant="destructive" onClick={() => openModal("reject", w)}><XCircle className="size-4" /> Reject</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        }
+        if (w.status === "APPROVED") {
+          return (
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => openModal("process", w)}><SendHorizonal className="size-4" /> Mark as paid</Button>
+            </div>
+          );
+        }
+        return null;
+      },
+    },
+  ], []);
 
-  const pendingCount = withdrawals.filter(w => w.status === "PENDING").length;
-  const statuses = ["", "PENDING", "APPROVED", "PROCESSING", "COMPLETED", "FAILED", "REJECTED"];
+  const type = modal?.type;
+  const invalid = (type === "reject" && !notes.trim()) || (type === "process" && !txnId.trim());
+  const w = modal?.w;
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Withdrawals</h1>
-          {pendingCount > 0 && (
-            <p className="text-sm text-orange-600 mt-0.5 font-medium">{pendingCount} pending approval</p>
-          )}
-        </div>
-        <p className="text-sm text-gray-400">{pagination?.total || 0} total</p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="Referral withdrawals"
+        description={pendingOnPage > 0 ? `${pendingOnPage} on this page awaiting approval.` : "Withdrawal requests from referral balances."}
+      />
 
-      {/* Status filters */}
-      <div className="flex gap-2 flex-wrap">
-        {statuses.map(s => (
-          <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${statusFilter === s ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-            {s || "All"}
-            {s === "PENDING" && pendingCount > 0 && (
-              <span className="ml-1.5 bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5">{pendingCount}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <FilterBar activeCount={statusFilter !== "ALL" ? 1 : 0} onReset={() => { setStatusFilter("ALL"); setPage(1); }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[170px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            {STATUSES.map((s) => <SelectItem key={s} value={s}>{label(s)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </FilterBar>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {["User", "Amount", "Payment Method", "Status", "Requested", "Actions"].map(h => (
-                  <th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                <tr><td colSpan={6} className="text-center py-16 text-gray-400">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />Loading...
-                  </div>
-                </td></tr>
-              ) : withdrawals.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-16 text-gray-400">No withdrawals found</td></tr>
-              ) : withdrawals.map(w => (
-                <tr key={w.id} className={`hover:bg-gray-50/60 transition-colors ${w.status === "PENDING" ? "bg-orange-50/30" : ""}`}>
-                  <td className="px-5 py-4">
-                    <p className="font-medium text-gray-900 truncate max-w-[130px]">{w.user?.name || "Unknown"}</p>
-                    <p className="text-xs text-gray-400 truncate max-w-[130px]">{formatEmail(w.user?.email) || w.user?.phone || "—"}</p>
-                  </td>
-                  <td className="px-5 py-4 font-bold text-gray-900 text-base">{formatCurrency(w.requested_amount)}</td>
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-medium">{w.payment_method === "UPI" ? "UPI" : "Bank Transfer"}</p>
-                    <p className="text-xs text-gray-400">{w.upi_id || w.account_holder_name || "—"}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusBadge(w.status)}`}>{w.status}</span>
-                    {(w.failure_reason || w.rejection_reason) && (
-                      <p className="text-xs text-red-500 mt-1 max-w-[140px] truncate">{w.failure_reason || w.rejection_reason}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">
-                    {new Date(w.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1">
-                      {w.status === "PENDING" && (
-                        <>
-                          <button title="Approve" onClick={() => openModal("approve", w)}
-                            className="p-1.5 hover:bg-green-50 rounded-lg transition-colors"><CheckCircle className="w-4 h-4 text-green-600" /></button>
-                          <button title="Reject" onClick={() => openModal("reject", w)}
-                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"><XCircle className="w-4 h-4 text-red-500" /></button>
-                        </>
-                      )}
-                      {w.status === "APPROVED" && (
-                        <button title="Mark as Processed" onClick={() => openModal("process", w)}
-                          className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors"><Zap className="w-4 h-4 text-blue-500" /></button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {pagination && pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="text-sm px-4 py-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">Previous</button>
-            <span className="text-sm text-gray-500">Page {page} of {pagination.pages}</span>
-            <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages}
-              className="text-sm px-4 py-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">Next</button>
+      <Card className="p-0 gap-0 overflow-hidden shadow-none">
+        {isError ? (
+          <ErrorState title="Unable to load withdrawals" onRetry={refetch} />
+        ) : !isLoading && withdrawals.length === 0 ? (
+          <EmptyState title="No withdrawals found" description={statusFilter !== "ALL" ? "No requests have this status." : "Requests appear here when users withdraw their referral balance."} />
+        ) : (
+          <DataTable columns={columns} data={withdrawals} isLoading={isLoading} />
+        )}
+        <TablePagination pagination={pagination} page={page} onPageChange={setPage} />
+      </Card>
+
+      <ConfirmDialog
+        open={!!modal}
+        onClose={closeModal}
+        title={type ? ACTIONS[type].title : ""}
+        description={type ? ACTIONS[type].consequence : null}
+        details={w && [
+          { label: "User", value: w.user?.name || "Unknown" },
+          { label: "Payout to", value: w.payment_method === "UPI" ? `UPI · ${w.upi_id || "—"}` : `Bank · ${w.account_holder_name || "—"}` },
+          { label: "Amount", value: formatINR(w.requested_amount), total: true },
+        ]}
+        confirmLabel={type ? `${ACTIONS[type].confirm}${type === "approve" ? ` · ${formatINR(w?.requested_amount)}` : ""}` : "Confirm"}
+        destructive={type ? ACTIONS[type].destructive : false}
+        isLoading={mutation.isPending}
+        onConfirm={() => !invalid && mutation.mutate()}
+      >
+        {type === "approve" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="w-notes">Notes (optional)</Label>
+            <Input id="w-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         )}
-      </div>
-
-      {/* Modal */}
-      {modal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 capitalize">{modal.type} Withdrawal</h3>
-              <button onClick={() => setModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
-            </div>
-            <p className="text-sm bg-gray-50 px-3 py-2 rounded-xl">
-              <span className="font-bold">{formatCurrency(modal.w.requested_amount)}</span>
-              <span className="text-gray-500 ml-2">— {modal.w.user?.name || "Unknown"}</span>
-            </p>
-            {modal.type === "approve" && (
-              <input placeholder="Notes (optional)" value={input} onChange={e => setInput(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-            )}
-            {modal.type === "reject" && (
-              <input placeholder="Rejection reason (required)" value={input} onChange={e => setInput(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-            )}
-            {modal.type === "process" && (
-              <>
-                <input placeholder="Transaction ID" value={input} onChange={e => setInput(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-                <input placeholder="Payment Gateway Ref (optional)" value={input2} onChange={e => setInput2(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-              </>
-            )}
-            {msg && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{msg}</p>}
-            <div className="flex gap-3 pt-1">
-              <button onClick={() => setModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
-              <button onClick={handleAction} disabled={processing}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-colors ${modal.type === "reject" ? "bg-red-600 hover:bg-red-700" : "bg-gray-900 hover:bg-gray-700"}`}>
-                {processing ? "Processing..." : "Confirm"}
-              </button>
-            </div>
+        {type === "reject" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="w-reason">Rejection reason (required)</Label>
+            <Input id="w-reason" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Shown to the user.</p>
           </div>
-        </div>
-      )}
+        )}
+        {type === "process" && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="w-txn">Transaction ID (required)</Label>
+              <Input id="w-txn" value={txnId} onChange={(e) => setTxnId(e.target.value)} className="font-mono" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="w-ref">Payment gateway reference (optional)</Label>
+              <Input id="w-ref" value={gatewayRef} onChange={(e) => setGatewayRef(e.target.value)} className="font-mono" />
+            </div>
+          </>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

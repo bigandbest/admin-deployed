@@ -111,8 +111,9 @@ export const {
 
   // Product Sections
   getAllProductSections,
-  getActiveProductSections,
   updateProductSection,
+  getSectionTypes,
+  getSectionAuditLog,
   toggleProductSectionStatus,
   updateProductSectionOrder,
   getSectionCounts,

@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { FaEdit, FaTrash, FaPlus, FaStar } from "react-icons/fa";
 import { LoadingOverlay } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 import api from "../../utils/api";
+
+const errorMessage = (error, fallback) => error?.response?.data?.error || fallback;
 
 const CustomerReviewManager = () => {
     const [testimonials, setTestimonials] = useState([]);
@@ -35,7 +38,7 @@ const CustomerReviewManager = () => {
             console.error("Error fetching testimonials:", error);
             notifications.show({
                 title: "Error",
-                message: "Failed to fetch testimonials",
+                message: errorMessage(error, "Failed to fetch testimonials"),
                 color: "red",
             });
         } finally {
@@ -75,7 +78,7 @@ const CustomerReviewManager = () => {
             console.error("Error saving testimonial:", error);
             notifications.show({
                 title: "Error",
-                message: "Failed to save testimonial",
+                message: errorMessage(error, "Failed to save testimonial"),
                 color: "red",
             });
         } finally {
@@ -83,31 +86,33 @@ const CustomerReviewManager = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this testimonial?")) {
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await api.delete(`/customer-testimonials/delete/${id}`);
-            notifications.show({
-                title: "Success",
-                message: "Testimonial deleted successfully",
-                color: "green",
-            });
-            fetchTestimonials();
-        } catch (error) {
-            console.error("Error deleting testimonial:", error);
-            notifications.show({
-                title: "Error",
-                message: "Failed to delete testimonial",
-                color: "red",
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+    const handleDelete = (id) =>
+        modals.openConfirmModal({
+            title: "Delete testimonial",
+            children: "Are you sure you want to delete this testimonial?",
+            labels: { confirm: "Delete", cancel: "Cancel" },
+            confirmProps: { color: "red" },
+            onConfirm: async () => {
+                setLoading(true);
+                try {
+                    await api.delete(`/customer-testimonials/delete/${id}`);
+                    notifications.show({
+                        title: "Success",
+                        message: "Testimonial deleted successfully",
+                        color: "green",
+                    });
+                    await fetchTestimonials();
+                } catch (error) {
+                    console.error("Error deleting testimonial:", error);
+                    notifications.show({
+                        title: "Error",
+                        message: errorMessage(error, "Failed to delete testimonial"),
+                        color: "red",
+                    });
+                    setLoading(false);
+                }
+            },
+        });
 
     const handleToggleStatus = async (id) => {
         setLoading(true);
@@ -123,7 +128,7 @@ const CustomerReviewManager = () => {
             console.error("Error toggling status:", error);
             notifications.show({
                 title: "Error",
-                message: "Failed to update status",
+                message: errorMessage(error, "Failed to update status"),
                 color: "red",
             });
         } finally {

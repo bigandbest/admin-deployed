@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { 
   FaBoxOpen, FaBell, FaEnvelope, FaUser, FaPhone, FaAt, 
@@ -6,6 +6,22 @@ import {
 } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 import api from '../../utils/api';
+
+const PAGE_SIZE = 20;
+
+const Pager = ({ page, total, onChange }) => {
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-600">
+      <span>Page {page} of {pages} · {total} total</span>
+      <div className="flex gap-2">
+        <button disabled={page <= 1} onClick={() => onChange(page - 1)} className="px-3 py-1 border rounded-lg disabled:opacity-40">Previous</button>
+        <button disabled={page >= pages} onClick={() => onChange(page + 1)} className="px-3 py-1 border rounded-lg disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  );
+};
 
 const StatusBadge = ({ status }) => {
   const colors = {
@@ -50,28 +66,39 @@ export default function OutOfStockEnquiries() {
   const [activeTab, setActiveTab] = useState('enquiries');
   const [enquiries, setEnquiries] = useState([]);
   const [notifyRequests, setNotifyRequests] = useState([]);
+  const [totals, setTotals] = useState({ enquiries: 0, notify: 0 });
+  const [pages, setPages] = useState({ enquiries: 1, notify: 1 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
-
-  const fetchData = async () => {
+  // Both lists are loaded together so the summary cards / tab badges are always real numbers,
+  // not 0 for whichever tab hasn't been opened yet.
+  const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      if (activeTab === 'enquiries') {
-        const res = await api.get('/out-of-stock/enquiries', { withCredentials: true });
-        if (res.data.success) setEnquiries(res.data.enquiries);
-      } else {
-        const res = await api.get('/out-of-stock/notify-requests', { withCredentials: true });
-        if (res.data.success) setNotifyRequests(res.data.requests);
+      const [enqRes, notifyRes] = await Promise.all([
+        api.get('/out-of-stock/enquiries', { params: { page: pages.enquiries, limit: PAGE_SIZE } }),
+        api.get('/out-of-stock/notify-requests', { params: { page: pages.notify, limit: PAGE_SIZE } }),
+      ]);
+      if (enqRes.data.success) {
+        setEnquiries(enqRes.data.enquiries || []);
+        setTotals((t) => ({ ...t, enquiries: enqRes.data.total ?? 0 }));
+      }
+      if (notifyRes.data.success) {
+        setNotifyRequests(notifyRes.data.requests || []);
+        setTotals((t) => ({ ...t, notify: notifyRes.data.total ?? 0 }));
       }
     } catch (err) {
-      console.error('Failed to fetch data', err);
+      setError(err?.response?.data?.error || 'Failed to load out-of-stock data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [pages]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const safeDate = (d) => {
     try { return format(new Date(d), 'MMM dd, yyyy'); } catch { return '-'; }
@@ -105,7 +132,7 @@ export default function OutOfStockEnquiries() {
               <FaEnvelope className="text-orange-500 text-lg" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{enquiries.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{totals.enquiries}</p>
               <p className="text-sm text-gray-500">Total Enquiries</p>
             </div>
           </div>
@@ -116,7 +143,7 @@ export default function OutOfStockEnquiries() {
               <FaBell className="text-blue-500 text-lg" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{notifyRequests.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{totals.notify}</p>
               <p className="text-sm text-gray-500">Notify Requests</p>
             </div>
           </div>
@@ -136,7 +163,7 @@ export default function OutOfStockEnquiries() {
           >
             <FaEnvelope /> Product Enquiries
             <span className="ml-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              {enquiries.length}
+              {totals.enquiries}
             </span>
           </button>
           <button
@@ -149,13 +176,16 @@ export default function OutOfStockEnquiries() {
           >
             <FaBell /> Notify Requests
             <span className="ml-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              {notifyRequests.length}
+              {totals.notify}
             </span>
           </button>
         </div>
 
         {/* Content */}
         <div>
+          {error && (
+            <div className="m-4 p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">{error}</div>
+          )}
           {loading ? (
             <div className="p-12 text-center text-gray-500">
               <span className="inline-block w-8 h-8 border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin mb-4 block mx-auto" />
@@ -238,6 +268,7 @@ export default function OutOfStockEnquiries() {
                   )}
                 </tbody>
               </table>
+              <Pager page={pages.enquiries} total={totals.enquiries} onChange={(p) => setPages((x) => ({ ...x, enquiries: p }))} />
             </div>
           ) : (
             /* --- NOTIFY REQUESTS TABLE --- */
@@ -295,6 +326,7 @@ export default function OutOfStockEnquiries() {
                   )}
                 </tbody>
               </table>
+              <Pager page={pages.notify} total={totals.notify} onChange={(p) => setPages((x) => ({ ...x, notify: p }))} />
             </div>
           )}
         </div>

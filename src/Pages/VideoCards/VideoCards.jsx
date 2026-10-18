@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { FaEdit, FaTrash, FaPlus, FaPlay } from "react-icons/fa";
 import { notifications } from "@mantine/notifications";
+import { modals } from "@mantine/modals";
 import {
   getAllVideoCards,
   addVideoCard,
@@ -258,31 +259,42 @@ const VideoCards = () => {
       console.error("Error saving video card:", error);
       notifications.show({
         color: "red",
-        message: "Failed to save video card.",
+        message: error.message || "Failed to save video card.",
       });
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this video card?")) return;
+  const handleDelete = (card) =>
+    modals.openConfirmModal({
+      title: "Delete video card",
+      children: `Delete "${card.title}"? This cannot be undone.`,
+      labels: { confirm: "Delete", cancel: "Cancel" },
+      confirmProps: { color: "red" },
+      onConfirm: async () => {
+        try {
+          const result = await deleteVideoCard(card.id);
+          if (!result.success) throw new Error(result.error);
+          await fetchVideoCards();
+          notifications.show({
+            color: "green",
+            message: "Video card deleted successfully.",
+          });
+        } catch (error) {
+          console.error("Error deleting video card:", error);
+          notifications.show({
+            color: "red",
+            message: error.message || "Failed to delete video card.",
+          });
+        }
+      },
+    });
 
-    try {
-      const result = await deleteVideoCard(id);
-      if (result.success) {
-        await fetchVideoCards();
-        notifications.show({
-          color: "green",
-          message: "Video card deleted successfully.",
-        });
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error("Error deleting video card:", error);
-      notifications.show({
-        color: "red",
-        message: "Failed to delete video card.",
-      });
+  // Only open real http(s) links (a stored "javascript:" URL must never be launched)
+  const previewVideo = (url) => {
+    if (/^https?:\/\//i.test(url || "")) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      notifications.show({ color: "red", message: "This video URL is not a valid http(s) link." });
     }
   };
 
@@ -398,7 +410,8 @@ const VideoCards = () => {
 
             <div className="flex gap-2">
               <button
-                onClick={() => window.open(card.video_url, "_blank")}
+                onClick={() => previewVideo(card.video_url)}
+                aria-label="Preview video"
                 className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
                 title="Preview video"
               >
@@ -411,7 +424,8 @@ const VideoCards = () => {
                 <FaEdit /> Edit
               </button>
               <button
-                onClick={() => handleDelete(card.id)}
+                onClick={() => handleDelete(card)}
+                aria-label="Delete video card"
                 className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
               >
                 <FaTrash />

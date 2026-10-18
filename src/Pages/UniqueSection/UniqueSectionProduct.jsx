@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { adminAuthHeaders } from "../../utils/backendApi";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -65,7 +66,7 @@ const UniqueSectionProducts = () => {
       await axios.post(`${API_BASE_URL}/unique-sections-products/map`, {
         product_id: selectedProductId,
         unique_section_id: id,
-      });
+      }, { headers: adminAuthHeaders() });
       setSelectedProductId("");
       await fetchSectionProducts();
     } catch (err) {
@@ -78,6 +79,7 @@ const UniqueSectionProducts = () => {
     try {
       // MUST be DELETE to match your router.delete('/remove', ...)
       await axios.delete(`${API_BASE_URL}/unique-sections-products/remove`, {
+        headers: adminAuthHeaders(),
         data: {
           product_id,
           unique_section_id: id,

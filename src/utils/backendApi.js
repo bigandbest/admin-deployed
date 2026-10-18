@@ -44,12 +44,22 @@ export async function getAdminMe() {
 const handleResponse = async (response) => {
   const data = await response.json();
   if (!response.ok) {
+    // Validation errors arrive as { error: { code, message, details[] } }; surface a readable string.
+    const err = data.error;
+    const text = err && typeof err === "object" ? (err.details?.join("; ") || err.message) : err;
     return {
       success: false,
-      error: data.error || data.message || "Request failed",
+      error: text || data.message || "Request failed",
     };
   }
   return { success: true, ...data };
+};
+
+// Auth headers for admin-only writes (product-sections etc.). The backend
+// requires a Bearer admin token on these routes; GETs stay public.
+export const adminAuthHeaders = (extra = {}) => {
+  const token = localStorage.getItem("admin_token") || "";
+  return { ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 };
 
 // Helper function to create FormData for file uploads
@@ -86,6 +96,7 @@ export async function addVideoBanner(videoBanner, videoFile) {
     const formData = createFormData(videoBanner, "video", videoFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/add`, {
       method: "POST",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -99,6 +110,7 @@ export async function updateVideoBanner(id, videoBanner, videoFile) {
     const formData = createFormData(videoBanner, "video", videoFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/update/${id}`, {
       method: "PUT",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -111,6 +123,7 @@ export async function deleteVideoBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/video-cards/delete/${id}`, {
       method: "DELETE",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -122,7 +135,7 @@ export async function toggleVideoBannerStatus(id, status) {
   try {
     const response = await fetch(`${API_BASE_URL}/video-cards/update/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ status }),
     });
     return await handleResponse(response);
@@ -155,6 +168,7 @@ export async function addBanner(banner, imageFile) {
     const formData = createFormData(banner, "image", imageFile);
     const response = await fetch(`${API_BASE_URL}/banner/add`, {
       method: "POST",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -168,6 +182,7 @@ export async function updateBanner(id, banner, imageFile) {
     const formData = createFormData(banner, "image", imageFile);
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
       method: "PUT",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -180,6 +195,7 @@ export async function deleteBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/delete/${id}`, {
       method: "DELETE",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -191,7 +207,7 @@ export async function toggleBannerStatus(id, active) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ active }),
     });
     return await handleResponse(response);
@@ -204,7 +220,7 @@ export async function toggleMobileBannerStatus(id, is_mobile) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ is_mobile }),
     });
     return await handleResponse(response);
@@ -232,6 +248,7 @@ export async function addMobileBanner(banner, imageFile) {
     );
     const response = await fetch(`${API_BASE_URL}/banner/add`, {
       method: "POST",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -249,6 +266,7 @@ export async function updateMobileBanner(id, banner, imageFile) {
     );
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
       method: "PUT",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -261,6 +279,7 @@ export async function deleteMobileBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/delete/${id}`, {
       method: "DELETE",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -272,7 +291,7 @@ export async function toggleMobileBannerActiveStatus(id, active) {
   try {
     const response = await fetch(`${API_BASE_URL}/banner/update/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ active, is_mobile: true }),
     });
     return await handleResponse(response);
@@ -849,9 +868,20 @@ export async function getSectionCounts() {
   }
 }
 
-export async function getActiveProductSections() {
+// Registry metadata (types, allowed config, platforms) that drives the section settings form.
+export async function getSectionTypes() {
   try {
-    const response = await fetch(`${API_BASE_URL}/product-sections/active`);
+    const response = await fetch(`${API_BASE_URL}/product-sections/meta/types`, { headers: adminAuthHeaders() });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Recent audit entries for a section.
+export async function getSectionAuditLog(id, limit = 20) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${id}/audit?limit=${limit}`, { headers: adminAuthHeaders() });
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -862,7 +892,7 @@ export async function updateProductSection(id, sectionData) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(sectionData),
     });
     return await handleResponse(response);
@@ -877,6 +907,7 @@ export async function toggleProductSectionStatus(id) {
       `${API_BASE_URL}/product-sections/${id}/toggle`,
       {
         method: "PATCH",
+        headers: adminAuthHeaders(),
       }
     );
     return await handleResponse(response);
@@ -889,7 +920,7 @@ export async function updateProductSectionOrder(sectionsOrder) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/order`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ sections: sectionsOrder }),
     });
     return await handleResponse(response);
@@ -903,7 +934,7 @@ export async function syncCategoriesInSection(sectionId, categoryIds) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ category_ids: categoryIds }),
     });
     return await handleResponse(response);
@@ -916,7 +947,7 @@ export async function addCategoriesToSection(sectionId, categoryIds) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ category_ids: categoryIds }),
     });
     return await handleResponse(response);
@@ -938,6 +969,7 @@ export async function removeCategoryFromSection(sectionId, categoryId) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/categories/${categoryId}`, {
       method: "DELETE",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -948,6 +980,41 @@ export async function removeCategoryFromSection(sectionId, categoryId) {
 export async function getSectionsForCategory(categoryId) {
   try {
     const response = await fetch(`${API_BASE_URL}/product-sections/categories/${categoryId}/sections`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// GROUP-SECTION MAPPING
+export async function addGroupsToSection(sectionId, groupIds) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/groups`, {
+      method: "POST",
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ group_ids: groupIds }),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getGroupsInSection(sectionId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/groups`);
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function removeGroupFromSection(sectionId, groupId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product-sections/${sectionId}/groups/${groupId}`, {
+      method: "DELETE",
+      headers: adminAuthHeaders(),
+    });
     return await handleResponse(response);
   } catch (error) {
     return { success: false, error: error.message };
@@ -968,7 +1035,7 @@ export async function addPromoBanner(banner) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/add`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(banner),
     });
     return await handleResponse(response);
@@ -981,7 +1048,7 @@ export async function updatePromoBanner(id, banner) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/update/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: adminAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(banner),
     });
     return await handleResponse(response);
@@ -994,6 +1061,7 @@ export async function deletePromoBanner(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/delete/${id}`, {
       method: "DELETE",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -1005,6 +1073,7 @@ export async function togglePromoBannerStatus(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/promo-banner/toggle/${id}`, {
       method: "PUT",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -1227,6 +1296,7 @@ export async function addProduct(
     }
 
     const response = await fetch(`${API_BASE_URL}/admin/products`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` },
       method: "POST",
       body: formData,
     });
@@ -1270,6 +1340,7 @@ export async function updateProduct(
     }
 
     const response = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` },
       method: "PUT",
       body: formData,
     });
@@ -1281,6 +1352,7 @@ export async function updateProduct(
 export async function deleteProduct(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/admin/products/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` },
       method: "DELETE",
     });
     return await handleResponse(response);
@@ -1637,6 +1709,7 @@ export async function addVideoCard(videoCard, thumbnailFile) {
     const formData = createFormData(videoCard, "thumbnail", thumbnailFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/add`, {
       method: "POST",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -1650,6 +1723,7 @@ export async function updateVideoCard(id, videoCard, thumbnailFile) {
     const formData = createFormData(videoCard, "thumbnail", thumbnailFile);
     const response = await fetch(`${API_BASE_URL}/video-cards/update/${id}`, {
       method: "PUT",
+      headers: adminAuthHeaders(),
       body: formData,
     });
     return await handleResponse(response);
@@ -1662,6 +1736,7 @@ export async function deleteVideoCard(id) {
   try {
     const response = await fetch(`${API_BASE_URL}/video-cards/delete/${id}`, {
       method: "DELETE",
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -1717,7 +1792,7 @@ export async function updateSectionSubcategoryMappings(sectionId, mappings) {
   try {
     const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ mappings }),
     });
     return await handleResponse(response);
@@ -1730,7 +1805,7 @@ export async function addSubcategoriesToSection(sectionId, subcategoryIds, displ
   try {
     const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ subcategory_ids: subcategoryIds, display_orders: displayOrders }),
     });
     return await handleResponse(response);
@@ -1743,6 +1818,7 @@ export async function removeSubcategoryFromSection(sectionId, subcategoryId) {
   try {
     const response = await fetch(`${API_BASE_URL}/section-mappings/${sectionId}/subcategories/${subcategoryId}`, {
       method: 'DELETE',
+      headers: adminAuthHeaders(),
     });
     return await handleResponse(response);
   } catch (error) {

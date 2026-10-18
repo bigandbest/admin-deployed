@@ -27,8 +27,8 @@ export const getConfig = () => makeRequest(`${API_BASE}/config`);
 export const updateConfig = (data) => makeRequest(`${API_BASE}/config`, { method: "PUT", body: JSON.stringify(data) });
 
 // Users
-export const listUsers = (page = 1, limit = 20, search = "", status = "") => {
-  const params = new URLSearchParams({ page, limit, ...(search && { search }), ...(status && { status }) });
+export const listUsers = (page = 1, limit = 20, search = "", status = "", tier = "") => {
+  const params = new URLSearchParams({ page, limit, ...(search && { search }), ...(status && { status }), ...(tier && { tier }) });
   return makeRequest(`${API_BASE}/users?${params}`);
 };
 export const getUserDetail = (id) => makeRequest(`${API_BASE}/users/${id}`);
@@ -63,15 +63,18 @@ export const rejectWithdrawal = (id, reason) => makeRequest(`${API_BASE}/withdra
 export const processWithdrawal = (id, data) => makeRequest(`${API_BASE}/withdrawals/${id}/process`, { method: "PUT", body: JSON.stringify(data) });
 
 // Fraud Logs
-export const listFraudLogs = (page = 1, limit = 20, status = "", severity = "") => {
-  const params = new URLSearchParams({ page, limit, ...(status && { status }), ...(severity && { severity }) });
+export const listFraudLogs = (page = 1, limit = 20, status = "", severity = "", program = "") => {
+  const params = new URLSearchParams({ page, limit, ...(status && { status }), ...(severity && { severity }), ...(program && { program }) });
   return makeRequest(`${API_BASE}/fraud-logs?${params}`);
 };
 export const reviewFraudLog = (id, data) => makeRequest(`${API_BASE}/fraud-logs/${id}/review`, { method: "PUT", body: JSON.stringify(data) });
 
 // Activity Logs
-export const listActivityLogs = (page = 1, limit = 20) => {
-  const params = new URLSearchParams({ page, limit });
+export const listActivityLogs = (page = 1, limit = 20, action = "", { module = "", search = "", from = "", to = "" } = {}) => {
+  const params = new URLSearchParams({
+    page, limit,
+    ...(action && { action }), ...(module && { module }), ...(search && { search }), ...(from && { from }), ...(to && { to }),
+  });
   return makeRequest(`${API_BASE}/activity-logs?${params}`);
 };
 
@@ -81,14 +84,8 @@ export const exportReport = (type, from, to) => {
   return makeRequest(`${API_BASE}/reports/export?${params}`);
 };
 
-// Campaigns
-export const listCampaigns = (page = 1, limit = 20) => {
-  const params = new URLSearchParams({ page, limit });
-  return makeRequest(`${API_BASE}/campaigns?${params}`);
-};
-export const createCampaign = (data) => makeRequest(`${API_BASE}/campaigns`, { method: "POST", body: JSON.stringify(data) });
-export const updateCampaign = (id, data) => makeRequest(`${API_BASE}/campaigns/${id}`, { method: "PUT", body: JSON.stringify(data) });
-export const deleteCampaign = (id) => makeRequest(`${API_BASE}/campaigns/${id}`, { method: "DELETE" });
+// Campaigns moved to utils/adminCampaignApi.js (/api/admin/campaigns, Phase 5) — the old
+// referral_campaigns-backed endpoints these used to call were removed in that same phase.
 
 // Helpers
 export const formatCurrency = (amount) =>

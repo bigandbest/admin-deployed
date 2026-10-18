@@ -1,206 +1,234 @@
-import { useState, useEffect } from "react";
-import { listPayouts, updatePayout, formatCurrency, statusColor } from "../../../utils/adminAffiliateApi";
-import { Eye, RefreshCw, ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
 
-const STATUSES = ["", "PENDING", "APPROVED", "PROCESSING", "COMPLETED", "FAILED", "REJECTED"];
+import { listPayouts, updatePayout } from "../../../utils/adminAffiliateApi";
+import { Card } from "../../../Components/UI/card";
+import { Button } from "../../../Components/UI/button";
+import { Input } from "../../../Components/UI/input";
+import { Label } from "../../../Components/UI/label";
+import { Textarea } from "../../../Components/UI/textarea";
+import { DataTable } from "../../../Components/UI/data-table";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../../Components/UI/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "../../../Components/UI/sheet";
+import {
+  PageHeader, StatusBadge, FilterBar, TablePagination, ConfirmDialog, DetailList, ErrorState, EmptyState,
+  formatINR, formatINRExact, formatDate, notifySuccess, notifyError,
+} from "../../../Components/Growth";
+
+const STATUSES = ["PENDING", "APPROVED", "PROCESSING", "COMPLETED", "FAILED", "REJECTED"];
+const LIMIT = 20;
+const label = (s) => s.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+
+const destination = (p) =>
+  p.payment_method === "UPI" ? `UPI · ${p.upi_id || "—"}` : `Bank · ${p.bank_name || "—"}`;
 
 export default function AffiliatePayouts() {
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const initialStatus = STATUSES.includes(searchParams.get("status")) ? searchParams.get("status") : "PENDING";
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("PENDING");
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [confirm, setConfirm] = useState(null); // "COMPLETED" | "FAILED"
   const [txnId, setTxnId] = useState("");
-  const [adminNotes, setAdminNotes] = useState("");
+  const [notes, setNotes] = useState("");
   const [failReason, setFailReason] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const limit = 20;
 
-  useEffect(() => { load(); }, [page, statusFilter]);
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["affiliate", "payouts", page, statusFilter],
+    queryFn: () => listPayouts(page, LIMIT, statusFilter === "ALL" ? "" : statusFilter),
+    placeholderData: (prev) => prev,
+  });
+  const items = data?.items || [];
+  const pagination = data ? { total: data.total || 0, limit: LIMIT, pages: Math.ceil((data.total || 0) / LIMIT) } : null;
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await listPayouts(page, limit, statusFilter);
-      setItems(res.items || []);
-      setTotal(res.total || 0);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+  const open = (p) => { setSelected(p); setTxnId(p.transaction_id || ""); setNotes(p.admin_notes || ""); setFailReason(""); };
+  const closeAll = () => { setSelected(null); setConfirm(null); };
 
-  const openModal = (payout) => {
-    setSelected(payout);
-    setTxnId(payout.transaction_id || "");
-    setAdminNotes(payout.admin_notes || "");
-    setFailReason("");
-    setModalOpen(true);
-  };
+  const mutation = useMutation({
+    mutationFn: () => {
+      const body = { status: confirm, admin_notes: notes.trim() };
+      if (confirm === "COMPLETED") body.transaction_id = txnId.trim();
+      if (confirm === "FAILED") body.failure_reason = failReason.trim();
+      return updatePayout(selected.id, body);
+    },
+    onSuccess: () => {
+      notifySuccess(confirm === "COMPLETED" ? `Payout ${selected.payout_number} marked as paid.` : `Payout ${selected.payout_number} marked as failed.`);
+      closeAll();
+      queryClient.invalidateQueries({ queryKey: ["affiliate", "payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["affiliate", "dashboard"] });
+    },
+    onError: (err) => notifyError(err.message),
+  });
 
-  const handleAction = async (status) => {
-    setActionLoading(true);
-    try {
-      const data = { status, admin_notes: adminNotes };
-      if (status === "COMPLETED") data.transaction_id = txnId;
-      if (status === "FAILED") data.failure_reason = failReason;
-      await updatePayout(selected.id, data);
-      setModalOpen(false);
-      load();
-    } catch (e) { alert(e.message); }
-    finally { setActionLoading(false); }
-  };
+  const columns = useMemo(() => [
+    { header: "Payout", id: "num", cell: ({ row }) => <span className="font-mono text-xs">{row.original.payout_number}</span> },
+    {
+      header: "Affiliate",
+      id: "aff",
+      cell: ({ row }) => (
+        <>
+          <p className="font-medium">{row.original.affiliate_profile?.display_name}</p>
+          <p className="font-mono text-xs text-muted-foreground">{row.original.affiliate_profile?.affiliate_code}</p>
+        </>
+      ),
+    },
+    { header: () => <div className="text-right">Gross</div>, id: "gross", cell: ({ row }) => <div className="text-right tabular-nums">{formatINR(row.original.gross_amount)}</div> },
+    { header: () => <div className="text-right">TDS</div>, id: "tds", cell: ({ row }) => <div className="text-right tabular-nums text-muted-foreground">{formatINR(row.original.tds_amount)}</div> },
+    { header: () => <div className="text-right">Net payout</div>, id: "net", cell: ({ row }) => <div className="text-right font-medium tabular-nums">{formatINR(row.original.net_amount)}</div> },
+    { header: "Method", id: "method", cell: ({ row }) => <span className="block max-w-[160px] truncate text-muted-foreground">{destination(row.original)}</span> },
+    { header: "Status", id: "status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { header: "Requested", id: "date", cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.created_at)}</span> },
+    {
+      header: () => <span className="sr-only">Actions</span>,
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <Button size="sm" variant={row.original.status === "PENDING" ? "default" : "outline"} onClick={(e) => { e.stopPropagation(); open(row.original); }}>
+            {row.original.status === "PENDING" ? "Process" : "View"}
+          </Button>
+        </div>
+      ),
+    },
+  ], []);
 
-  const totalPages = Math.ceil(total / limit);
+  const p = selected;
+  const canAct = p?.status === "PENDING";
+  const breakdown = p && [
+    { label: "Gross commission", value: formatINRExact(p.gross_amount) },
+    { label: "TDS deducted", value: `− ${formatINRExact(p.tds_amount)}` },
+    { label: "Net payout", value: formatINRExact(p.net_amount), total: true },
+  ];
+  const invalid = (confirm === "COMPLETED" && !txnId.trim()) || (confirm === "FAILED" && !failReason.trim());
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Affiliate Payouts</h1>
-          <p className="text-sm text-gray-500">{total} total payouts</p>
-        </div>
-        <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
-          <RefreshCw className="w-4 h-4" /> Refresh
-        </button>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="Affiliate payouts"
+        description="Pay out approved commissions."
+        actions={<Button variant="outline" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "size-4 animate-spin" : "size-4"} /> Refresh</Button>}
+      />
 
-      <div className="flex gap-2 flex-wrap">
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors
-              ${statusFilter === s ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-            {s || "All"}
-          </button>
-        ))}
-      </div>
+      <FilterBar activeCount={statusFilter !== "PENDING" ? 1 : 0} onReset={() => { setStatusFilter("PENDING"); setPage(1); }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[170px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            {STATUSES.map((s) => <SelectItem key={s} value={s}>{label(s)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </FilterBar>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
-        {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="w-6 h-6 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 text-sm">No payouts found</div>
+      <Card className="gap-0 overflow-hidden p-0 shadow-none">
+        {isError ? (
+          <ErrorState title="Unable to load payouts" onRetry={refetch} />
+        ) : !isLoading && items.length === 0 ? (
+          <EmptyState
+            title={statusFilter === "PENDING" ? "No payouts waiting" : "No payouts found"}
+            description={statusFilter === "PENDING" ? "Payout requests from affiliates will appear here." : "No payouts have this status."}
+          />
         ) : (
-          <table className="w-full text-sm min-w-[800px]">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {["Payout #", "Affiliate", "Gross", "TDS", "Net", "Method", "Status", "Date", "Action"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {items.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs">{p.payout_number}</td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{p.affiliate_profile?.display_name}</div>
-                    <div className="text-xs text-gray-500">{p.affiliate_profile?.affiliate_code}</div>
-                  </td>
-                  <td className="px-4 py-3 font-medium">{formatCurrency(p.gross_amount)}</td>
-                  <td className="px-4 py-3 text-red-600">-{formatCurrency(p.tds_amount)}</td>
-                  <td className="px-4 py-3 font-bold text-green-700">{formatCurrency(p.net_amount)}</td>
-                  <td className="px-4 py-3 text-xs">{p.payment_method === "UPI" ? `UPI: ${p.upi_id}` : `Bank`}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(p.status)}`}>{p.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(p.created_at).toLocaleDateString("en-IN")}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => openModal(p)} className="p-1.5 hover:bg-gray-100 rounded-lg">
-                      <Eye className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable columns={columns} data={items} isLoading={isLoading} onRowClick={open} />
         )}
-      </div>
+        <TablePagination pagination={pagination} page={page} onPageChange={setPage} />
+      </Card>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-          <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              className="p-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-              className="p-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Process Payout Modal */}
-      {modalOpen && selected && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setModalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Process Payout</h2>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(selected.status)}`}>{selected.status}</span>
-            </div>
-            <div className="p-6 space-y-4">
-              {/* Summary */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Payout #</span><span className="font-mono">{selected.payout_number}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Affiliate</span><span className="font-medium">{selected.affiliate_profile?.display_name}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Gross Amount</span><span>{formatCurrency(selected.gross_amount)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">TDS Deduction</span><span className="text-red-600">-{formatCurrency(selected.tds_amount)}</span></div>
-                <div className="flex justify-between border-t border-gray-200 pt-2"><span className="font-semibold">Net Payable</span><span className="font-bold text-green-700 text-base">{formatCurrency(selected.net_amount)}</span></div>
-              </div>
-
-              {/* Payment Info */}
-              <div className="text-sm space-y-1">
-                <h3 className="font-semibold text-gray-700 mb-2">Payment Details</h3>
-                {selected.payment_method === "UPI" ? (
-                  <div><span className="text-gray-500">UPI ID: </span><span className="font-medium">{selected.upi_id}</span></div>
+      <Sheet open={!!p && !confirm} onOpenChange={(o) => !o && closeAll()}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+          {p && (
+            <>
+              <SheetHeader>
+                <StatusBadge status={p.status} className="w-fit" />
+                <SheetTitle>Payout {p.payout_number}</SheetTitle>
+                <SheetDescription>{p.affiliate_profile?.display_name} · {formatDate(p.created_at)}</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-5 px-4">
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount</h3>
+                  <DetailList rows={breakdown} />
+                </section>
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pay to</h3>
+                  {p.payment_method === "UPI" ? (
+                    <DetailList rows={[{ label: "UPI ID", value: p.upi_id && <span className="font-mono">{p.upi_id}</span> }]} />
+                  ) : (
+                    <DetailList
+                      rows={[
+                        { label: "Bank", value: p.bank_name },
+                        { label: "Account holder", value: p.account_holder_name },
+                        { label: "Account number", value: p.bank_account_number && <span className="font-mono">{p.bank_account_number}</span> },
+                        { label: "IFSC", value: p.bank_ifsc_code && <span className="font-mono">{p.bank_ifsc_code}</span> },
+                      ]}
+                    />
+                  )}
+                </section>
+                {canAct ? (
+                  <section className="space-y-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Record payment</h3>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pay-txn">Transaction ID / UTR</Label>
+                      <Input id="pay-txn" className="font-mono" value={txnId} onChange={(e) => setTxnId(e.target.value)} />
+                      <p className="text-xs text-muted-foreground">Enter after you have made the transfer. Required to mark as paid.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pay-notes">Admin notes</Label>
+                      <Textarea id="pay-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                    </div>
+                  </section>
                 ) : (
-                  <>
-                    <div><span className="text-gray-500">Bank: </span><span>{selected.bank_name}</span></div>
-                    <div><span className="text-gray-500">Account: </span><span className="font-mono">{selected.bank_account_number}</span></div>
-                    <div><span className="text-gray-500">IFSC: </span><span className="font-mono">{selected.bank_ifsc_code}</span></div>
-                    <div><span className="text-gray-500">Name: </span><span>{selected.account_holder_name}</span></div>
-                  </>
+                  <section>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Record</h3>
+                    <DetailList
+                      rows={[
+                        { label: "Transaction ID", value: p.transaction_id && <span className="font-mono">{p.transaction_id}</span> },
+                        { label: "Failure reason", value: p.failure_reason },
+                        { label: "Notes", value: p.admin_notes },
+                      ]}
+                    />
+                  </section>
                 )}
               </div>
+              <SheetFooter>
+                <Button variant="outline" onClick={closeAll}>Close</Button>
+                {canAct && (
+                  <>
+                    <Button variant="destructive" onClick={() => setConfirm("FAILED")}>Mark as failed</Button>
+                    <Button disabled={!txnId.trim()} onClick={() => setConfirm("COMPLETED")}>Mark as paid</Button>
+                  </>
+                )}
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
-              {selected.status === "PENDING" && (
-                <>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase block mb-1.5">Transaction ID (after payment)</label>
-                    <input value={txnId} onChange={(e) => setTxnId(e.target.value)}
-                      placeholder="UTR / Transaction reference..."
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase block mb-1.5">Admin Notes</label>
-                    <textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={2}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-300" />
-                  </div>
-                  <div className="flex gap-3">
-                    <button onClick={() => handleAction("COMPLETED")} disabled={actionLoading || !txnId}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-                      <CheckCircle className="w-4 h-4" /> Mark Completed
-                    </button>
-                    <button onClick={() => handleAction("FAILED")} disabled={actionLoading}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 disabled:opacity-50">
-                      <XCircle className="w-4 h-4" /> Failed
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {selected.status !== "PENDING" && (
-                <button onClick={() => setModalOpen(false)} className="w-full py-2.5 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Close</button>
-              )}
-            </div>
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        title={confirm === "COMPLETED" ? "Mark payout as paid" : "Mark payout as failed"}
+        description={confirm === "COMPLETED"
+          ? "Confirms the transfer was made. The affiliate is notified and the payout is closed."
+          : "The payout is closed as failed. The gross amount returns to the affiliate's available balance."}
+        details={p && [
+          { label: "Affiliate", value: p.affiliate_profile?.display_name },
+          { label: "Pay to", value: destination(p) },
+          ...(confirm === "COMPLETED" ? [{ label: "Transaction ID", value: <span className="font-mono">{txnId.trim()}</span> }] : []),
+          { label: "Net payout", value: formatINRExact(p.net_amount), total: true },
+        ]}
+        confirmLabel={confirm === "COMPLETED" ? `Mark ${p ? formatINR(p.net_amount) : ""} as paid` : "Mark as failed"}
+        destructive={confirm === "FAILED"}
+        isLoading={mutation.isPending}
+        onConfirm={() => !invalid && mutation.mutate()}
+      >
+        {confirm === "FAILED" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="pay-fail">Failure reason (required)</Label>
+            <Input id="pay-fail" value={failReason} onChange={(e) => setFailReason(e.target.value)} />
           </div>
-        </div>
-      )}
+        )}
+      </ConfirmDialog>
     </div>
   );
 }

@@ -19,6 +19,14 @@ const makeRequest = async (url, options = {}) => {
 
 // Dashboard
 export const getDashboard = () => makeRequest(`${API_BASE}/dashboard`);
+export const getAnalytics = (period = 30) => makeRequest(`${API_BASE}/analytics?period=${period}`);
+
+// Fraud Logs (Marketing Control Center Q2 — shared referral_fraud_logs table, program=AFFILIATE)
+export const listFraudLogs = (page = 1, limit = 20, status = "", severity = "") => {
+  const params = new URLSearchParams({ page, limit, ...(status && { status }), ...(severity && { severity }) });
+  return makeRequest(`${API_BASE}/fraud-logs?${params}`);
+};
+export const reviewFraudLog = (id, data) => makeRequest(`${API_BASE}/fraud-logs/${id}/review`, { method: "PUT", body: JSON.stringify(data) });
 
 // Config
 export const getConfig = () => makeRequest(`${API_BASE}/config`);

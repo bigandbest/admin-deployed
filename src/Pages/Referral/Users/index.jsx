@@ -1,212 +1,244 @@
-// src/Pages/Referral/Users/index.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Ban, CheckCircle, Gift, MoreHorizontal, ToggleLeft, ToggleRight } from "lucide-react";
+
 import { formatEmail } from "../../../utils/formatEmail";
-import { listUsers, blockUser, unblockUser, deactivateCode, reactivateCode, manualCreditReward, formatCurrency, getStatusBadge } from "../../../utils/adminReferralApi";
-import { Search, Ban, CheckCircle, Gift, ToggleLeft, ToggleRight, X } from "lucide-react";
+import { listUsers, blockUser, unblockUser, deactivateCode, reactivateCode, manualCreditReward, getConfig } from "../../../utils/adminReferralApi";
+import { Card } from "../../../Components/UI/card";
+import { Button } from "../../../Components/UI/button";
+import { Input } from "../../../Components/UI/input";
+import { Label } from "../../../Components/UI/label";
+import { Badge } from "../../../Components/UI/badge";
+import { DataTable } from "../../../Components/UI/data-table";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../../Components/UI/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../Components/UI/dropdown-menu";
+import {
+  PageHeader, StatusBadge, FilterBar, TablePagination, ConfirmDialog, ErrorState, EmptyState,
+  useDebouncedValue, formatINR, notifySuccess, notifyError,
+} from "../../../Components/Growth";
+
+// What each action says to the admin before it runs.
+const ACTIONS = {
+  credit: { title: "Manual credit", confirm: "Credit reward" },
+  block: { title: "Block user", confirm: "Block user", destructive: true, consequence: "The user will no longer earn or redeem referral rewards until unblocked." },
+  unblock: { title: "Unblock user", confirm: "Unblock user", consequence: "The user will be able to earn and redeem referral rewards again." },
+  deactivate: { title: "Deactivate referral code", confirm: "Deactivate code", destructive: true, consequence: "New sign-ups can no longer use this code. Existing referrals are unaffected." },
+  reactivate: { title: "Reactivate referral code", confirm: "Reactivate code", consequence: "The code will accept new sign-ups again." },
+};
 
 export default function ReferralUsers() {
-  const [users, setUsers] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [tierFilter, setTierFilter] = useState("ALL");
   const [page, setPage] = useState(1);
-  const [modal, setModal] = useState(null); // { type, user }
-  const [input, setInput] = useState("");
-  const [input2, setInput2] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [modal, setModal] = useState(null);
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await listUsers(page, 20, search, statusFilter);
-      setUsers(res.users || []);
-      setPagination(res.pagination);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [page, search, statusFilter]);
+  const debouncedSearch = useDebouncedValue(search);
 
-  useEffect(() => { load(); }, [load]);
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["referral", "users", page, debouncedSearch, statusFilter, tierFilter],
+    queryFn: () => listUsers(page, 20, debouncedSearch, statusFilter === "ALL" ? "" : statusFilter, tierFilter === "ALL" ? "" : tierFilter),
+    placeholderData: (prev) => prev,
+  });
+  const users = data?.users || [];
+  const pagination = data?.pagination;
 
-  const openModal = (type, user) => { setModal({ type, user }); setInput(""); setInput2(""); setMsg(""); };
+  const { data: configData } = useQuery({
+    queryKey: ["referral", "config-tiers"],
+    queryFn: () => getConfig(),
+    staleTime: 5 * 60_000,
+  });
+  const tierOptions = (configData?.config?.tiered_rewards_config?.tiers || []).map((t) => t.name).filter(Boolean);
 
-  const handleAction = async () => {
-    if (!modal) return;
-    setProcessing(true); setMsg("");
-    try {
+  const activeFilters = (statusFilter !== "ALL") + (tierFilter !== "ALL") + (search ? 1 : 0);
+  const resetFilters = () => { setSearch(""); setStatusFilter("ALL"); setTierFilter("ALL"); setPage(1); };
+
+  const openModal = (type, user) => { setModal({ type, user }); setAmount(""); setReason(""); };
+  const closeModal = () => setModal(null);
+
+  const columns = useMemo(() => [
+    {
+      header: "User",
+      id: "user",
+      cell: ({ row }) => (
+        <>
+          <p className="font-medium text-foreground truncate max-w-[180px]" title={row.original.user?.name}>{row.original.user?.name || "Unknown"}</p>
+          <p className="text-xs text-muted-foreground truncate max-w-[180px]">{formatEmail(row.original.user?.email) || row.original.user?.phone || "—"}</p>
+        </>
+      ),
+    },
+    {
+      header: "Referral code",
+      accessorKey: "referral_code",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs bg-muted px-2 py-1 rounded-md">{row.original.referral_code}</span>
+          {!row.original.referral_code_active && <StatusBadge status="INACTIVE" />}
+        </div>
+      ),
+    },
+    {
+      header: "Referrals",
+      id: "referrals",
+      cell: ({ row }) => (
+        <>
+          <p className="font-medium tabular-nums">{row.original.successful_referrals}</p>
+          <p className="text-xs text-muted-foreground">{row.original.pending_referrals} pending</p>
+        </>
+      ),
+    },
+    {
+      header: "Tier",
+      accessorKey: "current_tier",
+      cell: ({ row }) => row.original.current_tier
+        ? <Badge variant="secondary">{row.original.current_tier}</Badge>
+        : <span className="text-muted-foreground">—</span>,
+    },
+    { header: () => <div className="text-right">Earnings</div>, accessorKey: "total_earnings", cell: ({ row }) => <div className="text-right tabular-nums">{formatINR(row.original.total_earnings)}</div> },
+    { header: () => <div className="text-right">Balance</div>, accessorKey: "available_balance", cell: ({ row }) => <div className="text-right tabular-nums font-medium">{formatINR(row.original.available_balance)}</div> },
+    {
+      header: "Status",
+      accessorKey: "status",
+      cell: ({ row }) => <StatusBadge status={row.original.is_blocked ? "BLOCKED" : row.original.status} />,
+    },
+    {
+      header: () => <span className="sr-only">Actions</span>,
+      id: "actions",
+      cell: ({ row }) => {
+        const u = row.original;
+        return (
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${u.user?.name || "user"}`}>
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => openModal("credit", u)}><Gift className="size-4" /> Manual credit</DropdownMenuItem>
+                {u.referral_code_active ? (
+                  <DropdownMenuItem onClick={() => openModal("deactivate", u)}><ToggleRight className="size-4" /> Deactivate code</DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => openModal("reactivate", u)}><ToggleLeft className="size-4" /> Reactivate code</DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                {u.is_blocked ? (
+                  <DropdownMenuItem onClick={() => openModal("unblock", u)}><CheckCircle className="size-4" /> Unblock user</DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem variant="destructive" onClick={() => openModal("block", u)}><Ban className="size-4" /> Block user</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  const actionMutation = useMutation({
+    mutationFn: async () => {
       const { type, user } = modal;
-      if (type === "block") await blockUser(user.user_id, input);
-      else if (type === "unblock") await unblockUser(user.user_id);
-      else if (type === "deactivate") await deactivateCode(user.user_id);
-      else if (type === "reactivate") await reactivateCode(user.user_id);
-      else if (type === "credit") await manualCreditReward({ user_id: user.user_id, amount: parseFloat(input), reason: input2, validity_days: 7 });
-      setModal(null);
-      load();
-    } catch (err) { setMsg(err.message); }
-    finally { setProcessing(false); }
-  };
+      if (type === "block") return blockUser(user.user_id, reason.trim());
+      if (type === "unblock") return unblockUser(user.user_id);
+      if (type === "deactivate") return deactivateCode(user.user_id);
+      if (type === "reactivate") return reactivateCode(user.user_id);
+      if (type === "credit") return manualCreditReward({ user_id: user.user_id, amount: parseFloat(amount), reason: reason.trim(), validity_days: 7 });
+    },
+    onSuccess: () => {
+      const { type, user } = modal;
+      notifySuccess(type === "credit" ? `Credited ${formatINR(amount)} to ${user.user?.name || "user"}.` : `${ACTIONS[type].title} completed.`);
+      closeModal();
+      queryClient.invalidateQueries({ queryKey: ["referral", "users"] });
+    },
+    onError: (err) => notifyError(err.message),
+  });
+
+  const needsReason = modal && (modal.type === "block" || modal.type === "credit");
+  const invalid = modal && (
+    (needsReason && !reason.trim()) ||
+    (modal.type === "credit" && !(parseFloat(amount) > 0))
+  );
+  const action = modal ? ACTIONS[modal.type] : null;
+  const confirmLabel = modal?.type === "credit" && parseFloat(amount) > 0 ? `Credit ${formatINR(amount)}` : action?.confirm;
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Referral Users</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage referral profiles and actions</p>
-        </div>
-        <p className="text-sm text-gray-400">{pagination?.total || 0} users</p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader title="Referral users" description="Referral profiles, codes and balances." />
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            placeholder="Search by code or email..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 w-64"
+      <FilterBar
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+        searchPlaceholder="Search by code or email..."
+        activeCount={activeFilters}
+        onReset={resetFilters}
+      >
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-[150px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="BLOCKED">Blocked</SelectItem>
+            <SelectItem value="SUSPENDED">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+        {tierOptions.length > 0 && (
+          <Select value={tierFilter} onValueChange={(v) => { setTierFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-[150px]" aria-label="Filter by tier"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All tiers</SelectItem>
+              {tierOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+      </FilterBar>
+
+      <Card className="p-0 gap-0 overflow-hidden shadow-none">
+        {isError ? (
+          <ErrorState title="Unable to load referral users" onRetry={refetch} />
+        ) : !isLoading && users.length === 0 ? (
+          <EmptyState
+            title={activeFilters ? "No users match these filters" : "No referral users yet"}
+            description={activeFilters ? "Try a different search or clear the filters." : "Users appear here once they generate a referral code."}
+            action={activeFilters ? <Button variant="outline" size="sm" onClick={resetFilters}>Reset filters</Button> : null}
           />
-        </div>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none">
-          <option value="">All Status</option>
-          <option value="ACTIVE">Active</option>
-          <option value="BLOCKED">Blocked</option>
-          <option value="SUSPENDED">Suspended</option>
-        </select>
-      </div>
+        ) : (
+          <DataTable columns={columns} data={users} isLoading={isLoading} />
+        )}
+        <TablePagination pagination={pagination} page={page} onPageChange={setPage} />
+      </Card>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {["User", "Referral Code", "Referrals", "Earnings", "Balance", "Status", "Actions"].map(h => (
-                  <th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    Loading...
-                  </div>
-                </td></tr>
-              ) : users.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16 text-gray-400">No users found</td></tr>
-              ) : users.map(u => (
-                <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-5 py-4">
-                    <p className="font-medium text-gray-900 truncate max-w-[140px]">{u.user?.name || "Unknown"}</p>
-                    <p className="text-xs text-gray-400 truncate max-w-[140px]">{formatEmail(u.user?.email) || u.user?.phone || "—"}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="font-mono font-bold text-gray-900 text-xs bg-gray-100 px-2 py-1 rounded-lg">{u.referral_code}</span>
-                    {!u.referral_code_active && <span className="ml-2 text-xs text-red-500">(inactive)</span>}
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="font-semibold text-gray-900">{u.successful_referrals}</p>
-                    <p className="text-xs text-gray-400">{u.pending_referrals} pending</p>
-                  </td>
-                  <td className="px-5 py-4 font-semibold text-emerald-700">{formatCurrency(u.total_earnings)}</td>
-                  <td className="px-5 py-4 font-semibold text-gray-900">{formatCurrency(u.available_balance)}</td>
-                  <td className="px-5 py-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusBadge(u.status)}`}>{u.status}</span>
-                    {u.is_blocked && <p className="text-xs text-red-400 mt-1">Blocked</p>}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1">
-                      <ActionBtn title="Manual Credit" onClick={() => openModal("credit", u)} className="hover:bg-green-50">
-                        <Gift className="w-4 h-4 text-green-600" />
-                      </ActionBtn>
-                      {u.is_blocked ? (
-                        <ActionBtn title="Unblock" onClick={() => openModal("unblock", u)} className="hover:bg-green-50">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        </ActionBtn>
-                      ) : (
-                        <ActionBtn title="Block" onClick={() => openModal("block", u)} className="hover:bg-red-50">
-                          <Ban className="w-4 h-4 text-red-500" />
-                        </ActionBtn>
-                      )}
-                      {u.referral_code_active ? (
-                        <ActionBtn title="Deactivate Code" onClick={() => openModal("deactivate", u)} className="hover:bg-orange-50">
-                          <ToggleRight className="w-4 h-4 text-orange-500" />
-                        </ActionBtn>
-                      ) : (
-                        <ActionBtn title="Reactivate Code" onClick={() => openModal("reactivate", u)} className="hover:bg-blue-50">
-                          <ToggleLeft className="w-4 h-4 text-blue-500" />
-                        </ActionBtn>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {pagination && pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="text-sm px-4 py-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">Previous</button>
-            <span className="text-sm text-gray-500">Page {page} of {pagination.pages}</span>
-            <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages}
-              className="text-sm px-4 py-2 border border-gray-200 rounded-xl disabled:opacity-40 hover:bg-gray-50">Next</button>
+      <ConfirmDialog
+        open={!!modal}
+        onClose={closeModal}
+        title={action?.title || ""}
+        description={action?.consequence}
+        details={modal && [
+          { label: "User", value: modal.user.user?.name || "Unknown" },
+          { label: "Referral code", value: <span className="font-mono">{modal.user.referral_code}</span> },
+          { label: "Available balance", value: formatINR(modal.user.available_balance) },
+        ]}
+        confirmLabel={confirmLabel || "Confirm"}
+        destructive={action?.destructive}
+        isLoading={actionMutation.isPending}
+        onConfirm={() => !invalid && actionMutation.mutate()}
+      >
+        {modal?.type === "credit" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="credit-amount">Amount (₹)</Label>
+            <Input id="credit-amount" type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Credited as a reward valid for 7 days.</p>
           </div>
         )}
-      </div>
-
-      {/* Modal */}
-      {modal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 capitalize">
-                {modal.type === "credit" ? "Manual Credit" : modal.type === "deactivate" ? "Deactivate Code" : modal.type === "reactivate" ? "Reactivate Code" : `${modal.type} User`}
-              </h3>
-              <button onClick={() => setModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
-            </div>
-            <p className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-xl">
-              {modal.user.user?.name || "Unknown"} &middot; <span className="font-mono">{modal.user.referral_code}</span>
-            </p>
-            {modal.type === "block" && (
-              <input placeholder="Reason for blocking (required)" value={input} onChange={e => setInput(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-            )}
-            {modal.type === "credit" && (
-              <>
-                <input type="number" placeholder="Amount (₹)" value={input} onChange={e => setInput(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-                <input placeholder="Reason for credit" value={input2} onChange={e => setInput2(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-              </>
-            )}
-            {["unblock", "deactivate", "reactivate"].includes(modal.type) && (
-              <p className="text-sm text-gray-600">Are you sure you want to {modal.type} this user's referral access?</p>
-            )}
-            {msg && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{msg}</p>}
-            <div className="flex gap-3 pt-1">
-              <button onClick={() => setModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
-              <button onClick={handleAction} disabled={processing}
-                className="flex-1 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">
-                {processing ? "Processing..." : "Confirm"}
-              </button>
-            </div>
+        {needsReason && (
+          <div className="space-y-1.5">
+            <Label htmlFor="action-reason">Reason (required)</Label>
+            <Input id="action-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={modal.type === "block" ? "Why is this user being blocked?" : "e.g. Promotional adjustment"} />
           </div>
-        </div>
-      )}
+        )}
+      </ConfirmDialog>
     </div>
-  );
-}
-
-function ActionBtn({ title, onClick, className, children }) {
-  return (
-    <button title={title} onClick={onClick}
-      className={`p-1.5 rounded-lg transition-colors ${className}`}>
-      {children}
-    </button>
   );
 }
