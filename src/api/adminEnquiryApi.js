@@ -1,7 +1,5 @@
 // admin-deployed/src/api/adminEnquiryApi.js
-import { adminAuthHeaders } from '../utils/backendApi';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
  * Get all enquiries (Admin view)
@@ -14,7 +12,9 @@ export const getAllEnquiries = async (filters = {}) => {
             `${API_BASE_URL}/enquiries/admin/all?${queryParams}`,
             {
                 method: 'GET',
-                headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             }
         );
 
@@ -40,7 +40,9 @@ export const updateEnquiryStatus = async (enquiryId, status, notes = '') => {
             `${API_BASE_URL}/enquiries/${enquiryId}/status`,
             {
                 method: 'PUT',
-                headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ status, admin_notes: notes }),
             }
         );
@@ -65,7 +67,9 @@ export const createBid = async (bidData) => {
     try {
         const response = await fetch(`${API_BASE_URL}/bids`, {
             method: 'POST',
-            headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(bidData),
         });
 
@@ -89,7 +93,9 @@ export const updateBid = async (bidId, bidData) => {
     try {
         const response = await fetch(`${API_BASE_URL}/bids/${bidId}`, {
             method: 'PUT',
-            headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(bidData),
         });
 
@@ -113,7 +119,9 @@ export const lockBid = async (bidId, lockData) => {
     try {
         const response = await fetch(`${API_BASE_URL}/bids/${bidId}/lock`, {
             method: 'POST',
-            headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(lockData),
         });
 
@@ -137,7 +145,9 @@ export const rejectBid = async (bidId, reason) => {
     try {
         const response = await fetch(`${API_BASE_URL}/bids/${bidId}/reject`, {
             method: 'POST',
-            headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({ reason }),
         });
 
@@ -161,7 +171,9 @@ export const sendAdminMessage = async (messageData) => {
     try {
         const response = await fetch(`${API_BASE_URL}/enquiry-messages`, {
             method: 'POST',
-            headers: adminAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
                 ...messageData,
                 sender_type: 'ADMIN',

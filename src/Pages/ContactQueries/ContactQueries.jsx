@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Table,
     Badge,
@@ -16,13 +16,6 @@ import {
 import { notifications } from "@mantine/notifications";
 import { FaTrash, FaEye, FaSearch } from "react-icons/fa";
 import { modals } from "@mantine/modals";
-import api from "../../utils/api";
-
-const STATUSES = ["Pending", "Contacted", "Resolved"];
-const statusColor = (status) =>
-    status === "Resolved" ? "green" : status === "Contacted" ? "blue" : "yellow";
-const errMsg = (error, fallback) =>
-    error?.response?.data?.message || error?.response?.data?.error || fallback;
 
 const ContactQueries = () => {
     const [queries, setQueries] = useState([]);
@@ -30,35 +23,43 @@ const ContactQueries = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [statusFilter, setStatusFilter] = useState("");
-    const fetchQueries = useCallback(async (signal) => {
+    const [refresh, setRefresh] = useState(false);
+
+    useEffect(() => {
+        fetchQueries();
+    }, [page, statusFilter, refresh]);
+
+    const fetchQueries = async () => {
         setLoading(true);
         try {
-            const { data: result } = await api.get("/contact", {
-                params: { page, limit: 10, ...(statusFilter ? { status: statusFilter } : {}) },
-                signal,
-            });
+            let url = `${import.meta.env.VITE_API_BASE_URL}/contact?page=${page}&limit=10`;
+            if (statusFilter) {
+                url += `&status=${statusFilter}`;
+            }
+
+            const response = await fetch(url);
+            const result = await response.json();
+
             if (result.success) {
                 setQueries(result.data);
-                setTotalPages(Math.max(1, result.pagination.totalPages));
+                setTotalPages(result.pagination.totalPages);
+            } else {
+                notifications.show({
+                    title: "Error",
+                    message: "Failed to fetch queries",
+                    color: "red",
+                });
             }
         } catch (error) {
-            if (error.code === "ERR_CANCELED") return;
-            notifications.show({ title: "Error", message: errMsg(error, "Failed to fetch queries"), color: "red" });
+            console.error("Error fetching queries:", error);
+            notifications.show({
+                title: "Error",
+                message: "Something went wrong",
+                color: "red",
+            });
         } finally {
-            if (!signal?.aborted) setLoading(false);
+            setLoading(false);
         }
-    }, [page, statusFilter]);
-
-    // Abort the in-flight request when page/filter change so a slow older response can't win
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchQueries(controller.signal);
-        return () => controller.abort();
-    }, [fetchQueries]);
-
-    const handleStatusFilter = (value) => {
-        setStatusFilter(value || "");
-        setPage(1);
     };
 
     const handleDelete = (id) => {
@@ -73,30 +74,70 @@ const ContactQueries = () => {
             confirmProps: { color: "red" },
             onConfirm: async () => {
                 try {
-                    await api.delete(`/contact/${id}`);
-                    notifications.show({ title: "Success", message: "Query deleted successfully", color: "green" });
-                    // Deleting the last row of a page would leave it empty: step back one page
-                    if (queries.length === 1 && page > 1) setPage(page - 1);
-                    else fetchQueries();
+                    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/contact/${id}`, {
+                        method: "DELETE",
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        notifications.show({
+                            title: "Success",
+                            message: "Query deleted successfully",
+                            color: "green",
+                        });
+                        setRefresh(!refresh);
+                    } else {
+                        notifications.show({
+                            title: "Error",
+                            message: result.message || "Failed to delete query",
+                            color: "red",
+                        });
+                    }
                 } catch (error) {
-                    notifications.show({ title: "Error", message: errMsg(error, "Failed to delete query"), color: "red" });
+                    console.error("Error deleting query:", error);
+                    notifications.show({
+                        title: "Error",
+                        message: "Something went wrong",
+                        color: "red",
+                    });
                 }
             },
         });
     };
 
     const handleStatusUpdate = async (id, newStatus) => {
-        if (!newStatus) return;
         try {
-            await api.patch(`/contact/${id}/status`, { status: newStatus });
-            notifications.show({ title: "Success", message: "Status updated successfully", color: "green" });
-            // The details modal renders a snapshot of the row, so close it rather than show a stale status
-            modals.closeAll();
-            fetchQueries();
+            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/contact/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const result = await response.json();
+            if (result.success) {
+                notifications.show({
+                    title: "Success",
+                    message: "Status updated successfully",
+                    color: "green",
+                });
+                setRefresh(!refresh);
+            } else {
+                notifications.show({
+                    title: "Error",
+                    message: result.message || "Failed to update status",
+                    color: "red",
+                });
+            }
         } catch (error) {
-            notifications.show({ title: "Error", message: errMsg(error, "Failed to update status"), color: "red" });
+            console.error("Error updating status:", error);
+            notifications.show({
+                title: "Error",
+                message: "Something went wrong",
+                color: "red",
+            });
         }
-    };
+    }
 
     const openViewModal = (query) => {
         modals.open({
@@ -129,11 +170,11 @@ const ContactQueries = () => {
                     <div>
                         <Text fw={500} size="sm" c="dimmed">Status</Text>
                         <Group>
-                            <Badge color={statusColor(query.status)}>
+                            <Badge color={query.status === 'Resolved' ? 'green' : query.status === 'Contacted' ? 'blue' : 'yellow'}>
                                 {query.status}
                             </Badge>
                             <Select
-                                data={STATUSES}
+                                data={['Pending', 'Contacted', 'Resolved']}
                                 value={query.status}
                                 onChange={(val) => handleStatusUpdate(query.id, val)}
                                 size="xs"
@@ -155,17 +196,17 @@ const ContactQueries = () => {
             <Table.Td>{query.subject}</Table.Td>
             <Table.Td>{query.quantity || 'N/A'}</Table.Td>
             <Table.Td>
-                <Badge color={statusColor(query.status)}>
+                <Badge color={query.status === 'Resolved' ? 'green' : query.status === 'Contacted' ? 'blue' : 'yellow'}>
                     {query.status}
                 </Badge>
             </Table.Td>
             <Table.Td>{new Date(query.created_at).toLocaleDateString()}</Table.Td>
             <Table.Td>
                 <Group gap="xs">
-                    <ActionIcon variant="light" color="blue" aria-label="View query" onClick={() => openViewModal(query)}>
+                    <ActionIcon variant="light" color="blue" onClick={() => openViewModal(query)}>
                         <FaEye size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="light" color="red" aria-label="Delete query" onClick={() => handleDelete(query.id)}>
+                    <ActionIcon variant="light" color="red" onClick={() => handleDelete(query.id)}>
                         <FaTrash size={16} />
                     </ActionIcon>
                 </Group>
@@ -179,9 +220,9 @@ const ContactQueries = () => {
                 <Title order={2}>Product Requests</Title>
                 <Select
                     placeholder="Filter by Status"
-                    data={STATUSES}
-                    value={statusFilter || null}
-                    onChange={handleStatusFilter}
+                    data={['Pending', 'Contacted', 'Resolved']}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
                     clearable
                 />
             </Group>

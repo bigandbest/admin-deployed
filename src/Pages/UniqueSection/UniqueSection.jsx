@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { adminAuthHeaders } from "../../utils/backendApi";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -38,7 +37,7 @@ const UniqueSection = () => {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/unique-sections/${id}`, { headers: adminAuthHeaders() });
+      await axios.delete(`${API_BASE_URL}/unique-sections/${id}`);
       await fetchSections();
     } catch (err) {
       alert("Failed to delete Section");
@@ -63,11 +62,10 @@ const UniqueSection = () => {
       if (editingSection) {
         await axios.put(
           `${API_BASE_URL}/unique-sections/${editingSection.id}`,
-          formData,
-          { headers: adminAuthHeaders() }
+          formData
         );
       } else {
-        await axios.post(`${API_BASE_URL}/unique-sections/`, formData, { headers: adminAuthHeaders() });
+        await axios.post(`${API_BASE_URL}/unique-sections/`, formData);
       }
       await fetchSections();
       setShowForm(false);
