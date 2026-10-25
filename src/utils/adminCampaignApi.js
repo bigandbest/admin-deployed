@@ -17,10 +17,19 @@ const makeRequest = async (url, options = {}) => {
   return res.json();
 };
 
-export const listCampaigns = (channel = "", status = "") => {
-  const p = new URLSearchParams({ ...(channel && { channel }), ...(status && { status }) });
-  return makeRequest(`${API_BASE}?${p}`);
+export const listCampaigns = async (channel = "", status = "") => {
+  const data = [];
+  let total = 0;
+  for (let page = 1; ; page++) {
+    const p = new URLSearchParams({ page: String(page), limit: "100", ...(channel && { channel }), ...(status && { status }) });
+    const result = await makeRequest(`${API_BASE}?${p}`);
+    const rows = result.data || [];
+    data.push(...rows); total = result.total ?? data.length;
+    if (!rows.length || data.length >= total) break;
+  }
+  return { success: true, data, total };
 };
+
 export const createCampaign = (data) =>
   makeRequest(`${API_BASE}`, { method: "POST", body: JSON.stringify(data) });
 export const updateCampaign = (id, data) =>

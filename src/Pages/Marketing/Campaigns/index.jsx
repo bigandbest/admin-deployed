@@ -40,8 +40,9 @@ const toLocalInput = (iso) => {
 const lifecycle = (c) => {
   const now = Date.now();
   if (!c.is_active) return { status: "INACTIVE", label: "Inactive" };
-  if (new Date(c.ends_at) < now) return { status: "EXPIRED", label: "Ended" };
+  if (new Date(c.ends_at) <= now) return { status: "EXPIRED", label: "Ended" };
   if (new Date(c.starts_at) > now) return { status: "PENDING", label: "Scheduled", tone: "info" };
+  if (c.usage_limit != null && c.used_count >= c.usage_limit) return { status: "INACTIVE", label: "Quota exhausted" };
   return { status: "ACTIVE", label: "Live" };
 };
 
@@ -70,6 +71,7 @@ Field.propTypes = { id: PropTypes.string, label: PropTypes.string.isRequired, hi
 
 export default function Campaigns() {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
   const [filter, setFilter] = useState("ALL");
   const [channel, setChannel] = useState("ALL");
   const [formOpen, setFormOpen] = useState(false);
@@ -229,7 +231,7 @@ export default function Campaigns() {
   ], []);
 
   const activeFilters = (filter !== "ALL") + (channel !== "ALL");
-  const reset = () => { setFilter("ALL"); setChannel("ALL"); };
+  const reset = () => { setPage(1); setFilter("ALL"); setChannel("ALL"); };
 
   return (
     <div className="space-y-4">
@@ -240,7 +242,7 @@ export default function Campaigns() {
       />
 
       <FilterBar activeCount={activeFilters} onReset={reset}>
-        <Select value={filter} onValueChange={setFilter}>
+        <Select value={filter} onValueChange={value => { setFilter(value); setPage(1); }}>
           <SelectTrigger className="w-[150px]" aria-label="Filter by status"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All statuses</SelectItem>
@@ -248,7 +250,7 @@ export default function Campaigns() {
             <SelectItem value="INACTIVE">Inactive</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={channel} onValueChange={setChannel}>
+        <Select value={channel} onValueChange={value => { setChannel(value); setPage(1); }}>
           <SelectTrigger className="w-[150px]" aria-label="Filter by channel"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All channels</SelectItem>
@@ -268,7 +270,12 @@ export default function Campaigns() {
             action={activeFilters ? <Button variant="outline" size="sm" onClick={reset}>Reset filters</Button> : <Button size="sm" onClick={openCreate}>New campaign</Button>}
           />
         ) : (
-          <DataTable columns={columns} data={campaigns} isLoading={campaignsQuery.isLoading} />
+          <div><DataTable columns={columns} data={campaigns.slice((page - 1) * 20, page * 20)} isLoading={campaignsQuery.isLoading} />
+            <div className="flex items-center justify-between p-4">
+              <Button disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+              <span>{campaigns.length} campaigns · page {page} / {Math.max(1, Math.ceil(campaigns.length / 20))}</span>
+              <Button disabled={page * 20 >= campaigns.length} onClick={() => setPage(p => p + 1)}>Next</Button>
+            </div></div>
         )}
       </Card>
 

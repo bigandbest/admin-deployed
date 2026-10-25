@@ -26,8 +26,9 @@ const channelConfig = {
 const lifecycleOf = (c) => {
   const now = Date.now();
   if (!c.is_active) return { key: "INACTIVE", label: "Inactive", tone: "neutral" };
-  if (c.ends_at && new Date(c.ends_at).getTime() < now) return { key: "ENDED", label: "Ended", tone: "neutral" };
+  if (c.ends_at && new Date(c.ends_at).getTime() <= now) return { key: "ENDED", label: "Ended", tone: "neutral" };
   if (c.starts_at && new Date(c.starts_at).getTime() > now) return { key: "SCHEDULED", label: "Scheduled", tone: "info" };
+  if (c.usage_limit != null && c.used_count >= c.usage_limit) return { key: "EXHAUSTED", label: "Quota exhausted", tone: "neutral" };
   return { key: "LIVE", label: "Live", tone: "success" };
 };
 
