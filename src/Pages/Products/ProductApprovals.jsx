@@ -113,10 +113,10 @@ const ProductApprovals = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Info</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variants</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prices (₹)</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3 text-left text-xs text-muted-foreground">Product Info</th>
+                            <th className="px-6 py-3 text-left text-xs text-muted-foreground">Variants</th>
+                            <th className="px-6 py-3 text-left text-xs text-muted-foreground">Prices (₹)</th>
+                            <th className="px-6 py-3 text-left text-xs text-muted-foreground">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">

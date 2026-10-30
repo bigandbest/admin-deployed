@@ -6,7 +6,7 @@ import { useState, useRef } from "react";
 import { Button } from "../UI/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../UI/card";
 import { Input } from "../UI/input";
-import { Upload, X, Star, ChevronUp, ChevronDown } from "lucide-react";
+import { Upload, X, ChevronUp, ChevronDown, Check } from "lucide-react";
 // import Image from 'next/image';
 
 interface MediaItem {
@@ -141,23 +141,23 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="border-border bg-card shadow-none">
       <CardHeader
-        className="border-b border-border pb-4 cursor-pointer flex flex-row items-center justify-between"
+        className="flex cursor-pointer flex-row items-center justify-between border-b border-border pb-4"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <CardTitle className="text-lg font-semibold">Upload Img</CardTitle>
+        <CardTitle className="text-sm font-medium">Images</CardTitle>
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          <ChevronUp className="size-4 text-muted-foreground" strokeWidth={1.5} />
         ) : (
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <ChevronDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
         )}
       </CardHeader>
       {isExpanded && (
         <CardContent className="pt-6 space-y-6">
           {/* Images Section */}
-          <div className="space-y-3">
-            <p className="text-sm font-semibold">Product Images</p>
+          <div className="flex flex-col gap-3">
+            <p className="text-sm">Photos</p>
 
             {/* Images Display */}
             {images.length > 0 && (
@@ -168,7 +168,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                   .map((image, index) => (
                     <div
                       key={`primary-${index}`}
-                      className="relative group rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
+                      className="group relative overflow-hidden rounded-xl bg-muted"
                     >
                       <div className="aspect-[4/3] flex items-center justify-center p-4">
                         <img
@@ -177,7 +177,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                           className="max-w-full max-h-full object-contain"
                         />
                       </div>
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity duration-150 ease-desk group-hover:opacity-100">
                         <Button
                           size="sm"
                           onClick={() =>
@@ -185,11 +185,11 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                               images.findIndex((img) => img.is_primary),
                             )
                           }
-                          variant="ghost"
-                          className="bg-blue-500/90 hover:bg-blue-600 text-white h-9 px-4"
-                          title="Replace Image"
+                          variant="outline"
+                          className="h-9 bg-background transition-colors duration-150 ease-desk"
+                          title="Replace image"
                         >
-                          <Upload className="w-4 h-4 mr-2" />
+                          <Upload className="size-4" strokeWidth={1.5} />
                           Replace
                         </Button>
                         <Button
@@ -199,16 +199,15 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                               images.findIndex((img) => img.is_primary),
                             )
                           }
-                          variant="ghost"
-                          className="bg-red-500/90 hover:bg-red-600 text-white h-9 px-4"
-                          title="Remove Image"
+                          variant="outline"
+                          className="h-9 bg-background text-[#dc2626] transition-colors duration-150 ease-desk"
+                          title="Remove image"
                         >
-                          <X className="w-4 h-4 mr-2" />
+                          <X className="size-4" strokeWidth={1.5} />
                           Remove
                         </Button>
                       </div>
-                      <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
-                        <Star className="w-3 h-3" fill="currentColor" />
+                      <div className="absolute top-3 left-3 rounded-sm bg-background/90 px-2 py-1 font-mono text-xs text-muted-foreground">
                         Primary
                       </div>
                     </div>
@@ -224,11 +223,7 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                       }`}
                     >
                       <div
-                        className={`w-20 h-20 rounded-lg overflow-hidden bg-muted border-2 cursor-pointer transition-all ${
-                          image.is_primary
-                            ? "border-yellow-500 ring-2 ring-yellow-500/20"
-                            : "border-border hover:border-primary"
-                        }`}
+                        className="size-20 cursor-pointer overflow-hidden rounded-lg border border-border bg-muted transition-colors duration-150 ease-desk hover:border-primary"
                         onClick={() => setPrimary(index)}
                         title="Click to set as primary"
                       >
@@ -238,18 +233,18 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
+                      <div className="absolute inset-0 flex items-center justify-center gap-1 rounded-lg bg-black/60 opacity-0 transition-opacity duration-150 ease-desk group-hover:opacity-100">
                         <Button
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setPrimary(index);
                           }}
-                          variant="ghost"
-                          className="bg-white/90 hover:bg-white text-gray-900 h-7 w-7 p-0"
-                          title="Set as Primary"
+                          variant="outline"
+                          className="size-8 bg-background p-0"
+                          title="Set as primary"
                         >
-                          <Star className="w-3 h-3" />
+                          <Check className="size-4" strokeWidth={1.5} />
                         </Button>
                         <Button
                           size="sm"
@@ -257,11 +252,11 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                             e.stopPropagation();
                             removeMedia(index);
                           }}
-                          variant="ghost"
-                          className="bg-red-500/90 hover:bg-red-600 text-white h-7 w-7 p-0"
+                          variant="outline"
+                          className="size-8 bg-background p-0 text-[#dc2626]"
                           title="Remove"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="size-4" strokeWidth={1.5} />
                         </Button>
                       </div>
                     </div>
@@ -270,14 +265,10 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                   {/* Add More Button */}
                   <button
                     onClick={() => imageInputRef.current?.click()}
-                    className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-green-50 hover:border-green-500 dark:hover:bg-green-900/20 transition-all flex items-center justify-center group"
-                    title="Add more images"
+                    className="flex size-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-foreground/15 bg-background transition-colors duration-150 ease-desk hover:bg-muted"
+                    title="Add images"
                   >
-                    <div className="text-center">
-                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto mb-1 group-hover:scale-110 transition-transform">
-                        <Upload className="w-4 h-4" />
-                      </div>
-                    </div>
+                    <Upload className="size-4 text-muted-foreground" strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
@@ -290,26 +281,27 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                className={`rounded-lg border border-dashed p-8 text-center transition-colors duration-150 ease-desk ${
                   dragActive
-                    ? "border-green-500 bg-green-50/10"
+                    ? "border-primary bg-muted"
                     : "border-border bg-muted/20"
                 }`}
               >
-                <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm font-medium mb-1">
-                  Drag images here or click to browse
+                <Upload className="mx-auto mb-3 size-4 text-muted-foreground" strokeWidth={1.5} />
+                <p className="mb-1 text-sm">
+                  Drop images here, or choose files
                 </p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Supports PNG, JPG, WebP
+                <p className="mb-4 text-xs text-muted-foreground">
+                  PNG, JPG, WebP
                 </p>
                 <Button
                   size="sm"
+                  variant="outline"
                   onClick={() => imageInputRef.current?.click()}
-                  className="gap-2 bg-green-500 hover:bg-green-600"
+                  className="transition-colors duration-150 ease-desk"
                 >
-                  <Upload className="w-4 h-4" />
-                  Select Images
+                  <Upload className="size-4" strokeWidth={1.5} />
+                  Choose images
                 </Button>
               </div>
             )}
@@ -333,9 +325,9 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
 
           {/* YouTube Video Section */}
           <div className="border-t border-border pt-4 space-y-3">
-            <p className="text-sm font-semibold">YouTube Video Link</p>
+            <p className="text-sm">YouTube link</p>
             <p className="text-xs text-muted-foreground">
-              Add a YouTube video URL for your product
+              A YouTube URL for this product
             </p>
 
             <div className="space-y-2">
@@ -367,19 +359,18 @@ export default function MediaUploader({ media, setMedia }: MediaUploaderProps) {
                 className="bg-muted/50 border-input"
               />
               {videos.length > 0 && (
-                <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
-                  <p className="text-xs text-green-700 dark:text-green-300">
-                    ✓ YouTube link added
-                  </p>
+                <div className="flex h-9 items-center justify-between rounded-lg border border-border px-3">
+                  <p className="text-xs text-muted-foreground">Link added</p>
                   <Button
                     size="sm"
                     onClick={() =>
                       setMedia(media.filter((m) => m.media_type !== "video"))
                     }
                     variant="ghost"
-                    className="h-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="size-8 p-0 text-muted-foreground"
+                    aria-label="Remove link"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="size-4" strokeWidth={1.5} />
                   </Button>
                 </div>
               )}

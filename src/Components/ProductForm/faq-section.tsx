@@ -140,16 +140,16 @@ export default function FAQSection({
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="border-border bg-card shadow-none">
       <CardHeader
         className="border-b border-border pb-4 cursor-pointer flex flex-row items-center justify-between"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <CardTitle className="text-lg font-semibold">FAQs</CardTitle>
+        <CardTitle className="text-sm font-medium">FAQs</CardTitle>
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          <ChevronUp className="size-4 text-muted-foreground" strokeWidth={1.5} />
         ) : (
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <ChevronDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
         )}
       </CardHeader>
       {isExpanded && (
@@ -192,7 +192,7 @@ export default function FAQSection({
                       </Label>
                       <Input
                         id={`question-${index}`}
-                        placeholder="Enter FAQ question"
+                        placeholder="Question"
                         value={faq.question}
                         onChange={(e) =>
                           handleChangeFAQ(index, "question", e.target.value)
@@ -210,7 +210,7 @@ export default function FAQSection({
                       </Label>
                       <Textarea
                         id={`answer-${index}`}
-                        placeholder="Enter FAQ answer"
+                        placeholder="Answer"
                         value={faq.answer}
                         onChange={(e) =>
                           handleChangeFAQ(index, "answer", e.target.value)
@@ -232,15 +232,14 @@ export default function FAQSection({
                   onClick={handleOpenLibrary}
                   className="w-full sm:w-auto"
                 >
-                  Add from Library
+                  Add from library
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
-                  <DialogTitle>Select FAQs from Library</DialogTitle>
+                  <DialogTitle>FAQ templates</DialogTitle>
                   <DialogDescription>
-                    Choose one or more FAQs from your templates to add to this
-                    product.
+                    Choose templates to add to this product
                   </DialogDescription>
                 </DialogHeader>
 
@@ -254,7 +253,7 @@ export default function FAQSection({
                       {templates.map((template, tIndex) => (
                         <div key={template.id} className="space-y-3">
                           <div className="flex items-center justify-between border-b pb-2">
-                            <h4 className="font-semibold text-sm">
+                            <h4 className="text-sm font-medium">
                               {template.title}
                             </h4>
                             <Badge variant="outline" className="text-xs">
@@ -268,7 +267,7 @@ export default function FAQSection({
                               return (
                                 <div
                                   key={fIndex}
-                                  className="flex items-start space-x-3 p-2 rounded hover:bg-muted/50 transition-colors"
+                                  className="flex items-start gap-3 rounded-lg p-2 transition-colors duration-150 ease-desk hover:bg-muted/50"
                                 >
                                   <Checkbox
                                     id={`chk-${key}`}
@@ -278,7 +277,7 @@ export default function FAQSection({
                                     }
                                     className="mt-1"
                                   />
-                                  <div className="grid gap-1.5 leading-none">
+                                  <div className="grid gap-2 leading-none">
                                     <label
                                       htmlFor={`chk-${key}`}
                                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
@@ -310,18 +309,19 @@ export default function FAQSection({
                     onClick={handleAddSelected}
                     disabled={selectedFoqs.size === 0}
                   >
-                    Add {selectedFoqs.size} Selected FAQs
+                    Add {selectedFoqs.size} questions
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
             <Button
+              variant="outline"
               onClick={handleAddFAQ}
-              className="gap-2 bg-blue-500 hover:bg-blue-600 text-white"
+              className="transition-colors duration-150 ease-desk"
             >
-              <Plus className="w-4 h-4" />
-              Add Custom FAQ
+              <Plus className="size-4" strokeWidth={1.5} />
+              Add question
             </Button>
           </div>
         </CardContent>

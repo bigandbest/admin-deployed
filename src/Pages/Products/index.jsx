@@ -429,7 +429,7 @@ export default function ProductsPage() {
               </SheetHeader>
               <div className="space-y-5 px-4 pb-4">
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Overview</h3>
                   <DetailList
                     rows={[
                       { label: "Price", value: selVariant && formatINR(selVariant.price) },
@@ -443,7 +443,7 @@ export default function ProductsPage() {
                   />
                 </section>
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tax and returns</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Tax and returns</h3>
                   <DetailList
                     rows={[
                       { label: "HSN / SAC", value: sel.hsn_or_sac_code },
@@ -454,7 +454,7 @@ export default function ProductsPage() {
                   />
                 </section>
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Variants ({sel.variants?.length || 0})</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Variants ({sel.variants?.length || 0})</h3>
                   {sel.variants?.length ? (
                     <div className="overflow-hidden rounded-md border">
                       <table className="w-full text-sm">
@@ -476,12 +476,12 @@ export default function ProductsPage() {
                 </section>
                 {sel.description && (
                   <section>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</h3>
+                    <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Description</h3>
                     <RichText html={sel.description} className="max-h-64 overflow-y-auto rounded-md bg-muted/40 p-3" />
                   </section>
                 )}
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">FAQs ({Array.isArray(sel.faq) ? sel.faq.length : 0})</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">FAQs ({Array.isArray(sel.faq) ? sel.faq.length : 0})</h3>
                   {Array.isArray(sel.faq) && sel.faq.length > 0 ? (
                     <ul className="divide-y rounded-md border">
                       {sel.faq.map((item, i) => (

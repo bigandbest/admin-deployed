@@ -8,7 +8,6 @@ import {
   Outlet,
   Navigate,
 } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/spotlight/styles.css";
@@ -16,12 +15,15 @@ import { Notifications } from "@mantine/notifications";
 import { ModalsProvider } from "@mantine/modals";
 import { Spotlight } from "@mantine/spotlight";
 import {
-  FaSearch,
-  FaHome,
-  FaUsers,
-  FaBoxOpen,
-  FaQuestionCircle,
-} from "react-icons/fa";
+  Search,
+  LayoutDashboard,
+  Package,
+  Users,
+  CircleHelp,
+  MapPinned,
+  Wallet,
+  ReceiptText,
+} from "lucide-react";
 
 // Components
 import Sidebar from "./Components/Sidebar";
@@ -178,24 +180,11 @@ const MainLayout = () => {
         onMouseEnter={() => handleSidebarHover(true)}
         onMouseLeave={() => handleSidebarHover(false)}
       />
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen || sidebarHovered ? "ml-60" : "ml-[70px]"
-          }`}
-      >
+      <div className={`flex min-w-0 flex-1 flex-col ${sidebarOpen || sidebarHovered ? "ml-60" : "ml-16"}`}>
         <Header toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
-        <main className="flex-1 overflow-y-auto mantine-bg rounded-tl-xl shadow-inner p-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="h-full"
-            >
-              <GrowthSubNav />
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+        <main className="mantine-bg flex-1 overflow-y-auto p-6">
+          <GrowthSubNav />
+          <Outlet />
         </main>
       </div>
     </div>
@@ -208,49 +197,49 @@ const spotlightActions = [
     id: "home",
     label: "Dashboard",
     description: "Go to dashboard",
-    icon: <FaHome size={18} />,
+    icon: <LayoutDashboard className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/"),
   },
   {
     id: "products",
     label: "Products",
     description: "Manage your products",
-    icon: <FaBoxOpen size={18} />,
+    icon: <Package className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/products"),
   },
   {
     id: "users",
     label: "Users",
     description: "Manage your users",
-    icon: <FaUsers size={18} />,
+    icon: <Users className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/users"),
   },
   {
     id: "enquiry",
     label: "Enquiries",
     description: "View customer enquiries",
-    icon: <FaQuestionCircle size={18} />,
+    icon: <CircleHelp className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/enquiry"),
   },
   {
     id: "delivery-zones",
     label: "Delivery Zones",
     description: "Manage delivery zones and pincodes",
-    icon: <FaBoxOpen size={18} />,
+    icon: <MapPinned className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/delivery-zones"),
   },
   {
     id: "wallet-management",
     label: "Wallet Management",
     description: "Manage user wallets and balances",
-    icon: <FaBoxOpen size={18} />,
+    icon: <Wallet className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/wallet-management"),
   },
   {
     id: "wallet-transactions",
     label: "Wallet Transactions",
     description: "View wallet transactions and audit logs",
-    icon: <FaBoxOpen size={18} />,
+    icon: <ReceiptText className="size-4" strokeWidth={1.5} />,
     onClick: () => (window.location.href = "/wallet-transactions"),
   },
 ];
@@ -742,8 +731,8 @@ function App() {
               <Spotlight
                 actions={spotlightActions}
                 searchProps={{
-                  placeholder: "Search...",
-                  leftSection: <FaSearch size={18} />,
+                  placeholder: "Search",
+                  leftSection: <Search className="size-4" strokeWidth={1.5} />,
                 }}
                 shortcut="mod + k"
               />

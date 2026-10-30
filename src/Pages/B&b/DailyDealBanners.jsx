@@ -262,7 +262,7 @@ export default function DailyDealBanners() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Daily Deal Banners</h1>
+          <h1 className="text-[28px] font-medium leading-[1.15]">Daily deal banners</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Create and manage banners for daily deal pages. Assign them from the Daily Deals section.
           </p>

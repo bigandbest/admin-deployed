@@ -154,20 +154,20 @@ const UnifiedOrders = () => {
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">📦 All Orders Management</h1>
-                        <p className="text-gray-600">Manage all orders (COD & Prepaid) in one place</p>
+                        <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">Orders</h1>
+                        <p className="text-sm text-muted-foreground">COD and prepaid orders</p>
                     </div>
-                    <div className="flex gap-3">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-                            <div className="text-sm text-blue-600 font-medium">Total Orders</div>
-                            <div className="text-2xl font-bold text-blue-700">{orders.length}</div>
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-lg border border-foreground/8 px-4 py-2">
+                            <div className="text-xs text-muted-foreground">Orders</div>
+                            <div className="font-mono text-lg font-medium tabular-nums">{orders.length}</div>
                         </div>
                         <button
                             onClick={fetchOrders}
                             disabled={loading}
-                            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold disabled:opacity-50"
+                            className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors duration-150 ease-desk disabled:opacity-50"
                         >
-                            {loading ? '🔄 Loading...' : '🔄 Refresh'}
+                            {loading ? "Refreshing" : "Refresh"}
                         </button>
                     </div>
                 </div>

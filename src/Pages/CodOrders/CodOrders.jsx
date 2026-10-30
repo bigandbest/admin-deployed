@@ -231,20 +231,20 @@ const CodOrders = () => {
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">💰 COD Orders Management</h1>
-            <p className="text-gray-600">Manage Cash on Delivery orders and track payments</p>
+            <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">COD orders</h1>
+            <p className="text-sm text-muted-foreground">Cash on delivery orders and payments</p>
           </div>
-          <div className="flex gap-3">
-            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-              <div className="text-sm text-green-600 font-medium">Total Orders</div>
-              <div className="text-2xl font-bold text-green-700">{codOrders.length}</div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg border border-foreground/8 px-4 py-2">
+              <div className="text-xs text-muted-foreground">Orders</div>
+              <div className="font-mono text-lg font-medium tabular-nums">{codOrders.length}</div>
             </div>
             <button
               onClick={fetchCodOrders}
               disabled={loading}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors duration-150 ease-desk disabled:opacity-50"
             >
-              {loading ? '🔄 Loading...' : '🔄 Refresh Data'}
+              {loading ? "Refreshing" : "Refresh"}
             </button>
           </div>
         </div>
@@ -287,22 +287,22 @@ const CodOrders = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-100 to-blue-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700r">
                     📦 Order Details
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700r">
                     👤 Customer Info
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700r">
                     🛍️ Products
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700r">
                     💰 Amount
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700r">
                     📊 Status
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-700r">
                     ⚡ Actions
                   </th>
                 </tr>
@@ -390,14 +390,14 @@ const CodOrders = () => {
                             setSelectedOrder(order);
                             setShowModal(true);
                           }}
-                          className="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg transition-colors duration-200 hover:scale-105 transform"
+                          className="flex size-8 items-center justify-center rounded-md border border-foreground/8 transition-colors duration-150 ease-desk hover:bg-muted"
                           title="View Details"
                         >
                           <FaEye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => deleteOrder(order.id)}
-                          className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition-colors duration-200 hover:scale-105 transform"
+                          className="flex size-8 items-center justify-center rounded-md text-[#dc2626] transition-colors duration-150 ease-desk hover:bg-muted"
                           title="Delete Order"
                         >
                           <FaTrash className="w-4 h-4" />

@@ -168,7 +168,7 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
           {/* Two columns: Customer + Order Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Customer</p>
+              <p className="text-xs font-semibold text-gray-500 mb-2">Customer</p>
               <p className="font-semibold text-gray-800">{data.customer.name}</p>
               <p className="text-sm text-gray-600">{data.customer.phone}</p>
               {formatEmail(data.customer.email) && (
@@ -178,7 +178,7 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
               <p className="text-sm font-medium text-blue-600 mt-1">Pincode: {data.customer.pincode}</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Order Summary</p>
+              <p className="text-xs font-semibold text-gray-500 mb-2">Order Summary</p>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Master Order</span>
@@ -208,7 +208,7 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
 
           {/* Items */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items ({data.items.length})</p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Items ({data.items.length})</p>
             <div className="divide-y border rounded-xl overflow-hidden">
               {data.items.map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 bg-white">
@@ -232,7 +232,7 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
           {/* Events timeline — only available after detail fetch */}
           {(data.events?.length > 0) && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Fulfillment Timeline</p>
+              <p className="text-xs font-semibold text-gray-500 mb-2">Fulfillment Timeline</p>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {data.events.map((ev, i) => (
                   <div key={i} className="flex gap-2 text-sm">
@@ -252,7 +252,7 @@ const DetailModal = ({ subOrder, onClose, onStatusUpdate }) => {
 
           {/* Status Actions */}
           <div className="border-t pt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Update Status</p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Update Status</p>
             <input
               className="w-full border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-300"
               placeholder="Optional note..."
@@ -416,7 +416,7 @@ const FulfillmentOrders = () => {
       {/* Page Title */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fulfillment Orders</h1>
+          <h1 className="text-[28px] font-medium leading-[1.15]">Fulfillment orders</h1>
           <p className="text-sm text-gray-500 mt-0.5">Division & Zonal warehouse sub-orders</p>
         </div>
         <button
@@ -487,7 +487,7 @@ const FulfillmentOrders = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
-              <tr className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <tr className="text-xs font-semibold text-gray-500">
                 <th className="px-4 py-3 text-left">Sub-Order</th>
                 <th className="px-4 py-3 text-left">Source</th>
                 <th className="px-4 py-3 text-left">Warehouse</th>

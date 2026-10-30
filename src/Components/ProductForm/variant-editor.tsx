@@ -99,8 +99,8 @@ export default function VariantEditor({
       >
         <div className="flex items-center gap-3 text-left">
           <ChevronDown
-            className={`w-5 h-5 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""
-              }`}
+            className={`size-4 shrink-0 transition-transform duration-150 ease-desk ${isExpanded ? "rotate-180" : ""}`}
+            strokeWidth={1.5}
           />
           {/* Variant Photo Thumbnail */}
           {variant.photo_url && (
@@ -128,10 +128,10 @@ export default function VariantEditor({
               e.stopPropagation();
               onSetDefault();
             }}
-            variant={isDefault ? "default" : "outline"}
-            className="gap-1"
+            variant="outline"
+            className={isDefault ? "border-primary text-primary" : ""}
           >
-            <Radio className="w-3 h-3" />
+            <Radio className="size-4" strokeWidth={1.5} />
             Default
           </Button>
           <Button
@@ -141,9 +141,9 @@ export default function VariantEditor({
               onDelete();
             }}
             variant="ghost"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="text-[#dc2626] hover:bg-muted hover:text-[#dc2626]"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="size-4" strokeWidth={1.5} />
           </Button>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function VariantEditor({
         <div className="border-t border-border p-4 space-y-6 bg-muted/20">
           {/* Variant Photo Upload */}
           <div className="space-y-3">
-            <Label className="text-sm font-semibold">Variant Photo</Label>
+            <Label className="text-sm">Variant photo</Label>
             <div className="flex items-center gap-4">
               {variant.photo_url && (
                 <div className="relative w-24 h-24 border border-border rounded-lg overflow-hidden">
@@ -164,9 +164,9 @@ export default function VariantEditor({
                   />
                   <button
                     onClick={() => handleChange("photo_url", "")}
-                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                    className="absolute top-1 right-1 flex size-8 items-center justify-center rounded-md bg-background text-[#dc2626]"
                   >
-                    <XIcon className="w-3 h-3" />
+                    <XIcon className="size-4" strokeWidth={1.5} />
                   </button>
                 </div>
               )}
@@ -250,7 +250,7 @@ export default function VariantEditor({
 
           {/* Pricing */}
           <div className="space-y-3">
-            <p className="text-sm font-semibold">Pricing</p>
+            <p className="text-sm">Pricing</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label
@@ -380,7 +380,7 @@ export default function VariantEditor({
           {/* Bulk Pricing Tiers */}
           <div className="border-t border-border pt-4">
             <div className="flex items-center justify-between mb-3">
-              <Label className="text-sm font-semibold">Bulk Pricing Tiers</Label>
+              <Label className="text-sm">Bulk pricing</Label>
               <button
                 type="button"
                 onClick={() => {
@@ -388,14 +388,14 @@ export default function VariantEditor({
                   tiers.push({ min_quantity: "", max_quantity: "", unit_price: "", sort_order: tiers.length });
                   handleChange("bulk_tiers", tiers);
                 }}
-                className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                className="h-8 rounded-lg border border-border px-3 text-xs transition-colors duration-150 ease-desk hover:bg-muted"
               >
-                + Add Tier
+                Add tier
               </button>
             </div>
 
             {(!variant.bulk_tiers || variant.bulk_tiers.length === 0) ? (
-              <p className="text-xs text-muted-foreground italic">No tiers yet. Add a tier to enable volume-based pricing.</p>
+              <p className="text-xs text-muted-foreground">No tiers yet</p>
             ) : (
               <div className="space-y-2">
                 {/* Header */}
@@ -446,7 +446,7 @@ export default function VariantEditor({
                         const tiers = variant.bulk_tiers.filter((_: any, i: number) => i !== tierIdx);
                         handleChange("bulk_tiers", tiers);
                       }}
-                      className="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded transition-colors"
+                      className="flex size-8 items-center justify-center rounded-lg text-[#dc2626] transition-colors duration-150 ease-desk hover:bg-muted"
                     >
                       ×
                     </button>

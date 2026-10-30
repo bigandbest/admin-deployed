@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { useMantineColorScheme } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { useMantineColorScheme } from "@mantine/core";
+import { useNavigate } from "react-router-dom";
+import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
 import {
-
-  ActionIcon,
   Menu,
   UnstyledButton,
   Group,
@@ -14,253 +12,188 @@ import {
   Divider,
 } from "@mantine/core";
 import { spotlight } from "@mantine/spotlight";
-import { motion } from "framer-motion";
 import {
-  FaCog,
-  FaSearch,
-  FaSignOutAlt,
-  FaUser,
-  FaBars,
-  FaMoon,
-  FaSun,
-  FaWallet,
-  FaPlus,
-  FaArrowUp,
-  FaArrowDown,
-} from "react-icons/fa";
+  Search,
+  Menu as MenuIcon,
+  Wallet,
+  Moon,
+  Sun,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react";
+import PropTypes from "prop-types";
 
+const iconProps = { className: "size-4", strokeWidth: 1.5 };
 
-
-
-const Header = ({ toggleSidebar, sidebarOpen }) => {
+const Header = ({ toggleSidebar }) => {
   const { currentUser, logout } = useAdminAuth();
   const navigate = useNavigate();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
-  const [walletBalance] = useState(12500.50); // Mock wallet balance
-
+  const [walletBalance] = useState(12500);
 
   const handleLogout = async () => {
     await logout();
     window.location.href = "/login";
   };
 
-  // const unreadNotifications = userNotifications.filter(n => !n.read).length;
+  const name =
+    currentUser?.user_metadata?.name ||
+    currentUser?.user_metadata?.displayName ||
+    currentUser?.email ||
+    "Admin";
+  const rupees = (n) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(n);
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="z-10 w-full py-3 px-3 sm:px-4 md:px-6 mantine-header flex items-center justify-between shadow-sm"
-    >
-      <div className="flex items-center gap-2 sm:gap-3">
-        <ActionIcon
-          size="lg"
-          radius="md"
-          variant="light"
+    <header className="z-10 flex h-16 w-full items-center justify-between px-6 mantine-header">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
           onClick={toggleSidebar}
-          className="shrink-0"
+          aria-label="Menu"
+          className="desk-chip flex size-9 items-center justify-center rounded-lg transition-colors duration-150 ease-desk hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <FaBars size={18} />
-        </ActionIcon>
+          <MenuIcon {...iconProps} />
+        </button>
 
-        <div
-          className="hidden sm:flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-md cursor-pointer hover:bg-gray-200 transition-colors"
+        <button
+          type="button"
           onClick={() => spotlight.open()}
+          className="desk-chip hidden h-9 items-center gap-2 rounded-lg px-3 text-sm text-neutral-500 transition-colors duration-150 ease-desk hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         >
-          <FaSearch size={14} className="text-gray-500" />
-          <Text size="sm" color="dimmed">
-            Search (Ctrl+K)
-          </Text>
-        </div>
+          <Search {...iconProps} />
+          <span>Search</span>
+          <kbd className="ml-4 rounded-sm border border-black/10 px-1 font-mono text-xs text-neutral-500">
+            Ctrl K
+          </kbd>
+        </button>
 
-        {/* Mobile Search Icon */}
-        <ActionIcon
-          size="lg"
-          radius="md"
-          variant="light"
+        <button
+          type="button"
           onClick={() => spotlight.open()}
-          className="sm:hidden shrink-0"
+          aria-label="Search"
+          className="desk-chip flex size-9 items-center justify-center rounded-lg sm:hidden"
         >
-          <FaSearch size={16} />
-        </ActionIcon>
+          <Search {...iconProps} />
+        </button>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Wallet Section - Premium Mobile Design */}
-        <Menu
-          width={280}
-          position="bottom-end"
-          transitionProps={{ transition: 'pop-top-right' }}
-          shadow="xl"
-        >
+      <div className="flex items-center gap-2">
+        <Menu width={280} position="bottom-end" shadow="sm">
           <Menu.Target>
-            <UnstyledButton className="flex items-center gap-2 bg-linear-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95">
-              <FaWallet size={16} className="sm:w-[18px] sm:h-[18px]" />
-              <div className="hidden sm:block">
-                <Text size="xs" className="opacity-90 leading-none">Wallet</Text>
-                <Text size="sm" weight={700} className="leading-tight">₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-              </div>
-              <div className="sm:hidden">
-                <Text size="xs" weight={700}>₹{walletBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-              </div>
+            <UnstyledButton className="desk-chip flex h-9 items-center gap-2 rounded-lg px-3 transition-colors duration-150 ease-desk">
+              <Wallet {...iconProps} />
+              <span className="hidden text-xs text-neutral-500 sm:block">Wallet</span>
+              <span className="font-mono text-sm tabular-nums">{rupees(walletBalance)}</span>
             </UnstyledButton>
           </Menu.Target>
           <Menu.Dropdown className="p-0">
-            {/* Wallet Header */}
-            <div className="bg-linear-to-r from-blue-500 to-indigo-600 p-4 text-white">
-              <div className="flex items-center justify-between mb-2">
-                <Text size="sm" className="opacity-90">Total Balance</Text>
-                <FaWallet size={20} className="opacity-75" />
-              </div>
-              <Text size="xl" weight={700} className="mb-1">
-                ₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-              <Text size="xs" className="opacity-75">Available for transactions</Text>
+            <div className="border-b border-black/8 px-4 py-4">
+              <Text size="xs" c="dimmed">Balance</Text>
+              <p className="mt-1 font-mono text-[28px] font-medium leading-none tabular-nums">
+                {rupees(walletBalance)}
+              </p>
             </div>
 
-            {/* Quick Actions */}
-            <div className="p-3 grid grid-cols-2 gap-2">
-              <button className="flex flex-col items-center gap-2 p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors border border-green-200">
-                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                  <FaPlus size={16} className="text-white" />
-                </div>
-                <Text size="xs" weight={600} className="text-green-700">Add Money</Text>
+            <div className="grid grid-cols-2 gap-2 p-3">
+              <button type="button" className="desk-chip h-9 rounded-lg text-sm">
+                Add money
               </button>
-              <button className="flex flex-col items-center gap-2 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors border border-blue-200">
-                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                  <FaArrowUp size={16} className="text-white" />
-                </div>
-                <Text size="xs" weight={600} className="text-blue-700">Withdraw</Text>
+              <button type="button" className="desk-chip h-9 rounded-lg text-sm">
+                Withdraw
               </button>
             </div>
 
             <Divider />
 
-            {/* Recent Transactions */}
             <div className="p-3">
-              <Text size="sm" weight={600} className="mb-3">Recent Transactions</Text>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                      <FaArrowDown size={12} className="text-green-600" />
-                    </div>
-                    <div>
-                      <Text size="sm" weight={500}>Payment Received</Text>
-                      <Text size="xs" color="dimmed">Order #12345</Text>
-                    </div>
+              <Text size="xs" c="dimmed" className="mb-2">Recent transactions</Text>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3 py-2">
+                  <div>
+                    <Text size="sm">Payment received</Text>
+                    <Text size="xs" c="dimmed" className="font-mono">Order 48291</Text>
                   </div>
-                  <Text size="sm" weight={600} className="text-green-600">+₹2,500</Text>
+                  <Text size="sm" className="font-mono tabular-nums text-[#16a34a]">+₹2,500</Text>
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                      <FaArrowUp size={12} className="text-red-600" />
-                    </div>
-                    <div>
-                      <Text size="sm" weight={500}>Refund Issued</Text>
-                      <Text size="xs" color="dimmed">Order #12340</Text>
-                    </div>
+                <div className="flex items-center justify-between gap-3 py-2">
+                  <div>
+                    <Text size="sm">Refund issued</Text>
+                    <Text size="xs" c="dimmed" className="font-mono">Order 47106</Text>
                   </div>
-                  <Text size="sm" weight={600} className="text-red-600">-₹1,200</Text>
+                  <Text size="sm" className="font-mono tabular-nums text-[#dc2626]">−₹1,200</Text>
                 </div>
               </div>
             </div>
 
             <Divider />
 
-            <Menu.Item className="text-center text-blue-600 font-semibold hover:bg-blue-50">
-              View All Transactions
+            <Menu.Item className="text-center text-sm">
+              View all transactions
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
 
-        {/* Theme Toggle - Responsive */}
-        <div
-          className="hidden md:flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+        <button
+          type="button"
           onClick={toggleColorScheme}
-          title="Toggle color scheme"
+          className="desk-chip hidden h-9 items-center gap-2 rounded-lg px-3 text-sm transition-colors duration-150 ease-desk focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex"
         >
-          <ActionIcon
-            variant="light"
-            radius="xl"
-            size="lg"
-            color={colorScheme === "dark" ? "yellow" : "blue"}
-          >
-            {colorScheme === "dark" ? <FaSun size={18} /> : <FaMoon size={18} />}
-          </ActionIcon>
-          <Text size="sm" className="ml-2">
-            {colorScheme === "dark" ? "Light Mode" : "Dark Mode"}
-          </Text>
-        </div>
+          {colorScheme === "dark" ? <Sun {...iconProps} /> : <Moon {...iconProps} />}
+          <span>{colorScheme === "dark" ? "Light" : "Dark"}</span>
+        </button>
 
-        {/* Mobile Theme Toggle */}
-        <ActionIcon
-          variant="light"
-          radius="xl"
-          size="lg"
-          color={colorScheme === "dark" ? "yellow" : "blue"}
+        <button
+          type="button"
           onClick={toggleColorScheme}
-          className="md:hidden shrink-0"
-          title="Toggle color scheme"
+          aria-label={colorScheme === "dark" ? "Light" : "Dark"}
+          className="desk-chip flex size-9 items-center justify-center rounded-lg md:hidden"
         >
-          {colorScheme === "dark" ? <FaSun size={18} /> : <FaMoon size={18} />}
-        </ActionIcon>
+          {colorScheme === "dark" ? <Sun {...iconProps} /> : <Moon {...iconProps} />}
+        </button>
 
-        {/* User Menu */}
-        <Menu
-          width={260}
-          position="bottom-end"
-          transitionProps={{ transition: 'pop-top-right' }}
-          shadow="md"
-        >
+        <Menu width={240} position="bottom-end" shadow="sm">
           <Menu.Target>
-            <UnstyledButton className="flex items-center hover:opacity-80 transition-opacity">
-              <Group spacing={7}>
+            <UnstyledButton className="flex h-9 items-center rounded-lg px-1 transition-colors duration-150 ease-desk hover:bg-black/5">
+              <Group gap={8}>
                 <Avatar
                   src={currentUser?.photoURL || "https://randomuser.me/api/portraits/lego/1.jpg"}
-                  radius="xl"
-                  size={36}
-                  className="border-2 border-blue-500"
+                  radius="md"
+                  size={32}
                 />
                 <div className="hidden lg:block">
-                  <Text size="sm" weight={500}>
-                    {currentUser?.user_metadata?.name || currentUser?.user_metadata?.displayName || currentUser?.email || 'Admin'}
-                  </Text>
-                  <Text color="dimmed" size="xs">
-                    Administrator
-                  </Text>
+                  <Text size="sm">{name}</Text>
+                  <Text c="dimmed" size="xs">Administrator</Text>
                 </div>
               </Group>
             </UnstyledButton>
           </Menu.Target>
           <Menu.Dropdown>
-            <div className="p-2 lg:hidden border-b">
-              <Text size="sm" weight={500}>
-                {currentUser?.user_metadata?.name || currentUser?.user_metadata?.displayName || currentUser?.email || 'Admin'}
-              </Text>
-              <Text color="dimmed" size="xs">
-                Administrator
-              </Text>
+            <div className="border-b p-2 lg:hidden">
+              <Text size="sm">{name}</Text>
+              <Text c="dimmed" size="xs">Administrator</Text>
             </div>
-            <Menu.Item icon={<FaUser size={14} />} onClick={() => navigate('/profile')}>Profile</Menu.Item>
-            {/* <Menu.Item icon={<FaEnvelope size={14} />} onClick={() => navigate('/messages')}>Messages</Menu.Item> */}
-            <Menu.Item icon={<FaCog size={14} />} onClick={() => navigate('/settings')}>Settings</Menu.Item>
+            <Menu.Item leftSection={<User {...iconProps} />} onClick={() => navigate("/profile")}>Profile</Menu.Item>
+            <Menu.Item leftSection={<Settings {...iconProps} />} onClick={() => navigate("/settings")}>Settings</Menu.Item>
             <Divider />
-            <Menu.Item
-              color="red"
-              icon={<FaSignOutAlt size={14} />}
-              onClick={handleLogout}
-            >
-              Logout
+            <Menu.Item color="red" leftSection={<LogOut {...iconProps} />} onClick={handleLogout}>
+              Log out
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
       </div>
-    </motion.header>
+    </header>
   );
+};
+
+Header.propTypes = {
+  toggleSidebar: PropTypes.func,
 };
 
 export default Header;

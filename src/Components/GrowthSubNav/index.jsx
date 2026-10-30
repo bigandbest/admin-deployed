@@ -8,15 +8,15 @@ const GROWTH_SUBNAVS = [
       { label: "Dashboard", path: "/affiliate" },
       { label: "Applications", path: "/affiliate/applications" },
       { label: "Affiliates", path: "/affiliate/affiliates" },
-      { label: "Commission Rates", path: "/affiliate/commission-rates" },
+      { label: "Commission rates", path: "/affiliate/commission-rates" },
       { label: "Payouts", path: "/affiliate/payouts" },
-      { label: "Fraud Logs", path: "/affiliate/fraud-logs" },
+      { label: "Fraud logs", path: "/affiliate/fraud-logs" },
       { label: "Settings", path: "/affiliate/config" },
     ],
   },
   {
     prefix: "/referral",
-    title: "Refer & Earn",
+    title: "Refer and earn",
     items: [
       { label: "Dashboard", path: "/referral" },
       { label: "Configuration", path: "/referral/config" },
@@ -24,7 +24,7 @@ const GROWTH_SUBNAVS = [
       { label: "Transactions", path: "/referral/transactions" },
       { label: "Rewards", path: "/referral/rewards" },
       { label: "Withdrawals", path: "/referral/withdrawals" },
-      { label: "Fraud Logs", path: "/referral/fraud-logs" },
+      { label: "Fraud logs", path: "/referral/fraud-logs" },
     ],
   },
 ];
@@ -38,10 +38,8 @@ const GrowthSubNav = () => {
   if (!section) return null;
 
   return (
-    <nav className="mb-4 border-b border-gray-200">
-      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
-        Growth Manager <span className="mx-1">›</span> {section.title}
-      </div>
+    <nav className="mb-6 border-b border-foreground/8">
+      <p className="mb-2 text-xs text-muted-foreground">Growth · {section.title}</p>
       <ul className="flex flex-wrap gap-1">
         {section.items.map((item) => (
           <li key={item.path}>
@@ -49,10 +47,10 @@ const GrowthSubNav = () => {
               to={item.path}
               end
               className={({ isActive }) =>
-                `inline-block px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                `inline-flex h-9 items-center border-b-2 px-3 text-sm transition-colors duration-150 ease-desk ${
                   isActive
-                    ? "border-pink-500 text-pink-600"
-                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`
               }
             >

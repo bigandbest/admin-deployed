@@ -50,7 +50,7 @@ const NEXT_STATUS = {
 const StatCard = ({ label, value, color, icon: Icon }) => (
   <div className={`rounded-xl border p-4 ${color.bg} ${color.border}`}>
     <div className="flex items-center justify-between mb-2">
-      <span className={`text-xs font-medium uppercase tracking-wide ${color.text}`}>{label}</span>
+      <span className={`text-xs font-medium ${color.text}`}>{label}</span>
       <Icon className={`w-4 h-4 ${color.text} opacity-70`} />
     </div>
     <p className={`text-2xl font-bold ${color.text}`}>{value}</p>
@@ -292,19 +292,19 @@ const ReturnRow = ({ item, onUpdate, onDelete }) => {
           <div className="border-t border-gray-100 px-4 py-4 bg-gray-50">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Customer</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">Customer</p>
                 <p className="text-gray-800">{user?.name || "—"}</p>
                 <p className="text-gray-500 text-xs">{formatEmail(user?.email) || user?.phone || "—"}</p>
                 <p className="text-gray-500 text-xs">{user?.phone || "—"}</p>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Reason</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">Reason</p>
                 <p className="text-gray-800">{item.reason}</p>
                 {item.additional_details && <p className="text-gray-500 text-xs mt-1">{item.additional_details}</p>}
               </div>
               {item.bank_account_number && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Bank Details</p>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Bank Details</p>
                   <p className="text-gray-800">{item.bank_account_holder_name}</p>
                   <p className="text-gray-600 text-xs font-mono">{item.bank_account_number} · {item.bank_ifsc_code}</p>
                   <p className="text-gray-500 text-xs">{item.bank_name}</p>
@@ -402,20 +402,20 @@ const RefundRow = ({ item, onUpdate }) => {
           <div className="border-t border-gray-100 px-4 py-4 bg-gray-50">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Customer</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">Customer</p>
                 <p className="text-gray-800">{user?.name || "—"}</p>
                 <p className="text-gray-500 text-xs">{formatEmail(user?.email) || user?.phone || "—"}</p>
                 <p className="text-gray-500 text-xs">{user?.phone || "—"}</p>
               </div>
               <div>
-                <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Refund Info</p>
+                <p className="text-xs font-medium text-gray-500 mb-2">Refund Info</p>
                 <p className="text-gray-700 text-xs">Mode: <span className="font-medium capitalize">{item.refund_mode?.replace(/_/g, " ")}</span></p>
                 <p className="text-gray-700 text-xs">Payment: <span className="font-medium uppercase">{item.payment_method}</span></p>
                 {item.processed_at && <p className="text-gray-700 text-xs">Processed: {fmt(item.processed_at)}</p>}
               </div>
               {item.bank_account_number && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Bank Details</p>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Bank Details</p>
                   <p className="text-gray-800">{item.bank_account_holder_name}</p>
                   <p className="text-gray-600 text-xs font-mono">{item.bank_account_number} · {item.bank_ifsc_code}</p>
                   <p className="text-gray-500 text-xs">{item.bank_name}</p>
@@ -560,7 +560,7 @@ const ReturnRefundAdmin = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Returns & Refunds</h1>
+            <h1 className="text-[28px] font-medium leading-[1.15]">Returns and refunds</h1>
             <p className="text-sm text-gray-500 mt-0.5">Manage customer return, cancellation and refund requests</p>
           </div>
           <button onClick={fetchAll} disabled={loading}

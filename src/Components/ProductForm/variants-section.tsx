@@ -82,17 +82,17 @@ export default function VariantsSection({
   };
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="border-border bg-card shadow-none">
       <CardHeader className="border-b border-border pb-4 flex items-center justify-between">
         <div
           className="flex items-center gap-2 cursor-pointer select-none"
           onClick={() => setIsSectionExpanded(!isSectionExpanded)}
         >
-          <CardTitle className="text-lg font-semibold">Variants</CardTitle>
+          <CardTitle className="text-sm font-medium">Variants</CardTitle>
           {isSectionExpanded ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            <ChevronUp className="size-4 text-muted-foreground" strokeWidth={1.5} />
           ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            <ChevronDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
           )}
         </div>
         <Button
@@ -101,11 +101,11 @@ export default function VariantsSection({
             e.stopPropagation();
             addVariant();
           }}
-          className="gap-2 bg-muted/50 hover:bg-muted text-foreground border border-border"
+          className="transition-colors duration-150 ease-desk"
           variant="outline"
         >
-          <Plus className="w-4 h-4" />
-          Add Variant
+          <Plus className="size-4" strokeWidth={1.5} />
+          Add variant
         </Button>
       </CardHeader>
       {isSectionExpanded && (
@@ -116,10 +116,11 @@ export default function VariantsSection({
               <Button
                 size="sm"
                 onClick={addVariant}
-                className="mt-4 gap-2 bg-green-500 hover:bg-green-600 text-white"
+                variant="outline"
+                className="mt-4 transition-colors duration-150 ease-desk"
               >
-                <Plus className="w-4 h-4" />
-                Add First Variant
+                <Plus className="size-4" strokeWidth={1.5} />
+                Add variant
               </Button>
             </div>
           ) : (
@@ -146,30 +147,28 @@ export default function VariantsSection({
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-7 max-w-sm w-full mx-4">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="w-7 h-7 text-red-500" />
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+            <div className="flex flex-col gap-4">
+              <Trash2 className="size-4 text-[#dc2626]" strokeWidth={1.5} />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Delete Variant?</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  Are you sure you want to delete{" "}
-                  <span className="font-medium text-gray-700">"{deleteConfirm.title}"</span>?
-                  This cannot be undone.
+                <h3 className="text-sm font-medium">Delete variant</h3>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                  Delete {deleteConfirm.title}. This cannot be undone.
                 </p>
               </div>
-              <div className="flex gap-3 w-full mt-1">
+              <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  className="h-9 flex-1 rounded-lg border border-border text-sm transition-colors duration-150 ease-desk hover:bg-muted"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={confirmDeleteVariant}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors"
+                  className="h-9 flex-1 rounded-lg bg-[#dc2626] text-sm text-white transition-colors duration-150 ease-desk hover:bg-[#dc2626]/90"
                 >
                   Delete
                 </button>

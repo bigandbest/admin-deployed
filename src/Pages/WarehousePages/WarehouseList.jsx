@@ -132,7 +132,7 @@ const WarehouseList = () => {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <ToastContainer position="top-right" autoClose={3000} />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Warehouses</h1>
+        <h1 className="text-[28px] font-medium leading-[1.15]">Warehouses</h1>
         <button
           onClick={() => setShowModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"

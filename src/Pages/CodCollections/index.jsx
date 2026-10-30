@@ -201,7 +201,7 @@ const CodCollections = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">💸 COD Deposits</h1>
+        <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">COD deposits</h1>
         <p className="text-gray-600">Review and approve rider COD cash submissions</p>
       </div>
 
@@ -242,12 +242,12 @@ const CodCollections = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rider / Date</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proof</th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs text-muted-foreground">Rider / Date</th>
+                <th className="px-6 py-4 text-left text-xs text-muted-foreground">Order</th>
+                <th className="px-6 py-4 text-left text-xs text-muted-foreground">Amount</th>
+                <th className="px-6 py-4 text-left text-xs text-muted-foreground">Status</th>
+                <th className="px-6 py-4 text-left text-xs text-muted-foreground">Proof</th>
+                <th className="px-6 py-4 text-left text-xs text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">

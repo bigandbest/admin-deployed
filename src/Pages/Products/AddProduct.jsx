@@ -508,17 +508,17 @@ const AddProduct = () => {
 
   if (loading && !initialData && isEditMode) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin" />
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
       </div>
     );
   }
 
   if (optionsLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin" />
-        <span className="ml-2">Loading options...</span>
+      <div className="flex items-center justify-center gap-2 py-24">
+        <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
+        <span className="text-sm text-muted-foreground">Loading options</span>
       </div>
     );
   }
@@ -529,32 +529,32 @@ const AddProduct = () => {
     return (
       <>
         <ToastContainer position="top-right" autoClose={3000} />
-        <div className="flex h-screen items-center justify-center bg-gray-50">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md w-full mx-4">
-            <div className="flex flex-col items-center text-center gap-5">
-              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-amber-500" />
-              </div>
+        <div className="flex items-center justify-center py-24">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+            <div className="flex flex-col gap-4">
+              <AlertTriangle className="size-4 text-amber-700" strokeWidth={1.5} />
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Edit Product?</h2>
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  You are about to edit <span className="font-medium text-gray-700">"{productName}"</span>. Changes will affect the live product visible to customers. Make sure your edits are accurate before saving.
+                <h2 className="text-[28px] font-medium leading-[1.15]">Edit product</h2>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                  You are about to edit <span className="font-medium text-foreground">{productName}</span>. Changes will affect the live product visible to customers. Make sure your edits are accurate before saving.
                 </p>
               </div>
-              <div className="flex gap-3 w-full mt-2">
+              <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => navigate("/products")}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg border border-border text-sm transition-colors duration-150 ease-desk hover:bg-muted"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="size-4" strokeWidth={1.5} />
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={() => setEditConfirmed(true)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-primary text-sm text-primary-foreground transition-colors duration-150 ease-desk hover:bg-primary/90"
                 >
-                  <Pencil className="w-4 h-4" />
-                  Yes, Edit Product
+                  <Pencil className="size-4" strokeWidth={1.5} />
+                  Edit product
                 </button>
               </div>
             </div>

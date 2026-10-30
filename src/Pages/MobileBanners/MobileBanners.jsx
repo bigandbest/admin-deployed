@@ -365,7 +365,7 @@ const MobileBanners = () => {
                 <FaMobileAlt className="text-white text-xl" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">📱 Mobile App Banners</h1>
+                <h1 className="text-[28px] font-medium leading-[1.15]">Mobile banners</h1>
                 <p className="mt-0.5 text-sm text-gray-500">
                   Manage banners exclusively displayed in the mobile application
                 </p>
@@ -426,7 +426,7 @@ const MobileBanners = () => {
                     {["Banner", "Type", "Position", "Status", "Actions"].map((h) => (
                       <th
                         key={h}
-                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-500r"
                       >
                         {h}
                       </th>

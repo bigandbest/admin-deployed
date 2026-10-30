@@ -113,7 +113,7 @@ export default function Notification() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Manage Notifications</h1>
+      <h1 className="mb-4 text-[28px] font-medium leading-[1.15]">Notifications</h1>
 
       {/* Add/Edit Form */}
       <form

@@ -645,8 +645,8 @@ const WarehouseManagement = () => {
       <ToastContainer position="top-right" autoClose={3000} />
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Warehouse Management
+        <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">
+          Warehouses
         </h1>
         <p className="text-gray-600">
           Manage zonal warehouses, division warehouses, and their hierarchical
@@ -1260,16 +1260,16 @@ const WarehousesTab = ({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                     Warehouse Details
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                     Type & Coverage
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                     Location
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                     Actions
                   </th>
                 </tr>
@@ -1692,16 +1692,16 @@ const ProductsTab = ({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                   Product Details
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                   Price & Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                   Availability
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs text-muted-foreground">
                   Actions
                 </th>
               </tr>

@@ -8,22 +8,23 @@ import PropTypes from "prop-types";
 import { getAdminDashboard } from "../../utils/adminDashboardApi";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../Components/UI/card";
 import { Button } from "../../Components/UI/button";
-import { Badge } from "../../Components/UI/badge";
 import { Skeleton } from "../../Components/UI/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../../Components/UI/select";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "../../Components/UI/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../../Components/UI/chart";
 import { cn } from "../../lib/utils";
 import {
-  PageHeader, KpiCard, StatusBadge, ErrorState, EmptyState, formatINR, formatINRCompact, formatNumber, formatDate, formatDateTime,
+  PageHeader, KpiCard, StatusBadge, ErrorState, EmptyState, formatINR, formatNumber, formatDate, formatDateTime,
 } from "../../Components/Growth";
 
 const RANGES = [{ v: "7", l: "Last 7 days" }, { v: "30", l: "Last 30 days" }, { v: "90", l: "Last 90 days" }];
 
 const trendConfig = {
-  revenue: { label: "Order value", color: "var(--chart-1)" },
-  orders: { label: "Orders", color: "var(--chart-2)" },
+  revenue: { label: "Order value", color: "var(--primary)" },
+  orders: { label: "Orders", color: "var(--muted-foreground)" },
 };
+
+const axisTick = { fontSize: 12, fontFamily: '"IBM Plex Mono", ui-monospace, monospace' };
 
 const ago = (ts) => {
   if (!ts) return null;
@@ -36,17 +37,20 @@ const humanize = (s = "") => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUppe
 
 // Composition rows: label + share bar. Used for order status and payment method.
 function MixList({ rows, total, render }) {
+  const lead = rows.reduce((m, r) => Math.max(m, r.n), 0);
   return (
-    <ul className="space-y-3">
+    <ul className="flex flex-col gap-3">
       {rows.map((r) => {
         const p = total ? (r.n / total) * 100 : 0;
         return (
-          <li key={r.key} className="space-y-1.5">
+          <li key={r.key} className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
               {render(r)}
-              <span className="tabular-nums text-muted-foreground">{formatNumber(r.n)} · {p.toFixed(0)}%</span>
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatNumber(r.n)} · {p.toFixed(0)}%</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary/70" style={{ width: `${p}%` }} /></div>
+            <div className="h-1 overflow-hidden rounded-sm bg-foreground/8">
+              <div className={cn("h-full rounded-sm", r.n === lead && lead > 0 ? "bg-primary" : "bg-foreground/20")} style={{ width: `${p}%` }} />
+            </div>
           </li>
         );
       })}
@@ -82,31 +86,32 @@ export default function Dashboard() {
 
   const header = (
     <PageHeader
-      title="Dashboard"
-      description={query.dataUpdatedAt ? `${rangeLabel} · Updated ${ago(query.dataUpdatedAt)}` : "What is happening and what needs your attention."}
+      className="mb-0"
+      title={rangeLabel || "Dashboard"}
+      description={query.dataUpdatedAt ? `Updated ${ago(query.dataUpdatedAt)}` : "Orders, stock and what is waiting"}
       actions={
         <>
           <Select value={days} onValueChange={setDays}>
-            <SelectTrigger className="w-[150px]" aria-label="Date range"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40" aria-label="Date range"><SelectValue /></SelectTrigger>
             <SelectContent>{RANGES.map((r) => <SelectItem key={r.v} value={r.v}>{r.l}</SelectItem>)}</SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
-            <RefreshCw className={cn("size-4", query.isFetching && "animate-spin")} /> Refresh
+          <Button variant="outline" className="transition-colors duration-150 ease-desk" onClick={() => query.refetch()} disabled={query.isFetching}>
+            <RefreshCw className={cn("size-4", query.isFetching && "animate-spin")} strokeWidth={1.5} /> Refresh
           </Button>
         </>
       }
     />
   );
 
-  if (query.isError && !d) return <div>{header}<ErrorState title="Unable to load the dashboard" onRetry={() => query.refetch()} /></div>;
+  if (query.isError && !d) return <div className="flex flex-col gap-8">{header}<ErrorState title="Unable to load the dashboard" onRetry={() => query.refetch()} /></div>;
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-8">
       {header}
 
       {/* P0: headline numbers, each compared with the previous period of the same length */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <KpiCard label="Order value" value={formatINRCompact(k?.revenue.value)} change={k?.revenue.change ?? undefined} changeLabel={cmp} hint="Excludes cancelled orders" isLoading={loading} onClick={() => navigate("/AdminOrders")} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <KpiCard className="sm:col-span-2" accent label="Order value" value={formatINR(k?.revenue.value)} change={k?.revenue.change ?? undefined} changeLabel={cmp} hint="Excludes cancelled orders" isLoading={loading} onClick={() => navigate("/AdminOrders")} />
         <KpiCard label="Orders" value={formatNumber(k?.orders.value)} change={k?.orders.change ?? undefined} changeLabel={cmp} hint="Excludes cancelled orders" isLoading={loading} onClick={() => navigate("/AdminOrders")} />
         <KpiCard label="Average order value" value={formatINR(k?.aov.value)} change={k?.aov.change ?? undefined} changeLabel={cmp} hint="Per order" isLoading={loading} />
         <KpiCard label="New customers" value={formatNumber(k?.new_customers.value)} change={k?.new_customers.change ?? undefined} changeLabel={cmp} hint="Sign-ups" isLoading={loading} onClick={() => navigate("/users")} />
@@ -123,22 +128,22 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="shadow-none lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-sm">Sales trend</CardTitle>
-            <CardDescription>Daily order value and number of orders, excluding cancelled.</CardDescription>
+            <CardTitle className="text-sm font-medium">Sales trend</CardTitle>
+            <CardDescription>Daily order value and number of orders, excluding cancelled</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? <Skeleton className="h-[260px] w-full" /> : !hasSales ? (
-              <EmptyState title="No orders in this period" description="Sales appear here once customers place orders." />
+            {loading ? <Skeleton className="h-80 w-full" /> : !hasSales ? (
+              <EmptyState title="No orders in this period" description="Sales appear here once customers place orders" />
             ) : (
-              <ChartContainer config={trendConfig} className="h-[260px] w-full">
+              <ChartContainer config={trendConfig} className="h-80 w-full">
                 <ComposedChart data={trend}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} minTickGap={24} />
-                  <YAxis yAxisId="rev" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} tickFormatter={formatINRCompact} width={56} />
-                  <YAxis yAxisId="ord" orientation="right" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} width={32} />
+                  <CartesianGrid vertical={false} stroke="currentColor" strokeOpacity={0.08} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={axisTick} minTickGap={24} />
+                  <YAxis yAxisId="rev" tickLine={false} axisLine={false} tick={axisTick} tickFormatter={formatINR} width={88} />
+                  <YAxis yAxisId="ord" orientation="right" allowDecimals={false} tickLine={false} axisLine={false} tick={axisTick} width={32} />
                   <ChartTooltip content={<ChartTooltipContent formatter={(v, name) => (name === "revenue" ? formatINR(v) : formatNumber(v))} />} />
-                  <Area yAxisId="rev" type="monotone" dataKey="revenue" stroke="var(--color-revenue)" fill="var(--color-revenue)" fillOpacity={0.12} strokeWidth={2} />
-                  <Line yAxisId="ord" type="monotone" dataKey="orders" stroke="var(--color-orders)" strokeWidth={2} dot={false} />
+                  <Area yAxisId="rev" type="monotone" dataKey="revenue" stroke="var(--color-revenue)" fill="var(--color-revenue)" fillOpacity={0.08} strokeWidth={1.5} />
+                  <Line yAxisId="ord" type="monotone" dataKey="orders" stroke="var(--color-orders)" strokeWidth={1.5} dot={false} />
                 </ComposedChart>
               </ChartContainer>
             )}
@@ -146,30 +151,31 @@ export default function Dashboard() {
         </Card>
 
         <Card className="gap-0 overflow-hidden p-0 shadow-none">
-          <CardHeader className="border-b py-3">
-            <CardTitle className="text-sm">Needs your attention</CardTitle>
-            <CardDescription>Items waiting on an admin right now.</CardDescription>
+          <CardHeader className="border-b py-4">
+            <CardTitle className="text-sm font-medium">Needs your attention</CardTitle>
+            <CardDescription>Items waiting on an admin</CardDescription>
           </CardHeader>
           {loading ? (
-            <div className="space-y-2 p-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+            <div className="flex flex-col gap-2 p-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
           ) : queue.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-              <CheckCircle2 className="size-8 text-emerald-600" />
-              <p className="text-sm font-medium">All clear</p>
-              <p className="text-sm text-muted-foreground">Nothing is waiting on you.</p>
+              <CheckCircle2 className="size-4 text-muted-foreground" strokeWidth={1.5} />
+              <p className="text-sm">All clear</p>
+              <p className="text-sm text-muted-foreground">Nothing is waiting</p>
             </div>
           ) : (
             <ul className="divide-y">
               {queue.map((a) => (
                 <li key={a.key}>
-                  <button type="button" onClick={() => navigate(a.path)} className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none">
+                  <button type="button" onClick={() => navigate(a.path)} className="flex h-12 w-full items-center justify-between gap-3 px-4 text-left transition-colors duration-150 ease-desk hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none">
                     <span className="min-w-0">
                       <span className="block truncate text-sm">{a.label}</span>
                       <span className="text-xs text-muted-foreground">{a.group}</span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
-                      <Badge variant="secondary" className="tabular-nums">{formatNumber(a.count)}</Badge>
-                      <ArrowRight className="size-4 text-muted-foreground" />
+                      <span className="size-2 rounded-full bg-primary" aria-hidden="true" />
+                      <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatNumber(a.count)}</span>
+                      <ArrowRight className="size-4 text-muted-foreground" strokeWidth={1.5} />
                     </span>
                   </button>
                 </li>
@@ -182,7 +188,7 @@ export default function Dashboard() {
       {/* P2 composition */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="shadow-none">
-          <CardHeader><CardTitle className="text-sm">Orders by status</CardTitle><CardDescription>All orders placed in this period.</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium">Orders by status</CardTitle><CardDescription>All orders placed in this period</CardDescription></CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-24 w-full" /> : statusRows.length === 0 ? <EmptyState title="No orders yet" /> : (
               <MixList rows={statusRows} total={statusTotal} render={(r) => <StatusBadge status={r.key.toUpperCase().replace(/ /g, "_")} label={humanize(r.key)} />} />
@@ -191,16 +197,16 @@ export default function Dashboard() {
         </Card>
 
         <Card className="shadow-none">
-          <CardHeader><CardTitle className="text-sm">Payment method</CardTitle><CardDescription>Share of orders, excluding cancelled.</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium">Payment method</CardTitle><CardDescription>Share of orders, excluding cancelled</CardDescription></CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-24 w-full" /> : payRows.length === 0 ? <EmptyState title="No orders yet" /> : (
-              <MixList rows={payRows} total={payTotal} render={(r) => <span>{r.key === "cod" ? "Cash on delivery" : humanize(r.key)} <span className="text-xs text-muted-foreground">{formatINRCompact(r.total)}</span></span>} />
+              <MixList rows={payRows} total={payTotal} render={(r) => <span>{r.key === "cod" ? "Cash on delivery" : humanize(r.key)} <span className="font-mono text-xs text-muted-foreground">{formatINR(r.total)}</span></span>} />
             )}
           </CardContent>
         </Card>
 
         <Card className="shadow-none">
-          <CardHeader><CardTitle className="text-sm">Catalogue health</CardTitle><CardDescription>Active products and their stock.</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium">Catalogue health</CardTitle><CardDescription>Active products and their stock</CardDescription></CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-24 w-full" /> : (
               <ul className="divide-y text-sm">
@@ -210,9 +216,9 @@ export default function Dashboard() {
                   { label: `Low stock (${d.catalogue.low_stock_threshold} units or fewer)`, n: d.catalogue.low_stock, path: "/products?stock=low_stock&active=true", tone: d.catalogue.low_stock > 0 ? "text-amber-700 dark:text-amber-400" : "" },
                 ].map((r) => (
                   <li key={r.label}>
-                    <button type="button" onClick={() => navigate(r.path)} className="flex w-full items-center justify-between py-2.5 text-left hover:text-foreground focus-visible:outline-none focus-visible:underline">
+                    <button type="button" onClick={() => navigate(r.path)} className="flex h-9 w-full items-center justify-between text-left transition-colors duration-150 ease-desk hover:text-foreground focus-visible:outline-none focus-visible:underline">
                       <span className="text-muted-foreground">{r.label}</span>
-                      <span className={cn("font-medium tabular-nums", r.tone)}>{formatNumber(r.n)}</span>
+                      <span className={cn("font-mono text-sm tabular-nums", r.tone)}>{formatNumber(r.n)}</span>
                     </button>
                   </li>
                 ))}
@@ -223,9 +229,9 @@ export default function Dashboard() {
       </div>
 
       {/* P3 rankings */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="gap-0 overflow-hidden p-0 shadow-none">
-          <CardHeader className="border-b py-3"><CardTitle className="text-sm">Top products</CardTitle><CardDescription>By order value in this period.</CardDescription></CardHeader>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="gap-0 overflow-hidden p-0 shadow-none lg:col-span-2">
+          <CardHeader className="border-b py-4"><CardTitle className="text-sm font-medium">Top products</CardTitle><CardDescription>By order value in this period</CardDescription></CardHeader>
           {loading ? <div className="p-4"><Skeleton className="h-28 w-full" /></div> : d.top_products.length === 0 ? <EmptyState title="No sales yet" /> : (
             <Table>
               <TableHeader><TableRow><TableHead>Product</TableHead><TableHead className="text-right">Units</TableHead><TableHead className="text-right">Order value</TableHead></TableRow></TableHeader>
@@ -233,8 +239,8 @@ export default function Dashboard() {
                 {d.top_products.map((p) => (
                   <TableRow key={p.id} className="cursor-pointer" onClick={() => navigate(`/products?q=${encodeURIComponent(p.name)}`)}>
                     <TableCell className="max-w-[260px] truncate font-medium" title={p.name}>{p.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatNumber(p.units)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatINR(p.revenue)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs tabular-nums">{formatNumber(p.units)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs tabular-nums">{formatINR(p.revenue)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -243,7 +249,7 @@ export default function Dashboard() {
         </Card>
 
         <Card className="gap-0 overflow-hidden p-0 shadow-none">
-          <CardHeader className="border-b py-3"><CardTitle className="text-sm">Top categories</CardTitle><CardDescription>By order value in this period.</CardDescription></CardHeader>
+          <CardHeader className="border-b py-4"><CardTitle className="text-sm font-medium">Top categories</CardTitle><CardDescription>By order value in this period</CardDescription></CardHeader>
           {loading ? <div className="p-4"><Skeleton className="h-28 w-full" /></div> : d.top_categories.length === 0 ? <EmptyState title="No sales yet" /> : (
             <Table>
               <TableHeader><TableRow><TableHead>Category</TableHead><TableHead className="text-right">Order value</TableHead></TableRow></TableHeader>
@@ -251,7 +257,7 @@ export default function Dashboard() {
                 {d.top_categories.map((c) => (
                   <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/products?category=${c.id}`)}>
                     <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatINR(c.revenue)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs tabular-nums">{formatINR(c.revenue)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -262,12 +268,12 @@ export default function Dashboard() {
 
       {/* Latest activity */}
       <Card className="gap-0 overflow-hidden p-0 shadow-none">
-        <CardHeader className="flex-row items-center justify-between border-b py-3">
-          <div><CardTitle className="text-sm">Recent orders</CardTitle><CardDescription>Latest orders across all statuses.</CardDescription></div>
+        <CardHeader className="flex-row items-center justify-between border-b py-4">
+          <div><CardTitle className="text-sm font-medium">Recent orders</CardTitle><CardDescription>Latest orders across all statuses</CardDescription></div>
           <Button variant="link" size="sm" className="h-auto p-0" onClick={() => navigate("/AdminOrders")}>View all</Button>
         </CardHeader>
         {loading ? <div className="p-4"><Skeleton className="h-28 w-full" /></div> : d.recent_orders.length === 0 ? (
-          <EmptyState title="No orders yet" description="New orders appear here as they are placed." />
+          <EmptyState title="No orders yet" description="New orders appear here as they are placed" />
         ) : (
           <Table>
             <TableHeader>
@@ -276,11 +282,11 @@ export default function Dashboard() {
             <TableBody>
               {d.recent_orders.map((o) => (
                 <TableRow key={o.id} className="cursor-pointer" onClick={() => navigate("/AdminOrders")}>
-                  <TableCell className="font-mono text-xs">{o.number || o.id.slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-xs tabular-nums">{o.number || o.id.slice(0, 8)}</TableCell>
                   <TableCell className="max-w-[200px] truncate">{o.customer}</TableCell>
                   <TableCell className="text-muted-foreground">{o.payment_method === "cod" ? "Cash on delivery" : humanize(o.payment_method || "—")}</TableCell>
                   <TableCell><StatusBadge status={(o.status || "").toUpperCase().replace(/ /g, "_")} label={humanize((o.status || "Unknown").toLowerCase())} /></TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(o.total)}</TableCell>
+                  <TableCell className="text-right font-mono text-xs tabular-nums">{formatINR(o.total)}</TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{formatDateTime(o.created_at)}</TableCell>
                 </TableRow>
               ))}

@@ -126,8 +126,8 @@ const AddBannerGroupProducts = () => {
         ← Back to the Groups
       </button>
 
-      <h1 className="text-3xl font-bold mb-2">
-        Manage Products for the Banner Group: {group.name}
+      <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">
+        Products in {group.name}
       </h1>
       <p className="text-gray-600 mb-6">ID: {group.id}</p>
 
@@ -162,10 +162,10 @@ const AddBannerGroupProducts = () => {
         <table className="min-w-full leading-normal">
           <thead>
             <tr>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Product Name
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Action
               </th>
             </tr>

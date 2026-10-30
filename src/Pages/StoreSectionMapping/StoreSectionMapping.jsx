@@ -206,8 +206,8 @@ const StoreSectionMapping = () => {
       <LoadingOverlay visible={loading} />
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          Group-Section Mapping
+        <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">
+          Store sections
         </h1>
         <Text c="dimmed" size="sm">
           Manage group-section relationships and product assignments

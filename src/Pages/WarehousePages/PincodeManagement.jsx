@@ -200,8 +200,8 @@ const PincodeManagement = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Pincode & Area Management
+          <h1 className="text-[28px] font-medium leading-[1.15]">
+            Pincodes
           </h1>
           <Button
             leftIcon={<Plus size={16} />}

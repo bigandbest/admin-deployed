@@ -93,7 +93,7 @@ export default function SubStoreAdmin() {
 
   return (
     <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Manage SubStore Section</h1>
+            <h1 className="mb-4 text-[28px] font-medium leading-[1.15]">Substores</h1>
            {" "}
       <form
         onSubmit={handleSubmit}

@@ -169,7 +169,7 @@ export default function FraudLogsView({ program, api, title, description, defaul
 
               <div className="space-y-5 px-4">
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evidence</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Evidence</h3>
                   <DetailList
                     rows={[
                       { label: "User", value: selected.user_id && <span className="font-mono text-xs">{selected.user_id}</span> },
@@ -185,7 +185,7 @@ export default function FraudLogsView({ program, api, title, description, defaul
 
                 {(selected.reviewed_at || selected.review_notes || selected.action_taken) && (
                   <section>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Review history</h3>
+                    <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Review history</h3>
                     <DetailList
                       rows={[
                         { label: "Reviewed", value: selected.reviewed_at && formatDateTime(selected.reviewed_at) },
@@ -198,7 +198,7 @@ export default function FraudLogsView({ program, api, title, description, defaul
 
                 {isOpenCase && (
                   <section className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your decision</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground">Your decision</h3>
                     <div className="space-y-1.5">
                       <Label htmlFor="fraud-decision">Outcome</Label>
                       <Select value={decision} onValueChange={setDecision}>

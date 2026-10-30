@@ -86,21 +86,21 @@ const DailyDealForm = ({ initialData, onSave, onCancel }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 p-4 overflow-y-auto flex items-center justify-center">
       <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-5 text-white flex items-start justify-between">
+        <div className="flex items-start justify-between border-b border-foreground/8 px-6 py-5">
           <div>
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-sm font-medium">
               {initialData
-                ? `Edit Daily Deal #${initialData.id}`
-                : "Add Daily Deal"}
+                ? `Edit daily deal ${initialData.id}`
+                : "Add daily deal"}
             </h2>
-            <p className="text-blue-100 text-sm mt-1">
-              Configure the deal details, media, and banner mapping.
+            <p className="mt-1 text-sm text-muted-foreground">
+              Deal details, media, and banner mapping
             </p>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="h-9 w-9 rounded-full hover:bg-blue-800 transition-colors text-xl leading-none"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-desk hover:bg-muted"
           >
             ×
           </button>
@@ -542,7 +542,7 @@ const DailyDealsPage = () => {
 
   return (
     <div className="p-8 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Daily Deals</h1>
+      <h1 className="mb-6 text-[28px] font-medium leading-[1.15]">Daily deals</h1>
       <button
         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-6 flex items-center"
         onClick={handleAddClick}
@@ -563,17 +563,17 @@ const DailyDealsPage = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-6xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-linear-to-r from-blue-600 to-blue-700 text-white p-6">
+            <div className="border-b border-foreground/8 p-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-2xl font-bold">Manage Products</h2>
-                  <p className="text-blue-100 mt-1">
-                    Daily Deal: {selectedDeal.title}
+                  <h2 className="text-sm font-medium">Products</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedDeal.title}
                   </p>
                 </div>
                 <button
                   onClick={() => setIsProductModalVisible(false)}
-                  className="text-white hover:bg-blue-800 rounded-full p-2 transition-colors"
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-desk hover:bg-muted"
                 >
                   <svg
                     className="w-6 h-6"
@@ -848,25 +848,25 @@ const DailyDealsPage = () => {
         <table className="min-w-full leading-normal">
           <thead>
             <tr>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 ID
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Title
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Discount
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Badge
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Image
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Active
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Actions
               </th>
             </tr>

@@ -138,7 +138,7 @@ const TeamManager = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Team Members</h1>
+                <h1 className="text-[28px] font-medium leading-[1.15]">Team members</h1>
                 <button
                     onClick={() => openModal()}
                     className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"

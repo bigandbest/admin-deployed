@@ -109,7 +109,7 @@ export default function OutOfStockEnquiries() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Out of Stock Management</h1>
+          <h1 className="text-[28px] font-medium leading-[1.15]">Out of stock</h1>
           <p className="text-gray-500 text-sm mt-1">
             View customer enquiries and notification requests for out-of-stock products
           </p>
@@ -196,7 +196,7 @@ export default function OutOfStockEnquiries() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500">
                     <th className="p-4">Date</th>
                     <th className="p-4">Product</th>
                     <th className="p-4">Customer</th>
@@ -275,7 +275,7 @@ export default function OutOfStockEnquiries() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500">
                     <th className="p-4">Requested On</th>
                     <th className="p-4">Product</th>
                     <th className="p-4">Customer</th>

@@ -192,8 +192,8 @@ const CustomerReviewManager = () => {
             {/* Header */}
             <div className="mb-6 flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800">
-                        Customer Reviews Manager
+                    <h1 className="text-[28px] font-medium leading-[1.15]">
+                        Customer reviews
                     </h1>
                     <p className="text-gray-600 mt-1">
                         Manage customer testimonials displayed on the homepage
@@ -212,22 +212,22 @@ const CustomerReviewManager = () => {
                 <table className="min-w-full">
                     <thead className="bg-gray-100 border-b">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600r">
                                 Customer
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600r">
                                 Rating
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600r">
                                 Comment
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600r">
                                 Order
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600r">
                                 Status
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600r">
                                 Actions
                             </th>
                         </tr>

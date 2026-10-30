@@ -202,7 +202,7 @@ export default function BulkPriceUpdate() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold mb-2">Bulk Price Update</h1>
+      <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">Bulk price update</h1>
       <p className="text-gray-500 mb-6 text-sm">Export current prices, edit in Excel, then upload to apply changes.</p>
 
       {/* Stepper */}

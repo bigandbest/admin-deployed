@@ -18,7 +18,7 @@ export default function InventoryEditor({
 
   return (
     <div className="space-y-3">
-      <Label className="text-sm font-semibold">Inventory</Label>
+      <Label className="text-sm">Inventory</Label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="stock" className="text-sm font-medium">
@@ -56,7 +56,7 @@ export default function InventoryEditor({
       <div className="p-3 bg-muted/30 rounded border border-border">
         <p className="text-xs text-muted-foreground">
           Available:{" "}
-          <span className="font-semibold text-foreground">
+          <span className="font-medium text-foreground">
             {inventory.stock_quantity - inventory.reserved_quantity}
           </span>
         </p>

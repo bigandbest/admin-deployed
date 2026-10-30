@@ -228,8 +228,8 @@ const AddBannerGroup = () => {
         ← Back to Banners
       </button>
 
-      <h1 className="text-3xl font-bold mb-2">
-        Manage Groups for the Banner: {bannerName}
+      <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">
+        Banner groups{bannerName ? `: ${bannerName}` : ""}
       </h1>
       <p className="text-gray-600 mb-6">ID: {bannerId}</p>
 
@@ -257,16 +257,16 @@ const AddBannerGroup = () => {
         <table className="min-w-full leading-normal">
           <thead>
             <tr>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 ID
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Name
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Image
               </th>
-              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600r">
                 Actions
               </th>
             </tr>

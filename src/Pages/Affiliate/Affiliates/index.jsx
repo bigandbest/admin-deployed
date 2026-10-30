@@ -152,7 +152,7 @@ export default function AffiliateList() {
               </SheetHeader>
               <div className="space-y-5 px-4">
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Performance</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Performance</h3>
                   <DetailList
                     rows={[
                       { label: "Total sales", value: formatINR(a.total_sales) },
@@ -162,7 +162,7 @@ export default function AffiliateList() {
                   />
                 </section>
                 <section className="space-y-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Manage</h3>
+                  <h3 className="text-xs font-semibold text-muted-foreground">Manage</h3>
                   <div className="space-y-1.5">
                     <Label htmlFor="aff-tier">Tier</Label>
                     <Select value={tier} onValueChange={setTier}>

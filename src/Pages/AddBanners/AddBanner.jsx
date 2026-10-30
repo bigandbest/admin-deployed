@@ -108,17 +108,17 @@ const BannerForm = ({ initialData, onSave, onCancel }) => {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="bg-linear-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-2xl">
+        <div className="border-b border-foreground/8 px-6 py-4">
           <div className="flex items-center justify-between">
             <h2
               id="banner-form-title"
-              className="text-2xl font-bold text-white"
+              className="text-sm font-medium"
             >
-              {initialData ? "✏️ Edit Banner" : "➕ Add New Banner"}
+              {initialData ? "Edit banner" : "Add banner"}
             </h2>
             <button
               onClick={onCancel}
-              className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-desk hover:bg-muted"
             >
               ✕
             </button>
@@ -292,7 +292,7 @@ const BannerForm = ({ initialData, onSave, onCancel }) => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-linear-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors duration-150 ease-desk disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -530,21 +530,21 @@ const AddBanner = () => {
   });
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
+    <div>
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                🎨 Banner Management
+              <h1 className="text-[28px] font-medium leading-[1.15]">
+                Banners
               </h1>
               <p className="mt-1 text-sm text-gray-600">
                 Create and manage banners for your website sections
               </p>
             </div>
             <button
-              className="bg-linear-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all flex items-center space-x-2 shadow-lg"
+              className="flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors duration-150 ease-desk"
               onClick={handleAddClick}
             >
               <FaPlus className="w-4 h-4" />
@@ -664,22 +664,22 @@ const AddBanner = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600r">
                       Banner
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600r">
                       Type
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600r">
                       Position
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600r">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600r">
                       Mobile
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600r">
                       Actions
                     </th>
                   </tr>
@@ -823,17 +823,17 @@ const AddBanner = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-linear-to-r from-blue-600 to-blue-700 text-white p-6">
+            <div className="border-b border-foreground/8 p-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-2xl font-bold">Manage Deals</h2>
-                  <p className="text-blue-100 mt-1">
-                    Banner: {selectedBanner.name}
+                  <h2 className="text-sm font-medium">Deals</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedBanner.name}
                   </p>
                 </div>
                 <button
                   onClick={() => setIsDealModalVisible(false)}
-                  className="text-white hover:bg-blue-800 rounded-full p-2 transition-colors"
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-desk hover:bg-muted"
                 >
                   <svg
                     className="w-6 h-6"
@@ -956,17 +956,17 @@ const AddBanner = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-linear-to-r from-purple-600 to-purple-700 text-white p-6">
+            <div className="border-b border-foreground/8 p-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-2xl font-bold">Manage Stores</h2>
-                  <p className="text-purple-100 mt-1">
-                    Banner: {selectedBanner.name}
+                  <h2 className="text-sm font-medium">Stores</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedBanner.name}
                   </p>
                 </div>
                 <button
                   onClick={() => setIsStoreModalVisible(false)}
-                  className="text-white hover:bg-purple-800 rounded-full p-2 transition-colors"
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-desk hover:bg-muted"
                 >
                   <svg
                     className="w-6 h-6"

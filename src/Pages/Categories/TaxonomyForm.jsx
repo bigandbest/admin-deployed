@@ -92,7 +92,7 @@ export default function TaxonomyForm({ open, kind, item, defaultParentId, parent
           {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">{error}</div>}
 
           <fieldset className="space-y-3">
-            <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Basics</legend>
+            <legend className="mb-1 text-xs font-semibold text-muted-foreground">Basics</legend>
             <div className="space-y-1.5">
               <Label htmlFor="tx-name">Name</Label>
               <Input id="tx-name" value={form.name} onChange={(e) => set("name", e.target.value)} />
@@ -111,7 +111,7 @@ export default function TaxonomyForm({ open, kind, item, defaultParentId, parent
           </fieldset>
 
           <fieldset className="space-y-3">
-            <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Image</legend>
+            <legend className="mb-1 text-xs font-semibold text-muted-foreground">Image</legend>
             <div className="flex items-center gap-3">
               <TaxonomyThumb src={shownImage} name={form.name} size="size-16" />
               <div className="min-w-0 flex-1 space-y-1.5">
@@ -122,7 +122,7 @@ export default function TaxonomyForm({ open, kind, item, defaultParentId, parent
           </fieldset>
 
           <fieldset className="space-y-3">
-            <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Display</legend>
+            <legend className="mb-1 text-xs font-semibold text-muted-foreground">Display</legend>
             {cfg.hasSort && (
               <div className="space-y-1.5">
                 <Label htmlFor="tx-sort">Sort order</Label>

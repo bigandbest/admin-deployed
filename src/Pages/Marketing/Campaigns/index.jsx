@@ -49,7 +49,7 @@ const lifecycle = (c) => {
 function Group({ title, children }) {
   return (
     <fieldset className="space-y-3">
-      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</legend>
+      <legend className="mb-1 text-xs font-semibold text-muted-foreground">{title}</legend>
       {children}
     </fieldset>
   );

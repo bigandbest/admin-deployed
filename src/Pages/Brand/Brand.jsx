@@ -172,7 +172,7 @@ const Brand = () => {
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Brands</h1>
+      <h1 className="mb-6 text-[28px] font-medium leading-[1.15]">Brands</h1>
 
       {/* Add Brand button */}
       <div className="mb-6">

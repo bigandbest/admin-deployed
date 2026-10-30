@@ -146,11 +146,11 @@ export default function AffiliatePayouts() {
               </SheetHeader>
               <div className="space-y-5 px-4">
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Amount</h3>
                   <DetailList rows={breakdown} />
                 </section>
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pay to</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Pay to</h3>
                   {p.payment_method === "UPI" ? (
                     <DetailList rows={[{ label: "UPI ID", value: p.upi_id && <span className="font-mono">{p.upi_id}</span> }]} />
                   ) : (
@@ -166,7 +166,7 @@ export default function AffiliatePayouts() {
                 </section>
                 {canAct ? (
                   <section className="space-y-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Record payment</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground">Record payment</h3>
                     <div className="space-y-1.5">
                       <Label htmlFor="pay-txn">Transaction ID / UTR</Label>
                       <Input id="pay-txn" className="font-mono" value={txnId} onChange={(e) => setTxnId(e.target.value)} />
@@ -179,7 +179,7 @@ export default function AffiliatePayouts() {
                   </section>
                 ) : (
                   <section>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Record</h3>
+                    <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Record</h3>
                     <DetailList
                       rows={[
                         { label: "Transaction ID", value: p.transaction_id && <span className="font-mono">{p.transaction_id}</span> },

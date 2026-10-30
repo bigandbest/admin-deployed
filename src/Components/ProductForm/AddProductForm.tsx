@@ -6,7 +6,7 @@ import VariantsSection from "./variants-section";
 import MediaUploader from "./media-uploader";
 import CategorySection from "./category-section";
 import FAQSection from "./faq-section";
-import { Plus, X } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { Switch } from "../UI/switch";
 import { Label } from "../UI/label";
 
@@ -262,72 +262,62 @@ export default function AddProductForm({
   }, [product, variants, media, category, warehouse, faqs, onSubmit]);
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Header */}
+    <div className="flex h-full flex-col bg-background">
       <div className="border-b border-border bg-card">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-foreground">
-                {isEditMode ? "Edit Product" : "Add New Product"}
-              </h2>
+        <div className="flex items-center justify-between gap-4 px-6 py-4">
+          <h2 className="text-[28px] font-medium leading-[1.15] text-foreground">
+            {isEditMode ? "Edit product" : "Add product"}
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 items-center gap-2 rounded-lg border border-border px-3">
+              <Label htmlFor="product-active" className="cursor-pointer text-sm">
+                {product.active ? "Active" : "Inactive"}
+              </Label>
+              <Switch
+                id="product-active"
+                checked={product.active}
+                onCheckedChange={(checked) =>
+                  setProduct((prev) => ({ ...prev, active: checked }))
+                }
+              />
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg">
-                <Label
-                  htmlFor="product-active"
-                  className="text-sm font-medium cursor-pointer"
-                >
-                  {product.active ? "Active" : "Inactive"}
-                </Label>
-                <Switch
-                  id="product-active"
-                  checked={product.active}
-                  onCheckedChange={(checked) =>
-                    setProduct((prev) => ({ ...prev, active: checked }))
-                  }
-                />
-              </div>
-              <Button
-                size="sm"
-                onClick={handleSubmitProduct}
-                disabled={isLoading}
-                className="gap-2 bg-green-500 hover:bg-green-600 text-white"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    {isEditMode ? "Updating..." : "Adding..."}
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4" />
-                    {isEditMode ? "Update Product" : "Add Product"}
-                  </>
-                )}
-              </Button>
-              {onClose && (
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                  <X className="w-5 h-5" />
-                </Button>
+            <Button
+              size="sm"
+              onClick={handleSubmitProduct}
+              disabled={isLoading}
+              className="transition-colors duration-150 ease-desk"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
+                  {isEditMode ? "Updating" : "Adding"}
+                </>
+              ) : (
+                <>
+                  <Plus className="size-4" strokeWidth={1.5} />
+                  {isEditMode ? "Update product" : "Add product"}
+                </>
               )}
-            </div>
+            </Button>
+            {onClose && (
+              <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+                <X className="size-4" strokeWidth={1.5} />
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <ScrollArea className="flex-1">
         <div className="px-6 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Form Sections */}
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
               <GeneralInformation product={product} setProduct={setProduct} />
               <VariantsSection variants={variants} setVariants={setVariants} />
             </div>
 
             {/* Right Column - Media & Category */}
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6">
               <MediaUploader media={media} setMedia={setMedia} />
               <CategorySection
                 category={category}

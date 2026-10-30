@@ -38,7 +38,7 @@ export default function MemberDrawer({ id, onClose }) {
             </SheetHeader>
             <div className="space-y-5 px-4 pb-6">
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress to qualify</h3>
+                <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Progress to qualify</h3>
                 <ProgressCell counted={m.referrals_counted} target={m.referral_target} />
                 {m.status === "TRIAL" && <p className="mt-2 text-xs text-muted-foreground">{Math.max(0, m.referral_target - m.referrals_counted)} more first-order referrals needed. {daysText(m)}.</p>}
                 {m.status === "ACTIVE" && <p className="mt-2 text-xs text-muted-foreground">Qualified on {formatDate(m.qualified_at)}. Membership is permanent.</p>}
@@ -46,7 +46,7 @@ export default function MemberDrawer({ id, onClose }) {
               </section>
 
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Details</h3>
+                <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Details</h3>
                 <DetailList
                   rows={[
                     { label: "Plan", value: m.plan?.name },
@@ -61,7 +61,7 @@ export default function MemberDrawer({ id, onClose }) {
               </section>
 
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Counted referrals ({m.credits.length})</h3>
+                <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Counted referrals ({m.credits.length})</h3>
                 {m.credits.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No referrals counted yet. A referral counts when the referred user&apos;s first order completes its return window.</p>
                 ) : (
@@ -80,7 +80,7 @@ export default function MemberDrawer({ id, onClose }) {
               </section>
 
               <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status history</h3>
+                <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Status history</h3>
                 <ol className="relative space-y-4 border-l pl-4">
                   {m.history.map((h) => (
                     <li key={h.id} className="relative">

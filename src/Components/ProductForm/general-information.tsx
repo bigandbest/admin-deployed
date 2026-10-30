@@ -30,18 +30,18 @@ function GeneralInformation({
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="border-border bg-card shadow-none">
       <CardHeader
         className="border-b border-border pb-4 cursor-pointer flex flex-row items-center justify-between"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <CardTitle className="text-lg font-semibold">
-          General Information
+        <CardTitle className="text-sm font-medium">
+          General information
         </CardTitle>
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          <ChevronUp className="size-4 text-muted-foreground" strokeWidth={1.5} />
         ) : (
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <ChevronDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
         )}
       </CardHeader>
       {isExpanded && (

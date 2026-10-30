@@ -125,7 +125,7 @@ const PromoBannerManager = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Promo Banner Management</h1>
+        <h1 className="text-[28px] font-medium leading-[1.15]">Promo banners</h1>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"

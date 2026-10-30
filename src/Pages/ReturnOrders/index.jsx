@@ -90,8 +90,8 @@ const ReturnOrdersAdmin = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          🔄 Return Orders Management
+        <h1 className="mb-2 text-[28px] font-medium leading-[1.15]">
+          Return orders
         </h1>
         <p className="text-gray-600">
           Manage customer return and cancellation requests

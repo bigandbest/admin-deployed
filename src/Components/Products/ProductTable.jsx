@@ -50,7 +50,7 @@ const ProductTable = ({
               {tableHeaders.map((header) => (
                 <th
                   key={header.key}
-                  className={`px-4 py-4 text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider ${
+                  className={`px-4 py-4 text-xs font-semibold text-indigo-700 dark:text-indigo-300r ${
                     header.align === "center"
                       ? "text-center"
                       : header.align === "right"

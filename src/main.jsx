@@ -7,8 +7,8 @@ import App from "./App.jsx";
 // Create a custom theme
 const theme = createTheme({
   primaryColor: 'red',
-  fontFamily: 'Roboto, sans-serif',
-  headings: { fontFamily: 'Roboto, sans-serif' },
+  fontFamily: '"IBM Plex Sans", sans-serif',
+  headings: { fontFamily: '"IBM Plex Sans", sans-serif' },
   defaultRadius: 'md',
   colors: {
     brand: [

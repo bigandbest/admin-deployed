@@ -38,7 +38,7 @@ const ProductTableRow = ({
   };
 
   return (
-    <tr className="border-b border-gray-100/50 dark:border-gray-700/50 hover:bg-gradient-to-r hover:from-indigo-50/30 hover:to-blue-50/30 dark:hover:from-indigo-900/20 dark:hover:to-blue-900/20 transition-all duration-200 hover:shadow-sm">
+    <tr className="border-b border-foreground/8 transition-colors duration-150 ease-desk hover:bg-muted/50">
       {/* Image */}
       <td className="text-center p-3">
         <div className="flex flex-col items-center gap-2">
@@ -46,7 +46,7 @@ const ProductTableRow = ({
             <img
               src={getImageSrc(product)}
               alt={product.name}
-              className="w-20 h-15 object-cover rounded-xl cursor-pointer transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg border-2 border-transparent group-hover:border-indigo-200 dark:group-hover:border-indigo-700"
+              className="h-16 w-16 cursor-pointer rounded-md object-cover"
               onClick={() => onImageClick(product)}
               onError={(e) => {
                 e.target.src = PRODUCT_PLACEHOLDER;
@@ -134,7 +134,7 @@ const ProductTableRow = ({
           {/* Manage Button */}
           <button
             onClick={() => onWarehouseClick && onWarehouseClick(product)}
-            className="px-2 py-1 text-xs font-medium bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-lg transition-all duration-200 hover:scale-105"
+            className="h-7 rounded-md border border-foreground/8 px-2 text-xs transition-colors duration-150 ease-desk hover:bg-muted"
             title="Manage Warehouse Assignment"
           >
             Manage
@@ -229,7 +229,7 @@ const ProductTableRow = ({
           </button>
           <button
             onClick={() => onDeleteClick(product.id)}
-            className="group relative bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 p-2 rounded-xl transition-all duration-200 hover:scale-110 hover:shadow-lg border border-red-200 dark:border-red-700/50"
+            className="flex size-8 items-center justify-center rounded-md text-[#dc2626] transition-colors duration-150 ease-desk hover:bg-muted"
             title="Delete Product"
           >
             <FaTrash className="text-sm" />
@@ -240,7 +240,7 @@ const ProductTableRow = ({
           {product.variants && product.variants.length > 0 && (
             <button
               onClick={() => onVariantsClick(product)}
-              className="group relative bg-gradient-to-r from-purple-100 to-indigo-100 hover:from-purple-200 hover:to-indigo-200 dark:from-purple-900/30 dark:to-indigo-900/30 dark:hover:from-purple-900/50 dark:hover:to-indigo-900/50 text-purple-700 dark:text-purple-300 px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-200 hover:scale-105 hover:shadow-lg border border-purple-200 dark:border-purple-700/50"
+              className="h-8 rounded-md border border-foreground/8 px-3 text-xs transition-colors duration-150 ease-desk hover:bg-muted"
               title="Manage Variants"
             >
               Variants

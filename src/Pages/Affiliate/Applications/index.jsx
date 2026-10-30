@@ -25,7 +25,7 @@ const label = (s) => s.toLowerCase().replace(/_/g, " ").replace(/^\w/, (c) => c.
 function Section({ title, children }) {
   return (
     <section>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold text-muted-foreground">{title}</h3>
       {children}
     </section>
   );

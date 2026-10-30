@@ -223,7 +223,7 @@ export default function ActivityLogs() {
               </SheetHeader>
               <div className="space-y-5 px-4 pb-6">
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Event</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">Event</h3>
                   <DetailList
                     rows={[
                       { label: "When", value: formatDateTime(selected.created_at) },
@@ -235,7 +235,7 @@ export default function ActivityLogs() {
                   />
                 </section>
                 <section>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">What changed</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-muted-foreground">What changed</h3>
                   <DiffView before={selected.previous_value} after={selected.new_value} />
                 </section>
               </div>

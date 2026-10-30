@@ -497,8 +497,8 @@ const InventoryManagement = () => {
       <ToastContainer position="top-right" autoClose={3000} />
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Inventory Management
+          <h1 className="text-[28px] font-medium leading-[1.15]">
+            Inventory
           </h1>
           <Group>
             <Button

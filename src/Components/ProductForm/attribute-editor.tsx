@@ -46,7 +46,7 @@ export default function AttributeEditor({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <Label className="text-sm font-semibold">Attributes</Label>
+          <Label className="text-sm">Attributes</Label>
           {variantPrice !== undefined && (
             <div className="flex gap-3 text-xs text-muted-foreground mt-1">
               <p>
@@ -64,10 +64,10 @@ export default function AttributeEditor({
           size="sm"
           onClick={addAttribute}
           variant="outline"
-          className="gap-1 h-8 bg-transparent"
+          className="h-8 gap-2 bg-transparent"
         >
-          <Plus className="w-3 h-3" />
-          Add Attribute
+          <Plus className="size-4" strokeWidth={1.5} />
+          Add attribute
         </Button>
       </div>
 
